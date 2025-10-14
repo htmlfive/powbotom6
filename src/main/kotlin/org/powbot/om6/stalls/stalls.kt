@@ -62,7 +62,7 @@ import kotlin.random.Random
         ScriptConfiguration(
             "Bank Tile",
             "Click the tile you want to stand on when banking.",
-            defaultValue = "{\"x\": 2655, \"y\":3283, \"floor\": 0}",
+            defaultValue = "{\"x\": 2655, \"y\":3280, \"floor\": 0}",
             optionType = OptionType.TILE
         )
     ]
