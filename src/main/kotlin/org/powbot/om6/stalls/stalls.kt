@@ -25,6 +25,7 @@ import kotlin.random.Random
         ScriptConfiguration(
             "Stall Target",
             "Click 'Examine' or 'Steal-from' on the stall you want to thieve from.",
+            defaultValue = "[{\"id\":11730, \"name\":\"Baker's stall\", \"interaction\":\"Steal-from\", \"tile\":{\"floor\":0, \"x\":2667, \"y\":3310}}]",
             optionType = OptionType.GAMEOBJECT_ACTIONS
         ),
         ScriptConfiguration(
@@ -136,6 +137,16 @@ class StallThiever : AbstractScript() {
         }
     }
 
+    override fun canBreak(): Boolean {
+        val atBank = Players.local().tile() == BANK_TILE
+        val bankClosed = !Bank.opened()
+        val inventoryDeposited = !Inventory.isFull()
+        val notInCombat = !Players.local().inCombat()
+
+        // Return true only if all conditions for a safe break are met.
+        return atBank && bankClosed && inventoryDeposited && notInCombat
+    }
+
     // --- Task Definitions ---
 
     inner class HandlePitchTask : Task() {
@@ -236,20 +247,24 @@ class StallThiever : AbstractScript() {
 
     inner class ThieveTask : Task() {
         private val STEAL_ACTION = "Steal-from"
+        private var stall: GameObject = GameObject.Nil
+
         override fun validate(): Boolean = !Inventory.isFull() &&
                 Players.local().tile() == THIEVING_TILE &&
                 Players.local().animation() == -1
 
         override fun execute() {
-            val stall = Objects.stream()
-                .id(STALL_ID)
-                .within(THIEVING_TILE, 3.0)
-                .nearest()
-                .firstOrNull()
-
-            if (stall == null) {
+            if (!stall.valid()) {
+                logger.info("Searching for stall object...")
+                stall = Objects.stream()
+                    .id(STALL_ID)
+                    .within(THIEVING_TILE, 3.0)
+                    .nearest()
+                    .firstOrNull() ?: GameObject.Nil
+            }
+            if (!stall.valid()) {
                 logger.warn("Stall not found within range of thieving tile, waiting...")
-                Condition.sleep(2000)
+                Condition.sleep(600)
                 return
             }
 
