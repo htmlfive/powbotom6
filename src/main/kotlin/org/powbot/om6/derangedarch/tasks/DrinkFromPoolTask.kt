@@ -13,7 +13,6 @@ class DrinkFromPoolTask(script: DerangedArchaeologistMagicKiller) : Task(script)
      */
     override fun validate(): Boolean {
         return script.FEROX_BANK_AREA.contains(Players.local())
-                && !script.needsSupplies()
                 && !script.hasAttemptedPoolDrink
     }
 

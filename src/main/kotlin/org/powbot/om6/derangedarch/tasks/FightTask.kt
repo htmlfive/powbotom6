@@ -14,7 +14,6 @@ class FightTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
     override fun validate(): Boolean {
         return script.getBoss() != null
                 && Players.local().tile().distanceTo(script.BOSS_TRIGGER_TILE) <= 8
-                && !script.needsSupplies()
     }
 
     override fun execute() {

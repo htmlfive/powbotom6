@@ -28,7 +28,7 @@ class TravelToBossTask(script: DerangedArchaeologistMagicKiller) : Task(script) 
      * This task is valid as long as we are more than 8 tiles away from the trigger spot.
      */
     override fun validate(): Boolean = Players.local().tile().distanceTo(script.BOSS_TRIGGER_TILE) > 8
-            && !script.needsSupplies() && script.hasAttemptedPoolDrink
+            && script.hasAttemptedPoolDrink
 
     override fun execute() {
         val player = Players.local()

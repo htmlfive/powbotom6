@@ -6,38 +6,25 @@ import org.powbot.om6.derangedarch.DerangedArchaeologistMagicKiller
 
 class PreBankEquipTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
     /**
-     * This task now validates ONLY if we need supplies AND there is an item in our inventory
-     * that is also a key in the user's "Required Equipment" map.
-     * This prevents it from activating for utility items like rings or an axe.
+     * This task now validates by checking for resupply conditions directly,
+     * since the needsSupplies() helper function was removed.
      */
     override fun validate(): Boolean {
-        // Don't run if we don't need to bank.
-        if (!script.needsSupplies()) return false
+        // Define the conditions that would trigger a resupply trip.
+        val noFood = Inventory.stream().name(script.config.foodName).isEmpty()
+        val inventoryFull = Inventory.isFull()
+        val noPrayerPotions = Inventory.stream().nameContains("Prayer potion").isEmpty()
+        val needsResupply = noFood || inventoryFull || noPrayerPotions
 
-        // Get the list of IDs for the gear we are *supposed* to be wearing.
-        val requiredEquipmentIds = script.config.requiredEquipment.keys
-
-        // Return true only if an item in our inventory matches one of those required IDs.
-        return Inventory.stream().any { it.id() in requiredEquipmentIds }
+        // This task should run if a resupply is needed AND there are wearable items in the inventory.
+        return needsResupply && Inventory.stream().any { it.actions().contains("Wear") || it.actions().contains("Wield") }
     }
 
-    /**
-     * This task now filters the inventory and ONLY interacts with items
-     * that are part of the "Required Equipment" setup before teleporting to the bank.
-     */
     override fun execute() {
-        script.logger.info("Equipping required combat gear from inventory before banking...")
-        val requiredEquipmentIds = script.config.requiredEquipment.keys
-
-        Inventory.stream()
-            // IMPORTANT: Filter the inventory to only include items that are part of our defined combat gear.
-            .filter { it.id() in requiredEquipmentIds }
-            .forEach { itemToEquip ->
-                // The action is typically "Wear", but "Wield" is a fallback for weapons.
-                if (itemToEquip.interact("Wear") || itemToEquip.interact("Wield")) {
-                    // Wait a moment for the equip action to complete before trying the next item.
-                    Condition.sleep(250)
-                }
-            }
+        script.logger.info("Equipping items from inventory before banking...")
+        Inventory.stream().filter { it.actions().contains("Wear") || it.actions().contains("Wield") }.forEach {
+            it.interact("Wear")
+            Condition.sleep(250)
+        }
     }
 }

@@ -9,34 +9,45 @@ class EmergencyTeleportTask(script: DerangedArchaeologistMagicKiller) : Task(scr
     private var reason = ""
 
     override fun validate(): Boolean {
+        // Don't trigger if we are already safe at the bank.
         if (script.FEROX_BANK_AREA.contains(Players.local())) return false
+
+        // Only check for resupply needs if we are in the fight area.
+        if (Players.local().tile().distanceTo(script.BOSS_TRIGGER_TILE) > 8) return false
+
         val lowHp = Combat.healthPercent() < script.config.emergencyHpPercent
-        val lowPrayerNoPots = Prayer.prayerPoints() < 10 && Inventory.stream().nameContains("Prayer potion").isEmpty()
+        val lowPrayer = Prayer.prayerPoints() < 10
+        val noFood = Inventory.stream().name(script.config.foodName).isEmpty()
+        val noPrayerPotions = Inventory.stream().nameContains("Prayer potion").isEmpty()
+        val inventoryFull = Inventory.isFull()
+
+        // Determine the reason for teleporting
         if (lowHp) reason = "HP is critical (${Combat.healthPercent()}%)"
-        else if (lowPrayerNoPots) reason = "Prayer is critical (${Prayer.prayerPoints()}) and out of potions"
-        return lowHp || lowPrayerNoPots
+        else if (lowPrayer && noPrayerPotions) reason = "Prayer is critical (${Prayer.prayerPoints()}) and out of potions"
+        else if (noFood) reason = "Out of food"
+        else if (noPrayerPotions) reason = "Out of prayer potions"
+        else if (inventoryFull) reason = "Inventory is full"
+
+        return lowHp || (lowPrayer && noPrayerPotions) || noFood || noPrayerPotions || inventoryFull
     }
 
-    /**
-     * SIMPLIFIED: This logic now only looks for a consumable teleport item in the inventory.
-     */
     override fun execute() {
-        script.logger.warn("EMERGENCY TELEPORT: $reason. Escaping!")
+        script.logger.warn("RESUPPLY TELEPORT: $reason. Escaping!")
         val teleport = script.teleportOptions[script.config.emergencyTeleportItem]
         if (teleport == null) {
             script.logger.warn("Invalid emergency teleport option: ${script.config.emergencyTeleportItem}. Stopping.")
             ScriptManager.stop(); return
         }
 
-        // Find the teleport item (e.g., house tablet) in the inventory.
         val teleItem = Inventory.stream().nameContains(teleport.itemNameContains).firstOrNull()
         if (teleItem != null) {
-            // Interact with the item.
             if (teleItem.interact(teleport.interaction)) {
-                Condition.wait(teleport.successCondition, 300, 20)
+                if (Condition.wait(teleport.successCondition, 300, 20)) {
+                    // Set the flag to trigger the walk-back and re-banking sequence.
+                    script.emergencyTeleportJustHappened = true
+                }
             }
         } else {
-            // If the item isn't found, stop the script for safety.
             script.logger.warn("CRITICAL: No '${teleport.itemNameContains}' found in inventory to escape! Stopping script.")
             ScriptManager.stop()
         }
