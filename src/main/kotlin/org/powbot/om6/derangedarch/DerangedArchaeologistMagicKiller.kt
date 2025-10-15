@@ -60,7 +60,7 @@ class DerangedArchaeologistMagicKiller : AbstractScript() {
     val ARCHAEOLOGIST_ID = 7806
     val BOSS_TRIGGER_TILE = Tile(3683, 3707, 0)
     val FIGHT_START_TILE = Tile(3683, 3715, 0)
-
+    var emergencyTeleportJustHappened: Boolean = false
     val FEROX_BANK_AREA = Area(Tile(3128, 3638), Tile(3138, 3628))
     val FEROX_POOL_AREA = Area(Tile(3128, 3637), Tile(3130, 3634))
     val POOL_OF_REFRESHMENT_ID = 39651
@@ -71,13 +71,13 @@ class DerangedArchaeologistMagicKiller : AbstractScript() {
     private var currentTask: String = "Starting..."
     private val tasks: List<Task> = listOf(
         EmergencyTeleportTask(this),
+        WalkToBankAfterEmergencyTask(this), // New recovery task
         DodgeSpecialTask(this),
         DeactivatePrayerTask(this),
         EatTask(this), // Moved up
         FightTask(this),
         LootTask(this),
         PreBankEquipTask(this),
-        TeleportToBankTask(this),
         BankTask(this),
         EquipItemsTask(this),
         DrinkFromPoolTask(this),
@@ -129,21 +129,9 @@ class DerangedArchaeologistMagicKiller : AbstractScript() {
 
     override fun canBreak(): Boolean {
         val nearBank = Players.local().tile().distanceTo(FEROX_BANK_AREA.centralTile) < 10
-        return nearBank && !needsSupplies() && !needsStatRestore()
+        return nearBank && !needsStatRestore()
     }
 
-    // --- Helper Methods ---
-    fun needsSupplies(): Boolean {
-        val noFood = Inventory.stream().name(config.foodName).isEmpty()
-        val inventoryFull = Inventory.isFull()
-        val noPrayerPotions = Inventory.stream().nameContains("Prayer potion").isEmpty()
-
-        if (noFood) logger.info("Banking reason: Out of food.")
-        if (inventoryFull) logger.info("Banking reason: Inventory is full.")
-        if (noPrayerPotions) logger.info("Banking reason: Out of prayer potions.")
-
-        return noFood || inventoryFull || noPrayerPotions
-    }
 
     fun needsStatRestore(): Boolean = Prayer.prayerPoints() < Skills.realLevel(Skill.Prayer) || Combat.healthPercent() < 100
     fun getBoss(): Npc? = Npcs.stream().id(ARCHAEOLOGIST_ID).nearest().firstOrNull()
