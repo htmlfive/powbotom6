@@ -17,6 +17,9 @@ class EmergencyTeleportTask(script: DerangedArchaeologistMagicKiller) : Task(scr
         return lowHp || lowPrayerNoPots
     }
 
+    /**
+     * SIMPLIFIED: This logic now only looks for a consumable teleport item in the inventory.
+     */
     override fun execute() {
         script.logger.warn("EMERGENCY TELEPORT: $reason. Escaping!")
         val teleport = script.teleportOptions[script.config.emergencyTeleportItem]
@@ -25,30 +28,17 @@ class EmergencyTeleportTask(script: DerangedArchaeologistMagicKiller) : Task(scr
             ScriptManager.stop(); return
         }
 
-        // Check if the teleport item is equippable (like the ring)
-        if (teleport.isEquippable) {
-            val equippedItem = if (teleport.equipmentSlot != null) Equipment.itemAt(teleport.equipmentSlot) else Item.Nil
-            // Check if the correct item is ALREADY equipped
-            if (equippedItem.name().contains(teleport.itemNameContains)) {
-                if (equippedItem.interact(teleport.interaction)) {
-                    Condition.wait(teleport.successCondition, 300, 20)
-                }
-            } else {
-                // If it's not equipped, we can't do anything. Stop the script for safety.
-                script.logger.warn("CRITICAL: Emergency teleport '${teleport.itemNameContains}' is not equipped! Stopping script.")
-                ScriptManager.stop()
+        // Find the teleport item (e.g., house tablet) in the inventory.
+        val teleItem = Inventory.stream().nameContains(teleport.itemNameContains).firstOrNull()
+        if (teleItem != null) {
+            // Interact with the item.
+            if (teleItem.interact(teleport.interaction)) {
+                Condition.wait(teleport.successCondition, 300, 20)
             }
         } else {
-            // Logic for non-equippable items (like tablets) remains the same
-            val teleItem = Inventory.stream().nameContains(teleport.itemNameContains).firstOrNull()
-            if (teleItem != null) {
-                if (teleItem.interact(teleport.interaction)) {
-                    Condition.wait(teleport.successCondition, 300, 20)
-                }
-            } else {
-                script.logger.warn("CRITICAL: No '${teleport.itemNameContains}' found in inventory to escape! Stopping script.")
-                ScriptManager.stop()
-            }
+            // If the item isn't found, stop the script for safety.
+            script.logger.warn("CRITICAL: No '${teleport.itemNameContains}' found in inventory to escape! Stopping script.")
+            ScriptManager.stop()
         }
     }
 }

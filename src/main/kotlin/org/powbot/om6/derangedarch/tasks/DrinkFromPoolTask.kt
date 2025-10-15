@@ -29,7 +29,7 @@ class DrinkFromPoolTask(script: DerangedArchaeologistMagicKiller) : Task(script)
             if (pool.inViewport()) {
                 if (pool.interact("Drink")) {
                     // Wait a short, fixed amount of time for the interaction to occur.
-                    Condition.sleep(1500)
+                    Condition.sleep(4500)
                 }
             } else {
                 Movement.walkTo(script.FEROX_POOL_AREA.randomTile)
