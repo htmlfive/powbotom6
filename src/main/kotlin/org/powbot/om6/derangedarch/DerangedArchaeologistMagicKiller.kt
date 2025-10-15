@@ -13,13 +13,13 @@ import org.powbot.om6.derangedarch.tasks.*
 @ScriptManifest(
     name = "0m6 Deranged Archaeologist (Magic)",
     description = "Kills the Archaeologist with user-defined gear and inventory setups.",
-    version = "2.1.4",
+    version = "2.2.4",
     author = "0m6",
     category = ScriptCategory.Combat
 )
 @ScriptConfiguration.List(
     [
-        // GUI configs from your provided file...
+        // GUI Configurations remain the same...
         ScriptConfiguration(
             "Required Equipment", "Define the gear to wear.",
             optionType = OptionType.EQUIPMENT,
@@ -27,7 +27,7 @@ import org.powbot.om6.derangedarch.tasks.*
         ),
         ScriptConfiguration(
             "Required Inventory",
-            "NOTE: Define your full inventory here. You MUST include:\n- Your food\n- Prayer potions\n- Ring of dueling\n- Digsite pendant\n- Your chosen Emergency Teleport item\n- An axe and/or rake if desired.",
+            "NOTE: Define your full inventory here. You MUST include:\n- Your food\n- Prayer potions\n- Your chosen Emergency Teleport item\n- An axe and/or rake if desired.",
             optionType = OptionType.INVENTORY,
             defaultValue = "{\"8013\":1,\"1351\":1,\"5341\":1,\"11194\":1,\"2434\":4,\"385\":15,\"2552\":1}"
         ),
@@ -57,7 +57,7 @@ class DerangedArchaeologistMagicKiller : AbstractScript() {
     lateinit var teleportOptions: Map<String, TeleportOption>
     var hasAttemptedPoolDrink: Boolean = true
 
-    // Constants...
+    // Constants remain the same...
     val ARCHAEOLOGIST_ID = 7806
     val BOSS_AREA = Area(Tile(3736, 3823), Tile(3761, 3801))
     val FEROX_BANK_AREA = Area(Tile(3128, 3638), Tile(3138, 3628))
@@ -66,6 +66,7 @@ class DerangedArchaeologistMagicKiller : AbstractScript() {
     val REQUIRED_PRAYER = Prayer.Effect.PROTECT_FROM_MISSILES
     val SPECIAL_ATTACK_PROJECTILE = 1260
     val SPECIAL_ATTACK_TEXT = "Learn to Read!"
+    val FIGHT_START_TILE = Tile(3683, 3715, 0)
 
     private var currentTask: String = "Starting..."
     private val tasks: List<Task> = listOf(
@@ -81,6 +82,7 @@ class DerangedArchaeologistMagicKiller : AbstractScript() {
     )
 
     override fun onStart() {
+        // onStart logic remains the same...
         config = Config(
             requiredEquipment = getOption("Required Equipment"),
             requiredInventory = getOption("Required Inventory"),
@@ -104,9 +106,6 @@ class DerangedArchaeologistMagicKiller : AbstractScript() {
         addPaint(paint)
     }
 
-    /**
-     * This is the main engine of the script. It's now correctly implemented.
-     */
     override fun poll() {
         val task = tasks.firstOrNull { it.validate() }
         if (task != null) {
@@ -120,44 +119,25 @@ class DerangedArchaeologistMagicKiller : AbstractScript() {
 
     override fun canBreak(): Boolean = FEROX_BANK_AREA.contains(Players.local()) && !needsSupplies() && !needsStatRestore()
 
-    // --- HELPER METHODS ---
-    private fun isDuelingRing(id: Int): Boolean = id in 2552..2566
-    private fun isDigsitePendant(id: Int): Boolean = id in 11190..11194
+    // --- UPDATED HELPER METHOD ---
 
-    private fun equipmentIsCorrect(): Boolean {
-        if (config.requiredEquipment.isEmpty()) { return true }
-        for ((requiredId, slotIndex) in config.requiredEquipment) {
-            val slot = Equipment.Slot.values()[slotIndex]
-            val wornItem = Equipment.itemAt(slot)
-            if (isDuelingRing(requiredId)) {
-                if (!wornItem.name().contains("Ring of dueling")) return false
-            } else if (isDigsitePendant(requiredId)) {
-                if (!wornItem.name().contains("Digsite pendant")) return false
-            } else {
-                if (wornItem.id() != requiredId) return false
-            }
-        }
-        return true
-    }
-
-    private fun inventoryIsCorrect(): Boolean {
-        if (config.requiredInventory.isEmpty()) { return true }
-        for ((id, amount) in config.requiredInventory) {
-            if (isDuelingRing(id)) {
-                if (Inventory.stream().nameContains("Ring of dueling").count(true) < amount) return false
-            } else if (isDigsitePendant(id)) {
-                if (Inventory.stream().nameContains("Digsite pendant").count(true) < amount) return false
-            } else {
-                if (Inventory.stream().id(id).count(true) < amount) return false
-            }
-        }
-        return true
-    }
-
+    /**
+     * Checks if a bank trip is required based on consumable supplies.
+     * Returns true if out of food, inventory is full, or out of prayer potions.
+     */
     fun needsSupplies(): Boolean {
-        return !equipmentIsCorrect() || !inventoryIsCorrect()
+        val noFood = Inventory.stream().name(config.foodName).isEmpty()
+        val inventoryFull = Inventory.isFull()
+        val noPrayerPotions = Inventory.stream().nameContains("Prayer potion").isEmpty()
+
+        if (noFood) logger.info("Banking reason: Out of food.")
+        if (inventoryFull) logger.info("Banking reason: Inventory is full.")
+        if (noPrayerPotions) logger.info("Banking reason: Out of prayer potions.")
+
+        return noFood || inventoryFull || noPrayerPotions
     }
 
+    // --- Unchanged Helper Methods ---
     fun needsStatRestore(): Boolean = Prayer.prayerPoints() < Skills.realLevel(Skill.Prayer) || Combat.healthPercent() < 100
     fun getBoss(): Npc? = Npcs.stream().id(ARCHAEOLOGIST_ID).nearest().firstOrNull()
 }
