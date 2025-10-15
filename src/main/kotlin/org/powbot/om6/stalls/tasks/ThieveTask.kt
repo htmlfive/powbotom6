@@ -6,20 +6,20 @@ import org.powbot.api.rt4.walking.model.Skill
 import org.powbot.om6.stalls.StallThiever
 import kotlin.random.Random
 
-class ThieveTask(script: StallThiever) : Task(script) {
+class ThieveTask(script: StallThiever) : Task(script, "Thieving") {
     private val STEAL_ACTION = "Steal-from"
     private var stall: GameObject = GameObject.Nil
 
     override fun validate(): Boolean = !Inventory.isFull() &&
-            Players.local().tile() == script.THIEVING_TILE &&
+            Players.local().tile() == script.config.thievingTile &&
             Players.local().animation() == -1
 
     override fun execute() {
         if (!stall.valid()) {
             script.logger.info("Searching for stall object...")
             stall = Objects.stream()
-                .id(script.STALL_ID)
-                .within(script.THIEVING_TILE, 3.0)
+                .id(script.config.stallId)
+                .within(script.config.thievingTile, 3.0)
                 .nearest()
                 .firstOrNull() ?: GameObject.Nil
         }

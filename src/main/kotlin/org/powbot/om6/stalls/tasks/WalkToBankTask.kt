@@ -5,14 +5,14 @@ import org.powbot.api.rt4.Inventory
 import org.powbot.api.rt4.Movement
 import org.powbot.om6.stalls.StallThiever
 
-class WalkToBankTask(script: StallThiever) : Task(script) {
+class WalkToBankTask(script: StallThiever) : Task(script, "Walking to Bank") {
     override fun validate(): Boolean = Inventory.isFull() &&
-            Inventory.stream().name(*script.TARGET_ITEM_NAMES_BANK.toTypedArray()).isNotEmpty() &&
-            script.BANK_TILE.distance() > 5
+            Inventory.stream().name(*script.config.itemsToBank.toTypedArray()).isNotEmpty() &&
+            script.config.bankTile.distance() > 5
 
     override fun execute() {
         script.logger.info("Inventory full, walking to bank...")
         if (Bank.opened()) Bank.close()
-        Movement.walkTo(script.BANK_TILE)
+        Movement.walkTo(script.config.bankTile)
     }
 }

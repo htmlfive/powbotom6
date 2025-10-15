@@ -6,9 +6,9 @@ import org.powbot.api.rt4.World
 import org.powbot.api.rt4.Worlds
 import org.powbot.om6.stalls.StallThiever
 
-class HandleHoppingTask(script: StallThiever) : Task(script) {
-    override fun validate(): Boolean = script.ENABLE_HOPPING &&
-            Players.local().tile() == script.THIEVING_TILE &&
+class HandleHoppingTask(script: StallThiever) : Task(script, "Hopping") {
+    override fun validate(): Boolean = script.config.enableHopping &&
+            Players.local().tile() == script.config.thievingTile &&
             Players.stream().at(Players.local().tile()).any { it != Players.local() }
 
     override fun execute() {
