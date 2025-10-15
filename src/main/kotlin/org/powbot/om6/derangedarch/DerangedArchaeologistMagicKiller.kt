@@ -61,7 +61,7 @@ class DerangedArchaeologistMagicKiller : AbstractScript() {
     val BOSS_TRIGGER_TILE = Tile(3683, 3707, 0)
     val FIGHT_START_TILE = Tile(3683, 3715, 0)
     var emergencyTeleportJustHappened: Boolean = false
-    val FEROX_BANK_AREA = Area(Tile(3128, 3638), Tile(3138, 3628))
+    val FEROX_BANK_AREA = Area(Tile(3130, 3631), Tile(3130, 3628))
     val FEROX_POOL_AREA = Area(Tile(3128, 3637), Tile(3130, 3634))
     val POOL_OF_REFRESHMENT_ID = 39651
     val REQUIRED_PRAYER = Prayer.Effect.PROTECT_FROM_MISSILES
@@ -78,6 +78,7 @@ class DerangedArchaeologistMagicKiller : AbstractScript() {
         FightTask(this),
         LootTask(this),
         PreBankEquipTask(this),
+        GoToBankTask(this), // New webwalking task
         BankTask(this),
         EquipItemsTask(this),
         DrinkFromPoolTask(this),
@@ -131,7 +132,40 @@ class DerangedArchaeologistMagicKiller : AbstractScript() {
         val nearBank = Players.local().tile().distanceTo(FEROX_BANK_AREA.centralTile) < 10
         return nearBank && !needsStatRestore()
     }
-
+    fun equipmentIsCorrect(): Boolean {
+        if (config.requiredEquipment.isEmpty()) { return true }
+        for ((requiredId, slotIndex) in config.requiredEquipment) {
+            val slot = Equipment.Slot.values()[slotIndex]
+            val wornItem = Equipment.itemAt(slot)
+            if (isDuelingRing(requiredId)) {
+                if (!wornItem.name().contains("Ring of dueling")) return false
+            } else if (isDigsitePendant(requiredId)) {
+                if (!wornItem.name().contains("Digsite pendant")) return false
+            } else {
+                if (wornItem.id() != requiredId) return false
+            }
+        }
+        return true
+    }
+    private fun isDuelingRing(id: Int): Boolean = id in 2552..2566
+    private fun isDigsitePendant(id: Int): Boolean = id in 11190..11194
+    /**
+     * Checks if the current inventory matches the setup defined in the GUI.
+     * This is now used directly by banking tasks.
+     */
+    fun inventoryIsCorrect(): Boolean {
+        if (config.requiredInventory.isEmpty()) { return true }
+        for ((id, amount) in config.requiredInventory) {
+            if (isDuelingRing(id)) {
+                if (Inventory.stream().nameContains("Ring of dueling").count(true) < amount) return false
+            } else if (isDigsitePendant(id)) {
+                if (Inventory.stream().nameContains("Digsite pendant").count(true) < amount) return false
+            } else {
+                if (Inventory.stream().id(id).count(true) < amount) return false
+            }
+        }
+        return true
+    }
 
     fun needsStatRestore(): Boolean = Prayer.prayerPoints() < Skills.realLevel(Skill.Prayer) || Combat.healthPercent() < 100
     fun getBoss(): Npc? = Npcs.stream().id(ARCHAEOLOGIST_ID).nearest().firstOrNull()
