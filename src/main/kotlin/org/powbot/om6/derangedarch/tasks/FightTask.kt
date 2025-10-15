@@ -1,39 +1,34 @@
 package org.powbot.om6.derangedarch.tasks
 
+import org.powbot.api.Area
 import org.powbot.api.Condition
+import org.powbot.api.Tile
 import org.powbot.api.rt4.*
 import org.powbot.om6.derangedarch.DerangedArchaeologistMagicKiller
 
 class FightTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
-    private val TRUNK_NAME = "Decaying trunk"
-    private val CLIMB_ACTION = "Climb"
 
+    /**
+     * This task is now strictly valid only if the boss is present and we are in the fight area.
+     */
     override fun validate(): Boolean {
-        // This task is now valid if we are at the fight start tile OR already in the boss area.
-        return (Players.local().tile() == script.FIGHT_START_TILE || script.BOSS_AREA.contains(Players.local())) && !script.needsSupplies()
+        return script.getBoss() != null
+                && Players.local().tile().distanceTo(script.BOSS_TRIGGER_TILE) <= 8
+                && !script.needsSupplies()
     }
 
     override fun execute() {
-        // --- NEW LOGIC: Entry Step ---
-        // If we are not yet in the boss area, our first job is to climb the trunk.
-        if (!script.BOSS_AREA.contains(Players.local())) {
-            script.logger.info("At final safe spot, climbing trunk...")
-            val trunk = Objects.stream().name(TRUNK_NAME).action(CLIMB_ACTION).nearest().firstOrNull()
-            if (trunk != null && trunk.interact(CLIMB_ACTION)) {
-                Condition.wait({ script.BOSS_AREA.contains(Players.local()) }, 200, 15)
-            }
-            return // End the task for this cycle to re-evaluate our position.
-        }
-
-        // --- Standard Combat Logic ---
-        val boss = script.getBoss()
-        if (boss == null || !boss.valid()) {
-            script.logger.info("Waiting for boss to spawn...")
-            Condition.sleep(1000)
+        // Prayer activation is now the first priority.
+        if (!Prayer.prayerActive(script.REQUIRED_PRAYER)) {
+            Prayer.prayer(script.REQUIRED_PRAYER, true)
+            Condition.wait({ Prayer.prayerActive(script.REQUIRED_PRAYER) }, 100, 5)
             return
         }
 
-        // 1. Prayer Potion Management
+        // Get the boss, but if it disappears mid-task, the validation will handle it next cycle.
+        val boss = script.getBoss() ?: return
+
+        // Prayer Potion Management
         if (Prayer.prayerPoints() < 30) {
             val prayerPotion = Inventory.stream().nameContains("Prayer potion").firstOrNull()
             if (prayerPotion != null && prayerPotion.interact("Drink")) {
@@ -42,22 +37,23 @@ class FightTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
             }
         }
 
-        // 2. Prayer Activation
-        if (!Prayer.prayerActive(script.REQUIRED_PRAYER)) {
-            Prayer.prayer(script.REQUIRED_PRAYER, true)
-        }
+        // Positioning
+        if (boss.distance() < 2) {
+            val playerTile = Players.local().tile()
+            val searchRadius = 5
+            val southWestTile = Tile(playerTile.x() - searchRadius, playerTile.y() - searchRadius, playerTile.floor())
+            val northEastTile = Tile(playerTile.x() + searchRadius, playerTile.y() + searchRadius, playerTile.floor())
+            val searchArea = Area(southWestTile, northEastTile)
+            val safeSpot = searchArea.tiles.filter { it.distanceTo(boss) >= 2 && it.reachable() }.randomOrNull()
 
-        // 3. Positioning
-        if (boss.distance() < 3) {
-            val safeSpot = script.BOSS_AREA.tiles.filter { it.distanceTo(boss) >= 3 && it.reachable() }.randomOrNull()
             if (safeSpot != null) {
                 Movement.step(safeSpot)
-                Condition.wait({ boss.valid() && boss.distance() >= 3 }, 100, 10)
+                Condition.wait({ boss.valid() && boss.distance() >= 2 }, 100, 10)
                 return
             }
         }
 
-        // 4. Attacking
+        // Attacking
         if (Players.local().interacting() != boss) {
             if (boss.interact("Attack")) {
                 Condition.wait({ Players.local().interacting() == boss }, 150, 10)

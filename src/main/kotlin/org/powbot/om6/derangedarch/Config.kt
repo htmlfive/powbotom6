@@ -6,5 +6,6 @@ data class Config(
     val foodName: String,
     val eatAtPercent: Int,
     val emergencyHpPercent: Int,
-    val emergencyTeleportItem: String
+    val emergencyTeleportItem: String,
+    // --- ADDED THIS LINE ---
 )

@@ -13,13 +13,12 @@ import org.powbot.om6.derangedarch.tasks.*
 @ScriptManifest(
     name = "0m6 Deranged Archaeologist (Magic)",
     description = "Kills the Archaeologist with user-defined gear and inventory setups.",
-    version = "2.2.4",
+    version = "2.4.1",
     author = "0m6",
     category = ScriptCategory.Combat
 )
 @ScriptConfiguration.List(
     [
-        // GUI Configurations remain the same...
         ScriptConfiguration(
             "Required Equipment", "Define the gear to wear.",
             optionType = OptionType.EQUIPMENT,
@@ -27,7 +26,7 @@ import org.powbot.om6.derangedarch.tasks.*
         ),
         ScriptConfiguration(
             "Required Inventory",
-            "NOTE: Define your full inventory here. You MUST include:\n- Your food\n- Prayer potions\n- Your chosen Emergency Teleport item\n- An axe and/or rake if desired.",
+            "NOTE: Define your full inventory here. You MUST include:\n- Your food\n- Prayer potions\n- Ring of dueling\n- Digsite pendant\n- Your chosen Emergency Teleport item\n- An axe and/or rake if desired.",
             optionType = OptionType.INVENTORY,
             defaultValue = "{\"8013\":1,\"1351\":1,\"5341\":1,\"11194\":1,\"2434\":4,\"385\":15,\"2552\":1}"
         ),
@@ -57,22 +56,32 @@ class DerangedArchaeologistMagicKiller : AbstractScript() {
     lateinit var teleportOptions: Map<String, TeleportOption>
     var hasAttemptedPoolDrink: Boolean = true
 
-    // Constants remain the same...
+    // --- Constants ---
     val ARCHAEOLOGIST_ID = 7806
-    val BOSS_AREA = Area(Tile(3736, 3823), Tile(3761, 3801))
+    val BOSS_TRIGGER_TILE = Tile(3683, 3707, 0)
+    val FIGHT_START_TILE = Tile(3683, 3715, 0)
+
     val FEROX_BANK_AREA = Area(Tile(3128, 3638), Tile(3138, 3628))
     val FEROX_POOL_AREA = Area(Tile(3128, 3637), Tile(3130, 3634))
     val POOL_OF_REFRESHMENT_ID = 39651
     val REQUIRED_PRAYER = Prayer.Effect.PROTECT_FROM_MISSILES
     val SPECIAL_ATTACK_PROJECTILE = 1260
     val SPECIAL_ATTACK_TEXT = "Learn to Read!"
-    val FIGHT_START_TILE = Tile(3683, 3715, 0)
 
     private var currentTask: String = "Starting..."
     private val tasks: List<Task> = listOf(
-        EmergencyTeleportTask(this), DodgeSpecialTask(this), FightTask(this), LootTask(this),
-        EatTask(this), PreBankEquipTask(this), TeleportToBankTask(this),
-        BankTask(this), EquipItemsTask(this), DrinkFromPoolTask(this), TravelToBossTask(this)
+        EmergencyTeleportTask(this),
+        DodgeSpecialTask(this),
+        DeactivatePrayerTask(this),
+        EatTask(this), // Moved up
+        FightTask(this),
+        LootTask(this),
+        PreBankEquipTask(this),
+        TeleportToBankTask(this),
+        BankTask(this),
+        EquipItemsTask(this),
+        DrinkFromPoolTask(this),
+        TravelToBossTask(this)
     )
 
     data class TeleportOption(
@@ -82,7 +91,6 @@ class DerangedArchaeologistMagicKiller : AbstractScript() {
     )
 
     override fun onStart() {
-        // onStart logic remains the same...
         config = Config(
             requiredEquipment = getOption("Required Equipment"),
             requiredInventory = getOption("Required Inventory"),
@@ -91,13 +99,15 @@ class DerangedArchaeologistMagicKiller : AbstractScript() {
             emergencyHpPercent = getOption<Integer>("Emergency Teleport HP %").toInt(),
             emergencyTeleportItem = getOption("Emergency Teleport Item")
         )
+
         teleportOptions = mapOf(
             "Teleport to house" to TeleportOption(
                 itemNameContains = "Teleport to house",
                 interaction = "Break",
-                successCondition = { !BOSS_AREA.contains(Players.local()) }
+                successCondition = { Players.local().tile().distanceTo(BOSS_TRIGGER_TILE) > 15 }
             )
         )
+
         val paint = PaintBuilder.newBuilder()
             .x(40).y(80)
             .addString("Current Task:") { currentTask }
@@ -117,14 +127,12 @@ class DerangedArchaeologistMagicKiller : AbstractScript() {
         }
     }
 
-    override fun canBreak(): Boolean = FEROX_BANK_AREA.contains(Players.local()) && !needsSupplies() && !needsStatRestore()
+    override fun canBreak(): Boolean {
+        val nearBank = Players.local().tile().distanceTo(FEROX_BANK_AREA.centralTile) < 10
+        return nearBank && !needsSupplies() && !needsStatRestore()
+    }
 
-    // --- UPDATED HELPER METHOD ---
-
-    /**
-     * Checks if a bank trip is required based on consumable supplies.
-     * Returns true if out of food, inventory is full, or out of prayer potions.
-     */
+    // --- Helper Methods ---
     fun needsSupplies(): Boolean {
         val noFood = Inventory.stream().name(config.foodName).isEmpty()
         val inventoryFull = Inventory.isFull()
@@ -137,7 +145,6 @@ class DerangedArchaeologistMagicKiller : AbstractScript() {
         return noFood || inventoryFull || noPrayerPotions
     }
 
-    // --- Unchanged Helper Methods ---
     fun needsStatRestore(): Boolean = Prayer.prayerPoints() < Skills.realLevel(Skill.Prayer) || Combat.healthPercent() < 100
     fun getBoss(): Npc? = Npcs.stream().id(ARCHAEOLOGIST_ID).nearest().firstOrNull()
 }
