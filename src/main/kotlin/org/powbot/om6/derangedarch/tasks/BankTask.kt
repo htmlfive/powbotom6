@@ -17,7 +17,7 @@ class BankTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
         }
 
         Bank.depositInventory()
-        Condition.sleep(300)
+        Condition.sleep(600)
 
         script.logger.info("Withdrawing required equipment...")
         script.config.requiredEquipment.forEach { (id, _) ->
@@ -28,7 +28,7 @@ class BankTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
                     ScriptManager.stop()
                     return@forEach // Exit the loop
                 }
-                Condition.sleep(300)
+                Condition.sleep(600)
             }
         }
 
@@ -40,7 +40,7 @@ class BankTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
                 ScriptManager.stop()
                 return@forEach // Exit the loop
             }
-            Condition.sleep(300)
+            Condition.sleep(600)
         }
 
         if (Bank.close()) {

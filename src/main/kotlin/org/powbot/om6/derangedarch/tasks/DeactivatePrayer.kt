@@ -1,7 +1,6 @@
 package org.powbot.om6.derangedarch.tasks
 
 import org.powbot.api.Condition
-import org.powbot.api.rt4.Players
 import org.powbot.api.rt4.Prayer
 import org.powbot.om6.derangedarch.DerangedArchaeologistMagicKiller
 
@@ -12,7 +11,6 @@ class DeactivatePrayerTask(script: DerangedArchaeologistMagicKiller) : Task(scri
     override fun validate(): Boolean {
         return Prayer.prayerActive(script.REQUIRED_PRAYER)
                 && script.getBoss() == null
-                && Players.local().tile().distanceTo(script.BOSS_TRIGGER_TILE) <= 8
     }
 
     override fun execute() {

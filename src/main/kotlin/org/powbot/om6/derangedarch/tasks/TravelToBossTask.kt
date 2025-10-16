@@ -84,6 +84,7 @@ class TravelToBossTask(script: DerangedArchaeologistMagicKiller) : Task(script) 
                 pendant = Inventory.stream().nameContains("Digsite pendant").firstOrNull() ?: Item.Nil
             }
             if (pendant.valid() && pendant.interact("Rub")) {
+                Condition.sleep(600)
                 if (Condition.wait({ Widgets.widget(PENDANT_WIDGET_ID).valid() }, 200, 15)) {
                     val islandOption = Widgets.widget(PENDANT_WIDGET_ID).component(PENDANT_FOSSIL_ISLAND_COMPONENT).component(PENDANT_FOSSIL_ISLAND_OPTION_INDEX)
                     if (islandOption.valid() && islandOption.click()) {
