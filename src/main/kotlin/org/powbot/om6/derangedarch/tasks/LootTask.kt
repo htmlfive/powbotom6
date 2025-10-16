@@ -1,12 +1,19 @@
 package org.powbot.om6.derangedarch.tasks
 
 import org.powbot.api.Condition
-import org.powbot.api.rt4.*
+import org.powbot.api.rt4.GrandExchange
+import org.powbot.api.rt4.GroundItem
+import org.powbot.api.rt4.GroundItems
+import org.powbot.api.rt4.Inventory
+import org.powbot.api.rt4.Players
 import org.powbot.om6.derangedarch.DerangedArchaeologistMagicKiller
 
 class LootTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
     override fun validate(): Boolean {
-        if (script.getBoss() != null || Players.local().tile().distanceTo(script.BOSS_TRIGGER_TILE) > 8) {
+        // Validation logic remains the same
+        val boss = script.getBoss()
+        val bossIsDead = boss == null || boss.healthPercent() == 0
+        if (!bossIsDead || Players.local().tile().distanceTo(script.BOSS_TRIGGER_TILE) > 8) {
             return false
         }
         return GroundItems.stream().within(Players.local(), 15).any {
@@ -34,13 +41,17 @@ class LootTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
         }
 
         if (!Inventory.isFull()) {
+            // --- THIS IS THE CORRECTED LOGIC ---
+            // 1. Calculate the value of the item *before* trying to loot it.
             val itemValue = (GrandExchange.getItemPrice(itemToLoot.id()) ?: 0) * itemToLoot.stackSize()
             script.logger.info("Looting ${itemToLoot.name()} (Value: $itemValue)")
+
             val inventoryCount = Inventory.items().size
             if (itemToLoot.interact("Take")) {
+                // 2. Wait until the item is actually in the inventory.
                 if (Condition.wait({ Inventory.items().size > inventoryCount }, 150, 10)) {
+                    // 3. Only after confirming the loot was successful, add the value to the total.
                     script.totalLootValue += itemValue
-                    // --- ADDED: 600ms delay after a successful loot ---
                     Condition.sleep(600)
                 }
             }

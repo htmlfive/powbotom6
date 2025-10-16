@@ -1,6 +1,7 @@
 package org.powbot.om6.derangedarch.tasks
 
 import org.powbot.api.Condition
+import org.powbot.api.Tile
 import org.powbot.api.rt4.*
 import org.powbot.mobile.script.ScriptManager
 import org.powbot.om6.derangedarch.DerangedArchaeologistMagicKiller
@@ -11,6 +12,10 @@ class WalkToBankAfterEmergencyTask(script: DerangedArchaeologistMagicKiller) : T
     private val DUELING_RING_WIDGET_ID = 219
     private val OPTIONS_CONTAINER_COMPONENT = 1
     private val FEROX_ENCLAVE_OPTION_INDEX = 3
+
+    // --- New constants for the two-step travel ---
+    private val FEROX_ENTRANCE_TILE = Tile(3151, 3635, 0) // The arrival point after teleporting
+    private val FEROX_BANK_TILE = Tile(3135, 3631, 0)      // The final destination inside the bank
 
     /**
      * This task is valid only if we have just emergency teleported and are not yet at the bank.
@@ -35,7 +40,12 @@ class WalkToBankAfterEmergencyTask(script: DerangedArchaeologistMagicKiller) : T
                         .component(FEROX_ENCLAVE_OPTION_INDEX)
 
                     if (enclaveOption.valid() && enclaveOption.click()) {
-                        Condition.wait({ script.FEROX_BANK_AREA.contains(Players.local()) }, 300, 20)
+                        // Step 1: Wait until we land near the Ferox Enclave entrance.
+                        if (Condition.wait({ Players.local().tile().distanceTo(FEROX_ENTRANCE_TILE) < 6 }, 300, 15)) {
+                            // Step 2: Once we've arrived, walk the rest of the way to the bank.
+                            script.logger.info("Arrived at Ferox Enclave, walking to bank chest...")
+                            Movement.walkTo(FEROX_BANK_TILE)
+                        }
                     }
                 }
             }
