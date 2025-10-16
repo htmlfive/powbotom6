@@ -10,9 +10,10 @@ class DrinkFromPoolTask(script: DerangedArchaeologistMagicKiller) : Task(script)
      * yet attempted to drink from the pool on this trip.
      */
     override fun validate(): Boolean {
-        return script.initialCheckCompleted
-                && script.FEROX_BANK_AREA.contains(Players.local())
-                && !script.hasAttemptedPoolDrink
+        // Run if we are at the bank, don't need a full restock, but do need stats.
+        return script.FEROX_BANK_AREA.contains(Players.local())
+                && !script.needsFullRestock()
+                && script.needsStatRestore()
     }
 
     override fun execute() {

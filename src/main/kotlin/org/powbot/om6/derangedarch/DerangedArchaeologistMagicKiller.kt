@@ -7,8 +7,8 @@ import org.powbot.api.rt4.*
 import org.powbot.api.rt4.walking.model.Skill
 import org.powbot.api.script.*
 import org.powbot.api.script.paint.PaintBuilder
-import org.powbot.mobile.script.ScriptManager
 import org.powbot.om6.derangedarch.tasks.*
+import java.util.concurrent.TimeUnit
 
 @ScriptManifest(
     name = "0m6 Deranged Archaeologist (Magic)",
@@ -55,7 +55,7 @@ class DerangedArchaeologistMagicKiller : AbstractScript() {
     lateinit var config: Config
     lateinit var teleportOptions: Map<String, TeleportOption>
     var hasAttemptedPoolDrink: Boolean = true
-
+    private var startTime: Long = 0
     // --- Constants ---
     val ARCHAEOLOGIST_ID = 7806
     val BOSS_TRIGGER_TILE = Tile(3683, 3707, 0)
@@ -67,30 +67,29 @@ class DerangedArchaeologistMagicKiller : AbstractScript() {
     val REQUIRED_PRAYER = Prayer.Effect.PROTECT_FROM_MISSILES
     val SPECIAL_ATTACK_PROJECTILE = 1260
     val SPECIAL_ATTACK_TEXT = "Learn to Read!"
-    var initialCheckCompleted: Boolean = false
     var totalLootValue: Long = 0
 
     private var currentTask: String = "Starting..."
     private val tasks: List<Task> = listOf(
-        // --- HIGH PRIORITY SURVIVAL & PREPARATION ---
+        // High priority survival/banking
         EmergencyTeleportTask(this),
         WalkToBankAfterEmergencyTask(this),
         GoToBankTask(this),
         BankTask(this),
+        PreBankEquipTask(this),
         EquipItemsTask(this),
         DrinkFromPoolTask(this),
 
-        // --- TRAVEL ---
+        // Travel
         TravelToBossTask(this),
 
-        // --- COMBAT ACTIONS (only run when at the boss) ---
+        // Combat
         DodgeSpecialTask(this),
         DeactivatePrayerTask(this),
         EatTask(this),
         FightTask(this),
         LootTask(this),
-        RepositionTask(this), // New task added here
-        PreBankEquipTask(this) // This runs just before an emergency teleport
+        RepositionTask(this), // This was the missing line
     )
 
     data class TeleportOption(
@@ -98,8 +97,16 @@ class DerangedArchaeologistMagicKiller : AbstractScript() {
         val interaction: String,
         val successCondition: () -> Boolean
     )
-
+    // --- NEW: Helper function to format numbers ---
+    private fun formatNumber(number: Long): String {
+        return when {
+            number >= 1_000_000 -> String.format("%.1fm", number / 1_000_000.0)
+            number >= 1_000 -> String.format("%.1fk", number / 1_000.0)
+            else -> number.toString()
+        }
+    }
     override fun onStart() {
+        startTime = System.currentTimeMillis()
         config = Config(
             requiredEquipment = getOption("Required Equipment"),
             requiredInventory = getOption("Required Inventory"),
@@ -117,14 +124,17 @@ class DerangedArchaeologistMagicKiller : AbstractScript() {
             )
         )
 
-// --- UPDATED: PaintBuilder now includes the loot tracker ---
+// --- UPDATED: PaintBuilder now uses the correct formatting function ---
         val paint = PaintBuilder.newBuilder()
             .x(40).y(80)
             .addString("Current Task:") { currentTask }
-            .trackSkill(Skill.Hitpoints)
             .trackSkill(Skill.Magic)
-            .trackSkill(Skill.Prayer)
-            .addString("Loot GP:") { totalLootValue.toString() } // New line
+            .addString("Loot GP:") { formatNumber(totalLootValue) }
+            .addString("GP/hr:") {
+                val runtime = System.currentTimeMillis() - startTime
+                val gpPerHour = if (runtime > 0) (totalLootValue * 3600000 / runtime) else 0
+                formatNumber(gpPerHour)
+            }
             .build()
         addPaint(paint)
     }
@@ -196,7 +206,9 @@ class DerangedArchaeologistMagicKiller : AbstractScript() {
     fun needsTripResupply(): Boolean {
         val noFood = Inventory.stream().name(config.foodName).isEmpty()
         val noPrayerPotions = Inventory.stream().nameContains("Prayer potion").isEmpty()
-        return noPrayerPotions || noFood
+
+        // CORRECTED: The logic is now simple. If you have no food OR no prayer potions, you need to resupply.
+        return noFood || noPrayerPotions
     }
     fun needsStatRestore(): Boolean {
         // Only consider restoring stats if we are safely at the bank.

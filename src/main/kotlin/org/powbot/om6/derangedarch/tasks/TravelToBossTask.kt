@@ -23,9 +23,11 @@ class TravelToBossTask(script: DerangedArchaeologistMagicKiller) : Task(script) 
     private val TRUNK_NAME = "Decaying trunk"
     private val CLIMB_ACTION = "Climb"
 
-    override fun validate(): Boolean = Players.local().tile().distanceTo(script.BOSS_TRIGGER_TILE) > 8
-            && !script.needsFullRestock()
-            && !script.needsStatRestore()
+    override fun validate(): Boolean {
+        val inFightZone = Players.local().tile().distanceTo(script.BOSS_TRIGGER_TILE) <= 8
+        // Run if we are not in the fight zone AND all banking/restoring is complete.
+        return !inFightZone && !script.needsFullRestock() && !script.needsStatRestore()
+    }
 
     override fun execute() {
         val player = Players.local()

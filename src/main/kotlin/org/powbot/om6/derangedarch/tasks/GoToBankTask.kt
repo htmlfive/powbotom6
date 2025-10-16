@@ -17,14 +17,17 @@ class GoToBankTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
     private val FEROX_ENTRANCE_TILE = Tile(3151, 3635, 0) // The arrival point after teleporting
     private val FEROX_BANK_TILE = Tile(3135, 3631, 0)      // The final destination inside the bank
 
+    /**
+     * This task is valid if a full restock is needed, but ONLY if we are not
+     * already at the bank or in the boss fight area.
+     */
     override fun validate(): Boolean {
-        val needsBanking = !script.initialCheckCompleted && script.needsFullRestock()
+        val needsFullRestock = script.needsFullRestock()
         val notAtBank = !script.FEROX_BANK_AREA.contains(Players.local())
-        // NEW: Check if we are outside the boss fight area.
+        // This is the key change: ensure we are not in the fight area.
         val notInFightArea = Players.local().tile().distanceTo(script.BOSS_TRIGGER_TILE) > 8
 
-        // This task now only runs on startup if a restock is needed AND we are not at the bank OR the boss area.
-        return needsBanking && notAtBank && notInFightArea
+        return needsFullRestock && notAtBank && notInFightArea
     }
 
     override fun execute() {
@@ -40,7 +43,6 @@ class GoToBankTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
                         .component(FEROX_ENCLAVE_OPTION_INDEX)
 
                     if (enclaveOption.valid() && enclaveOption.click()) {
-                        // --- UPDATED LOGIC ---
                         // Step 1: Wait until we land near the Ferox Enclave entrance.
                         if (Condition.wait({ Players.local().tile().distanceTo(FEROX_ENTRANCE_TILE) < 6 }, 300, 15)) {
                             // Step 2: Once we've arrived, walk the rest of the way to the bank.
