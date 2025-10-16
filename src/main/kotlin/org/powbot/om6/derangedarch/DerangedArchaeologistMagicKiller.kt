@@ -8,12 +8,11 @@ import org.powbot.api.rt4.walking.model.Skill
 import org.powbot.api.script.*
 import org.powbot.api.script.paint.PaintBuilder
 import org.powbot.om6.derangedarch.tasks.*
-import java.util.concurrent.TimeUnit
 
 @ScriptManifest(
     name = "0m6 Deranged Archaeologist (Magic)",
     description = "Kills the Archaeologist with user-defined gear and inventory setups.",
-    version = "2.4.1",
+    version = "2.4.2", // Incremented version
     author = "0m6",
     category = ScriptCategory.Combat
 )
@@ -26,13 +25,23 @@ import java.util.concurrent.TimeUnit
         ),
         ScriptConfiguration(
             "Required Inventory",
-            "NOTE: Define your full inventory here. You MUST include:\n- Your food\n- Prayer potions\n- Ring of dueling\n- Digsite pendant\n- Your chosen Emergency Teleport item\n- An axe and/or rake if desired.",
+            "Define your full inventory. Must include food, pots, teles, etc.",
             optionType = OptionType.INVENTORY,
             defaultValue = "{\"8013\":1,\"1351\":1,\"5341\":1,\"11194\":1,\"2434\":4,\"385\":15,\"2552\":1}"
         ),
         ScriptConfiguration(
             "Food Name", "The name of the food in your inventory setup to eat.",
             optionType = OptionType.STRING, defaultValue = "Shark"
+        ),
+        ScriptConfiguration(
+            "Always Loot", "Comma-separated list of items to loot regardless of value (e.g., Shark,Numulite).",
+            optionType = OptionType.STRING,
+            defaultValue = "Shark,Numulite"
+        ),
+        // --- ADDED: New configuration for minimum loot value ---
+        ScriptConfiguration(
+            "Minimum Loot Value", "Don't loot items worth less than this (unless in 'Always Loot').",
+            optionType = OptionType.INTEGER, defaultValue = "1000"
         ),
         ScriptConfiguration(
             "Eat At %", "What health percentage should the script eat at?",
@@ -52,11 +61,23 @@ import java.util.concurrent.TimeUnit
 )
 class DerangedArchaeologistMagicKiller : AbstractScript() {
 
+    // --- Config data class now holds all GUI settings ---
+    data class Config(
+        val requiredEquipment: Map<Int, Int>,
+        val requiredInventory: Map<Int, Int>,
+        val foodName: String,
+        val alwaysLootItems: List<String>,
+        val minLootValue: Int,
+        val eatAtPercent: Int,
+        val emergencyHpPercent: Int,
+        val emergencyTeleportItem: String
+    )
+
     lateinit var config: Config
     lateinit var teleportOptions: Map<String, TeleportOption>
     var hasAttemptedPoolDrink: Boolean = true
     private var startTime: Long = 0
-    // --- Constants ---
+
     val ARCHAEOLOGIST_ID = 7806
     val BOSS_TRIGGER_TILE = Tile(3683, 3707, 0)
     val FIGHT_START_TILE = Tile(3683, 3715, 0)
@@ -71,25 +92,10 @@ class DerangedArchaeologistMagicKiller : AbstractScript() {
 
     private var currentTask: String = "Starting..."
     private val tasks: List<Task> = listOf(
-        // High priority survival/banking
-        EmergencyTeleportTask(this),
-        WalkToBankAfterEmergencyTask(this),
-        GoToBankTask(this),
-        BankTask(this),
-        PreBankEquipTask(this),
-        EquipItemsTask(this),
-        DrinkFromPoolTask(this),
-
-        // Travel
-        TravelToBossTask(this),
-
-        // Combat
-        DodgeSpecialTask(this),
-        DeactivatePrayerTask(this),
-        EatTask(this),
-        FightTask(this),
-        LootTask(this),
-        RepositionTask(this), // This was the missing line
+        EmergencyTeleportTask(this), DeactivatePrayerTask(this), WalkToBankAfterEmergencyTask(this),
+        GoToBankTask(this), EquipItemsTask(this), BankTask(this), PreBankEquipTask(this),
+        DrinkFromPoolTask(this), TravelToBossTask(this), DodgeSpecialTask(this), EatTask(this),
+        FightTask(this), FixPitchTask(this), LootTask(this), RepositionTask(this)
     )
 
     data class TeleportOption(
@@ -97,7 +103,7 @@ class DerangedArchaeologistMagicKiller : AbstractScript() {
         val interaction: String,
         val successCondition: () -> Boolean
     )
-    // --- NEW: Helper function to format numbers ---
+
     private fun formatNumber(number: Long): String {
         return when {
             number >= 1_000_000 -> String.format("%.1fm", number / 1_000_000.0)
@@ -107,12 +113,22 @@ class DerangedArchaeologistMagicKiller : AbstractScript() {
     }
     override fun onStart() {
         startTime = System.currentTimeMillis()
+
+        // --- CORRECTED LOGIC ---
+        // First, get the "Always Loot" option as a single String.
+        val alwaysLootString = getOption<String>("Always Loot") ?: ""
+
+        // Then, split that string into a list, removing any empty parts.
+        val alwaysLootList = alwaysLootString.split(",").map { it.trim() }.filter { it.isNotBlank() }
+
         config = Config(
             requiredEquipment = getOption("Required Equipment"),
             requiredInventory = getOption("Required Inventory"),
             foodName = getOption("Food Name"),
-            eatAtPercent = getOption<Integer>("Eat At %").toInt(),
-            emergencyHpPercent = getOption<Integer>("Emergency Teleport HP %").toInt(),
+            alwaysLootItems = alwaysLootList, // Assign the list we just created
+            minLootValue = getOption<Int>("Minimum Loot Value"), // Use kotlin.Int
+            eatAtPercent = getOption<Int>("Eat At %"), // Use kotlin.Int
+            emergencyHpPercent = getOption<Int>("Emergency Teleport HP %"), // Use kotlin.Int
             emergencyTeleportItem = getOption("Emergency Teleport Item")
         )
 
@@ -124,7 +140,6 @@ class DerangedArchaeologistMagicKiller : AbstractScript() {
             )
         )
 
-// --- UPDATED: PaintBuilder now uses the correct formatting function ---
         val paint = PaintBuilder.newBuilder()
             .x(40).y(80)
             .addString("Current Task:") { currentTask }
@@ -149,7 +164,6 @@ class DerangedArchaeologistMagicKiller : AbstractScript() {
             Condition.sleep(150)
         }
     }
-
     override fun canBreak(): Boolean {
         val nearBank = Players.local().tile().distanceTo(FEROX_BANK_AREA.centralTile) < 10
         return nearBank && !needsStatRestore()

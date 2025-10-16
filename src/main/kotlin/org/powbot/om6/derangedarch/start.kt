@@ -1,5 +1,4 @@
 package org.powbot.om6.derangedarch
-import org.powbot.om6.derangedarch.*
 
 fun main() {
     val script = DerangedArchaeologistMagicKiller()

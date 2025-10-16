@@ -17,7 +17,8 @@ class DrinkFromPoolTask(script: DerangedArchaeologistMagicKiller) : Task(script)
     }
 
     override fun execute() {
-        // First, check if we even need to restore stats. If not, we can skip this and proceed.
+        // This initial check is a good safeguard. If stats are already full,
+        // we just set the flag and move on.
         if (!script.needsStatRestore()) {
             script.logger.info("Stats are already full, skipping pool.")
             script.hasAttemptedPoolDrink = true
@@ -30,7 +31,14 @@ class DrinkFromPoolTask(script: DerangedArchaeologistMagicKiller) : Task(script)
         if (pool != null) {
             if (pool.inViewport()) {
                 if (pool.interact("Drink")) {
-                    Condition.wait({ !script.needsStatRestore() }, 150, 20)
+                    // Wait for the stats to actually restore and capture the result.
+                    val restoredSuccessfully = Condition.wait({ !script.needsStatRestore() }, 150, 20)
+
+                    // If restoration was successful, add the 1200ms delay.
+                    if (restoredSuccessfully) {
+                        script.logger.info("Stats restored. Waiting for 1200ms...")
+                        Condition.sleep(1200)
+                    }
                 }
             } else {
                 Movement.walkTo(script.FEROX_POOL_AREA.randomTile)

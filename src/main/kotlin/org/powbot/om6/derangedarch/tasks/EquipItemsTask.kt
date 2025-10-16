@@ -2,42 +2,49 @@ package org.powbot.om6.derangedarch.tasks
 
 import org.powbot.api.Condition
 import org.powbot.api.rt4.Bank
+import org.powbot.api.rt4.Equipment
 import org.powbot.api.rt4.Inventory
 import org.powbot.om6.derangedarch.DerangedArchaeologistMagicKiller
 
 class EquipItemsTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
-    /**
-     * This task now validates ONLY if there's an item in the inventory
-     * that is also a key in the user's "Required Equipment" map.
-     * This prevents it from activating for items like rings or tools.
-     */
     override fun validate(): Boolean {
-        // Don't run if the bank is open.
         if (Bank.opened()) return false
-
-        // Get the list of IDs for the gear we are *supposed* to be wearing.
         val requiredEquipmentIds = script.config.requiredEquipment.keys
-
-        // Return true only if an item in our inventory matches one of those required IDs.
         return Inventory.stream().any { it.id() in requiredEquipmentIds }
     }
 
-    /**
-     * This task now filters the inventory and ONLY interacts with items
-     * that are part of the "Required Equipment" setup.
-     */
     override fun execute() {
-        script.logger.info("Equipping required combat gear from inventory...")
+        script.logger.info("Equipping required gear from inventory...")
         val requiredEquipmentIds = script.config.requiredEquipment.keys
 
         Inventory.stream()
-            // IMPORTANT: Filter the inventory to only include items that are part of our defined combat gear.
             .filter { it.id() in requiredEquipmentIds }
             .forEach { itemToEquip ->
-                // The action is typically "Wear", but "Wield" is a fallback for weapons.
-                if (itemToEquip.interact("Wear") || itemToEquip.interact("Wield")) {
-                    // Wait a moment for the equip action to complete before trying the next item.
-                    Condition.sleep(250)
+                val actions = itemToEquip.actions()
+                var equipped = false
+
+                // Prioritize "Wield" for weapons
+                if ("Wield" in actions) {
+                    if (itemToEquip.interact("Wield")) {
+                        // Wait for the item to actually be equipped
+                        equipped = Condition.wait({ Equipment.stream().id(itemToEquip.id()).isNotEmpty() }, 250, 10)
+                    }
+                    // Fallback to "Wear" for armor, capes, etc.
+                } else if ("Wear" in actions) {
+                    if (itemToEquip.interact("Wear")) {
+                        equipped = Condition.wait({ Equipment.stream().id(itemToEquip.id()).isNotEmpty() }, 250, 10)
+                    }
+                    // ADDED: Fallback for "Equip" for ammo, blessings, etc.
+                } else if ("Equip" in actions) {
+                    if (itemToEquip.interact("Equip")) {
+                        equipped = Condition.wait({ Equipment.stream().id(itemToEquip.id()).isNotEmpty() }, 250, 10)
+                    }
+                }
+
+                if (equipped) {
+                    script.logger.info("Successfully equipped ${itemToEquip.name()}.")
+                } else {
+                    script.logger.warn("Failed to equip ${itemToEquip.name()}. Could not find a valid action.")
                 }
             }
     }
