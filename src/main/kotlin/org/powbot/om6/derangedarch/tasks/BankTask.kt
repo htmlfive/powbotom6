@@ -2,12 +2,10 @@ package org.powbot.om6.derangedarch.tasks
 
 import org.powbot.api.Condition
 import org.powbot.api.rt4.*
-import org.powbot.mobile.script.ScriptManager
 import org.powbot.om6.derangedarch.DerangedArchaeologistMagicKiller
 
 class BankTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
     override fun validate(): Boolean {
-        // Validate if we are in the bank area AND we need a restock or just teleported.
         return script.FEROX_BANK_AREA.contains(Players.local()) && (script.needsFullRestock() || script.emergencyTeleportJustHappened)
     }
 
@@ -31,7 +29,6 @@ class BankTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
 
             missingEquipmentIds.forEach { id ->
                 script.logger.info("Withdrawing item ID: $id")
-                // MODIFIED: If withdraw fails, log a warning and exit the loop instead of stopping the script.
                 if (!Bank.withdraw(id, 1)) {
                     script.logger.warn("WARNING: Could not withdraw required equipment ID: $id. Exiting equipment withdrawal.")
                     return@forEach // Exit the loop on failure
@@ -40,8 +37,6 @@ class BankTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
                 Condition.wait({ Inventory.stream().id(id).isNotEmpty() }, 250, 10)
             }
 
-            // IMPORTANT: Close the bank to allow the EquipItemsTask to run.
-            // The banking process will "restart" on the next task loop.
             Bank.close()
             return
         }

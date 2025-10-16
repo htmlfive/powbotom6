@@ -10,9 +10,9 @@ import org.powbot.api.script.paint.PaintBuilder
 import org.powbot.om6.derangedarch.tasks.*
 
 @ScriptManifest(
-    name = "0m6 Deranged Archaeologist (Magic)",
+    name = "0m6 Deranged Archaeologist",
     description = "Kills the Archaeologist with user-defined gear and inventory setups.",
-    version = "2.4.2", // Incremented version
+    version = "2.4.2",
     author = "0m6",
     category = ScriptCategory.Combat
 )
@@ -25,7 +25,7 @@ import org.powbot.om6.derangedarch.tasks.*
         ),
         ScriptConfiguration(
             "Required Inventory",
-            "Define your full inventory. Must include food, pots, teles, etc.",
+            "Define your full inventory. Must include an axe, some food, prayer pots, ring of dueling, emergency teleport",
             optionType = OptionType.INVENTORY,
             defaultValue = "{\"8013\":1,\"1351\":1,\"5341\":1,\"11194\":1,\"2434\":4,\"385\":15,\"2552\":1}"
         ),
@@ -38,7 +38,6 @@ import org.powbot.om6.derangedarch.tasks.*
             optionType = OptionType.STRING,
             defaultValue = "Shark,Numulite"
         ),
-        // --- ADDED: New configuration for minimum loot value ---
         ScriptConfiguration(
             "Minimum Loot Value", "Don't loot items worth less than this (unless in 'Always Loot').",
             optionType = OptionType.INTEGER, defaultValue = "1000"
@@ -54,14 +53,13 @@ import org.powbot.om6.derangedarch.tasks.*
         ScriptConfiguration(
             "Emergency Teleport Item", "Select the item to use for emergency teleports.",
             optionType = OptionType.STRING,
-            defaultValue = "Teleport to house",
+            defaultValue = "Ectophial",
             allowedValues = ["Teleport to house", "Ectophial"]
         )
     ]
 )
 class DerangedArchaeologistMagicKiller : AbstractScript() {
 
-    // --- Config data class now holds all GUI settings ---
     data class Config(
         val requiredEquipment: Map<Int, Int>,
         val requiredInventory: Map<Int, Int>,
@@ -75,27 +73,38 @@ class DerangedArchaeologistMagicKiller : AbstractScript() {
 
     lateinit var config: Config
     lateinit var teleportOptions: Map<String, TeleportOption>
-    var hasAttemptedPoolDrink: Boolean = true
     private var startTime: Long = 0
 
     val ARCHAEOLOGIST_ID = 7806
     val BOSS_TRIGGER_TILE = Tile(3683, 3707, 0)
-    val FIGHT_START_TILE = Tile(3683, 3715, 0)
-    var emergencyTeleportJustHappened: Boolean = false
     val FEROX_BANK_AREA = Area(Tile(3123, 3623, 0), Tile(3143, 3643, 0))
     val FEROX_POOL_AREA = Area(Tile(3128, 3637), Tile(3130, 3634))
     val POOL_OF_REFRESHMENT_ID = 39651
     val REQUIRED_PRAYER = Prayer.Effect.PROTECT_FROM_MISSILES
     val SPECIAL_ATTACK_PROJECTILE = 1260
     val SPECIAL_ATTACK_TEXT = "Learn to Read!"
+
     var totalLootValue: Long = 0
+    var hasAttemptedPoolDrink: Boolean = true
+    var emergencyTeleportJustHappened: Boolean = false
 
     private var currentTask: String = "Starting..."
     private val tasks: List<Task> = listOf(
-        EmergencyTeleportTask(this), DeactivatePrayerTask(this), WalkToBankAfterEmergencyTask(this),
-        GoToBankTask(this), EquipItemsTask(this), BankTask(this), PreBankEquipTask(this),
-        DrinkFromPoolTask(this), TravelToBossTask(this), DodgeSpecialTask(this), EatTask(this),
-        FightTask(this), FixPitchTask(this), LootTask(this), RepositionTask(this)
+        EmergencyTeleportTask(this),
+        DeactivatePrayerTask(this),
+        WalkToBankAfterEmergencyTask(this),
+        GoToBankTask(this),
+        EquipItemsTask(this),
+        BankTask(this),
+        PreBankEquipTask(this),
+        DrinkFromPoolTask(this),
+        TravelToBossTask(this),
+        DodgeSpecialTask(this),
+        EatTask(this),
+        FightTask(this),
+        FixPitchTask(this),
+        LootTask(this),
+        RepositionTask(this)
     )
 
     data class TeleportOption(
@@ -114,11 +123,8 @@ class DerangedArchaeologistMagicKiller : AbstractScript() {
     override fun onStart() {
         startTime = System.currentTimeMillis()
 
-        // --- CORRECTED LOGIC ---
-        // First, get the "Always Loot" option as a single String.
         val alwaysLootString = getOption<String>("Always Loot") ?: ""
 
-        // Then, split that string into a list, removing any empty parts.
         val alwaysLootList = alwaysLootString.split(",").map { it.trim() }.filter { it.isNotBlank() }
 
         config = Config(
@@ -136,6 +142,11 @@ class DerangedArchaeologistMagicKiller : AbstractScript() {
             "Teleport to house" to TeleportOption(
                 itemNameContains = "Teleport to house",
                 interaction = "Break",
+                successCondition = { Players.local().tile().distanceTo(BOSS_TRIGGER_TILE) > 15 }
+            ),
+            "Empty" to TeleportOption(
+                itemNameContains = "Ectophial",
+                interaction = "Empty",
                 successCondition = { Players.local().tile().distanceTo(BOSS_TRIGGER_TILE) > 15 }
             )
         )
@@ -164,10 +175,12 @@ class DerangedArchaeologistMagicKiller : AbstractScript() {
             Condition.sleep(150)
         }
     }
+
     override fun canBreak(): Boolean {
         val nearBank = Players.local().tile().distanceTo(FEROX_BANK_AREA.centralTile) < 10
         return nearBank && !needsStatRestore()
     }
+
     fun equipmentIsCorrect(): Boolean {
         if (config.requiredEquipment.isEmpty()) { return true }
         for ((requiredId, slotIndex) in config.requiredEquipment) {
@@ -183,12 +196,10 @@ class DerangedArchaeologistMagicKiller : AbstractScript() {
         }
         return true
     }
+
     private fun isDuelingRing(id: Int): Boolean = id in 2552..2566
     private fun isDigsitePendant(id: Int): Boolean = id in 11190..11194
-    /**
-     * Checks if the current inventory matches the setup defined in the GUI.
-     * This is now used directly by banking tasks.
-     */
+
     fun inventoryIsCorrect(): Boolean {
         if (config.requiredInventory.isEmpty()) { return true }
         for ((id, amount) in config.requiredInventory) {
@@ -206,26 +217,13 @@ class DerangedArchaeologistMagicKiller : AbstractScript() {
         return !equipmentIsCorrect() || !inventoryIsCorrect()
     }
 
-    /**
-     * Checks for mid-trip resupply conditions.
-     * Returns true only if out of food, out of prayer potions, or full inventory with no food.
-     */
-    fun needsTripSupplies(): Boolean {
-        val noFood = Inventory.stream().name(config.foodName).isEmpty()
-        val inventoryFull = Inventory.isFull()
-        val noPrayerPotions = Inventory.stream().nameContains("Prayer potion").isEmpty()
-
-        return noPrayerPotions || noFood || (inventoryFull && !noFood)
-    }
     fun needsTripResupply(): Boolean {
         val noFood = Inventory.stream().name(config.foodName).isEmpty()
         val noPrayerPotions = Inventory.stream().nameContains("Prayer potion").isEmpty()
 
-        // CORRECTED: The logic is now simple. If you have no food OR no prayer potions, you need to resupply.
         return noFood || noPrayerPotions
     }
     fun needsStatRestore(): Boolean {
-        // Only consider restoring stats if we are safely at the bank.
         if (!FEROX_BANK_AREA.contains(Players.local())) {
             return false
         }
