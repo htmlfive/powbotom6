@@ -9,10 +9,6 @@ import org.powbot.om6.derangedarch.DerangedArchaeologistMagicKiller
 class TravelToBossTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
 
     // --- Constants for travel logic ---
-    private val TRUNK_SAFE_TILE = Tile(3683, 3717, 0)
-    private val TRUNK_NAME = "Decaying trunk"
-    private val CLIMB_ACTION = "Climb"
-    // ... other constants ...
     private val PENDANT_WIDGET_ID = 219
     private val PENDANT_FOSSIL_ISLAND_COMPONENT = 1
     private val PENDANT_FOSSIL_ISLAND_OPTION_INDEX = 2
@@ -23,27 +19,25 @@ class TravelToBossTask(script: DerangedArchaeologistMagicKiller) : Task(script) 
     private val SECOND_MUSHTREE_ID = 30924
     private val VINE_OBJECT_TILE = Tile(3680, 3743, 0)
     private val POST_VINE_STEP_TILE = Tile(3680, 3725, 0)
+    private val TRUNK_SAFE_TILE = Tile(3683, 3717, 0)
+    private val TRUNK_NAME = "Decaying trunk"
+    private val CLIMB_ACTION = "Climb"
 
-    /**
-     * This task is valid as long as we are more than 8 tiles away from the trigger spot.
-     */
     override fun validate(): Boolean = Players.local().tile().distanceTo(script.BOSS_TRIGGER_TILE) > 8
-            && script.hasAttemptedPoolDrink
+            && !script.needsFullRestock()
+            && !script.needsStatRestore()
 
     override fun execute() {
         val player = Players.local()
 
-        // The final step is to climb the trunk.
         if (player.tile().distanceTo(TRUNK_SAFE_TILE) < 5) {
             val trunk = Objects.stream().name(TRUNK_NAME).action(CLIMB_ACTION).nearest().firstOrNull()
             if (trunk != null && trunk.interact(CLIMB_ACTION)) {
-                // Wait until we arrive within 8 tiles of our destination.
                 Condition.wait({ player.tile().distanceTo(script.BOSS_TRIGGER_TILE) <= 8 }, 200, 15)
             }
             return
         }
 
-        // ... rest of the travel logic to get to the trunk remains the same ...
         if (!Movement.running() && Movement.energyLevel() > 40) Movement.running(true)
         val onFossilIsland = Objects.stream().id(MAGIC_MUSHTREE_ID, SECOND_MUSHTREE_ID).isNotEmpty() || player.tile().distanceTo(TRUNK_SAFE_TILE) < 200
         if (onFossilIsland) {
@@ -68,8 +62,11 @@ class TravelToBossTask(script: DerangedArchaeologistMagicKiller) : Task(script) 
             }
             val firstMushtree = Objects.stream().id(MAGIC_MUSHTREE_ID).nearest().firstOrNull()
             if (firstMushtree != null && firstMushtree.distance() < 20) {
-                if (firstMushtree.interact("Use")) {
+                // CORRECTED: Only interact with the mushtree if the player is not moving.
+                if (!player.inMotion() && firstMushtree.interact("Use")) {
                     if (Condition.wait({ Widgets.widget(MUSHTREE_INTERFACE_ID).valid() }, 200, 15)) {
+                        // CORRECTED: Added the 600ms delay before clicking the widget.
+                        Condition.sleep(600)
                         val swampOption = Widgets.widget(MUSHTREE_INTERFACE_ID).component(MUSHTREE_SWAMP_OPTION_COMPONENT)
                         if (swampOption.valid() && swampOption.click()) {
                             Condition.wait({ Objects.stream().id(SECOND_MUSHTREE_ID).isNotEmpty() }, 300, 10)

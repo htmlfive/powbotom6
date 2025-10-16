@@ -9,25 +9,26 @@ import org.powbot.om6.derangedarch.DerangedArchaeologistMagicKiller
 class FightTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
 
     /**
-     * This task is now strictly valid only if the boss is present and we are in the fight area.
+     * This task is now ONLY valid if we are in the fight area AND the boss is present.
      */
     override fun validate(): Boolean {
         return script.getBoss() != null
                 && Players.local().tile().distanceTo(script.BOSS_TRIGGER_TILE) <= 8
+                && !script.needsTripResupply()
     }
 
     override fun execute() {
-        // Prayer activation is now the first priority.
+        // --- Prayer Activation ---
         if (!Prayer.prayerActive(script.REQUIRED_PRAYER)) {
             Prayer.prayer(script.REQUIRED_PRAYER, true)
             Condition.wait({ Prayer.prayerActive(script.REQUIRED_PRAYER) }, 100, 5)
             return
         }
 
-        // Get the boss, but if it disappears mid-task, the validation will handle it next cycle.
+        // The validation already confirms the boss exists, so we can safely use it.
         val boss = script.getBoss() ?: return
 
-        // Prayer Potion Management
+        // --- Prayer Potion Management ---
         if (Prayer.prayerPoints() < 30) {
             val prayerPotion = Inventory.stream().nameContains("Prayer potion").firstOrNull()
             if (prayerPotion != null && prayerPotion.interact("Drink")) {
@@ -36,7 +37,7 @@ class FightTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
             }
         }
 
-        // Positioning
+        // --- Positioning ---
         if (boss.distance() < 2) {
             val playerTile = Players.local().tile()
             val searchRadius = 5
@@ -52,8 +53,11 @@ class FightTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
             }
         }
 
-        // Attacking
+        // --- Attacking ---
         if (Players.local().interacting() != boss) {
+            if (!boss.inViewport()) {
+                Camera.turnTo(boss)
+            }
             if (boss.interact("Attack")) {
                 Condition.wait({ Players.local().interacting() == boss }, 150, 10)
             }

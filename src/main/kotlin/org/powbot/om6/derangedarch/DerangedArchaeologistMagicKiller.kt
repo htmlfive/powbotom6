@@ -61,28 +61,36 @@ class DerangedArchaeologistMagicKiller : AbstractScript() {
     val BOSS_TRIGGER_TILE = Tile(3683, 3707, 0)
     val FIGHT_START_TILE = Tile(3683, 3715, 0)
     var emergencyTeleportJustHappened: Boolean = false
-    val FEROX_BANK_AREA = Area(Tile(3130, 3631), Tile(3130, 3628))
+    val FEROX_BANK_AREA = Area(Tile(3123, 3623, 0), Tile(3143, 3643, 0))
     val FEROX_POOL_AREA = Area(Tile(3128, 3637), Tile(3130, 3634))
     val POOL_OF_REFRESHMENT_ID = 39651
     val REQUIRED_PRAYER = Prayer.Effect.PROTECT_FROM_MISSILES
     val SPECIAL_ATTACK_PROJECTILE = 1260
     val SPECIAL_ATTACK_TEXT = "Learn to Read!"
+    var initialCheckCompleted: Boolean = false
+    var totalLootValue: Long = 0
 
     private var currentTask: String = "Starting..."
     private val tasks: List<Task> = listOf(
+        // --- HIGH PRIORITY SURVIVAL & PREPARATION ---
         EmergencyTeleportTask(this),
-        WalkToBankAfterEmergencyTask(this), // New recovery task
-        DodgeSpecialTask(this),
-        DeactivatePrayerTask(this),
-        EatTask(this), // Moved up
-        FightTask(this),
-        LootTask(this),
-        PreBankEquipTask(this),
-        GoToBankTask(this), // New webwalking task
+        WalkToBankAfterEmergencyTask(this),
+        GoToBankTask(this),
         BankTask(this),
         EquipItemsTask(this),
         DrinkFromPoolTask(this),
-        TravelToBossTask(this)
+
+        // --- TRAVEL ---
+        TravelToBossTask(this),
+
+        // --- COMBAT ACTIONS (only run when at the boss) ---
+        DodgeSpecialTask(this),
+        DeactivatePrayerTask(this),
+        EatTask(this),
+        FightTask(this),
+        LootTask(this),
+        RepositionTask(this), // New task added here
+        PreBankEquipTask(this) // This runs just before an emergency teleport
     )
 
     data class TeleportOption(
@@ -109,10 +117,14 @@ class DerangedArchaeologistMagicKiller : AbstractScript() {
             )
         )
 
+// --- UPDATED: PaintBuilder now includes the loot tracker ---
         val paint = PaintBuilder.newBuilder()
             .x(40).y(80)
             .addString("Current Task:") { currentTask }
-            .trackSkill(Skill.Hitpoints).trackSkill(Skill.Magic).trackSkill(Skill.Prayer)
+            .trackSkill(Skill.Hitpoints)
+            .trackSkill(Skill.Magic)
+            .trackSkill(Skill.Prayer)
+            .addString("Loot GP:") { totalLootValue.toString() } // New line
             .build()
         addPaint(paint)
     }
@@ -166,7 +178,34 @@ class DerangedArchaeologistMagicKiller : AbstractScript() {
         }
         return true
     }
+    fun needsFullRestock(): Boolean {
+        return !equipmentIsCorrect() || !inventoryIsCorrect()
+    }
 
-    fun needsStatRestore(): Boolean = Prayer.prayerPoints() < Skills.realLevel(Skill.Prayer) || Combat.healthPercent() < 100
-    fun getBoss(): Npc? = Npcs.stream().id(ARCHAEOLOGIST_ID).nearest().firstOrNull()
+    /**
+     * Checks for mid-trip resupply conditions.
+     * Returns true only if out of food, out of prayer potions, or full inventory with no food.
+     */
+    fun needsTripSupplies(): Boolean {
+        val noFood = Inventory.stream().name(config.foodName).isEmpty()
+        val inventoryFull = Inventory.isFull()
+        val noPrayerPotions = Inventory.stream().nameContains("Prayer potion").isEmpty()
+
+        return noPrayerPotions || noFood || (inventoryFull && !noFood)
+    }
+    fun needsTripResupply(): Boolean {
+        val noFood = Inventory.stream().name(config.foodName).isEmpty()
+        val noPrayerPotions = Inventory.stream().nameContains("Prayer potion").isEmpty()
+        return noPrayerPotions || noFood
+    }
+    fun needsStatRestore(): Boolean {
+        // Only consider restoring stats if we are safely at the bank.
+        if (!FEROX_BANK_AREA.contains(Players.local())) {
+            return false
+        }
+        val prayerNotFull = Prayer.prayerPoints() < Skills.realLevel(Skill.Prayer)
+        val healthNotFull = Combat.healthPercent() < 100
+
+        return prayerNotFull || healthNotFull
+    }    fun getBoss(): Npc? = Npcs.stream().id(ARCHAEOLOGIST_ID).nearest().firstOrNull()
 }

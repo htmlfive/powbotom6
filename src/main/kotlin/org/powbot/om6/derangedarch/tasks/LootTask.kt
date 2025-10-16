@@ -3,7 +3,6 @@ package org.powbot.om6.derangedarch.tasks
 import org.powbot.api.Condition
 import org.powbot.api.rt4.GrandExchange
 import org.powbot.api.rt4.GroundItems
-import org.powbot.api.rt4.GroundItem
 import org.powbot.api.rt4.Inventory
 import org.powbot.api.rt4.Players
 import org.powbot.om6.derangedarch.DerangedArchaeologistMagicKiller
@@ -11,8 +10,10 @@ import org.powbot.om6.derangedarch.DerangedArchaeologistMagicKiller
 class LootTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
 
     /**
-     * Validates if the boss is dead and if there is at least one item nearby (excluding bones)
-     * with a GE value > 1000 gp.
+     * Validates if the boss is dead and if there are valuable items to loot.
+     * Valuable items are:
+     * 1. Any single item/stack worth > 1000 gp (excluding bones).
+     * 2. Numulite, but only if we already have some in our inventory.
      */
     override fun validate(): Boolean {
         // Task is only valid if we are in the fight area and the boss is NOT present.
@@ -20,21 +21,35 @@ class LootTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
             return false
         }
 
-        // Check if there is ANY valuable item on the ground.
-        return GroundItems.stream().within(Players.local(), 15).any {
+        // Check for any item (not bones) with a GE value > 1000 gp.
+        val hasValuableLoot = GroundItems.stream().within(Players.local(), 15).any {
             it.name() != "Bones" && (GrandExchange.getItemPrice(it.id()) ?: 0) * it.stackSize() > 1000
         }
+
+        // Check if we are in a state to loot Numulite (we have some in inventory and there is some on the ground).
+        val canLootNumulite = Inventory.stream().name("Numulite").isNotEmpty() && GroundItems.stream().name("Numulite").isNotEmpty()
+
+        return hasValuableLoot || canLootNumulite
     }
 
     override fun execute() {
-        // Find the nearest valuable item that is NOT bones.
+        // Determine if we are in a state where we should be looting Numulite.
+        val shouldLootNumulite = Inventory.stream().name("Numulite").isNotEmpty()
+
+        // Find the nearest lootable item based on our rules.
         val itemToLoot = GroundItems.stream()
             .within(Players.local(), 15)
-            .filter { it.name() != "Bones" && (GrandExchange.getItemPrice(it.id()) ?: 0) * it.stackSize() > 1000 }
+            .filter {
+                val itemName = it.name()
+                // Condition 1: The item must not be "Bones".
+                itemName != "Bones" &&
+                        // Condition 2: The item is valuable OR it's Numulite and we have given it permission to be looted.
+                        ( (GrandExchange.getItemPrice(it.id()) ?: 0) * it.stackSize() > 1000 || (itemName == "Numulite" && shouldLootNumulite) )
+            }
             .minByOrNull { it.distance() }
 
         if (itemToLoot == null) {
-            script.logger.info("Valuable loot disappeared before it could be picked up.")
+            script.logger.info("Valuable loot may have disappeared before it could be picked up.")
             return
         }
 
@@ -44,12 +59,11 @@ class LootTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
             if (food != null) {
                 script.logger.info("Inventory full, eating ${food.name()} to make space for loot.")
                 if (food.interact("Eat")) {
-                    // Wait until a space is free.
                     Condition.wait({ !Inventory.isFull() }, 150, 10)
                 }
             } else {
                 script.logger.warn("Inventory full and no food to eat for space! Skipping loot.")
-                return // Can't loot, so stop.
+                return
             }
         }
 

@@ -9,6 +9,9 @@ class EmergencyTeleportTask(script: DerangedArchaeologistMagicKiller) : Task(scr
     private var reason = ""
 
     override fun validate(): Boolean {
+        // This task should only run after the initial setup is complete.
+        if (!script.initialCheckCompleted) return false
+
         // Don't trigger if we are already safe at the bank.
         if (script.FEROX_BANK_AREA.contains(Players.local())) return false
 
@@ -16,19 +19,22 @@ class EmergencyTeleportTask(script: DerangedArchaeologistMagicKiller) : Task(scr
         if (Players.local().tile().distanceTo(script.BOSS_TRIGGER_TILE) > 8) return false
 
         val lowHp = Combat.healthPercent() < script.config.emergencyHpPercent
-        val lowPrayer = Prayer.prayerPoints() < 10
-        val noFood = Inventory.stream().name(script.config.foodName).isEmpty()
-        val noPrayerPotions = Inventory.stream().nameContains("Prayer potion").isEmpty()
-        val inventoryFull = Inventory.isFull()
+        val lowPrayerNoPots = Prayer.prayerPoints() < 10 && Inventory.stream().nameContains("Prayer potion").isEmpty()
 
-        // Determine the reason for teleporting
+        // Use the less-strict mid-trip resupply check.
+        val needsResupply = script.needsTripResupply()
+
+        // Determine the reason for teleporting to provide a clear log message.
         if (lowHp) reason = "HP is critical (${Combat.healthPercent()}%)"
-        else if (lowPrayer && noPrayerPotions) reason = "Prayer is critical (${Prayer.prayerPoints()}) and out of potions"
-        else if (noFood) reason = "Out of food"
-        else if (noPrayerPotions) reason = "Out of prayer potions"
-        else if (inventoryFull) reason = "Inventory is full"
+        else if (lowPrayerNoPots) reason = "Prayer is critical and out of potions"
+        else if (needsResupply) {
+            if (Inventory.isFull() && Inventory.stream().name(script.config.foodName).isEmpty()) reason = "Inventory full with no food"
+            else if (Inventory.stream().nameContains("Prayer potion").isEmpty()) reason = "Out of prayer potions"
+            else if (Inventory.stream().name(script.config.foodName).isEmpty()) reason = "Out of food"
+            else reason = "Resupply needed" // Fallback reason
+        }
 
-        return lowHp || (lowPrayer && noPrayerPotions) || noFood || noPrayerPotions || inventoryFull
+        return lowHp || lowPrayerNoPots || needsResupply
     }
 
     override fun execute() {
@@ -42,6 +48,7 @@ class EmergencyTeleportTask(script: DerangedArchaeologistMagicKiller) : Task(scr
         val teleItem = Inventory.stream().nameContains(teleport.itemNameContains).firstOrNull()
         if (teleItem != null) {
             if (teleItem.interact(teleport.interaction)) {
+                // Wait for the teleport to succeed.
                 if (Condition.wait(teleport.successCondition, 300, 20)) {
                     // Set the flag to trigger the walk-back and re-banking sequence.
                     script.emergencyTeleportJustHappened = true

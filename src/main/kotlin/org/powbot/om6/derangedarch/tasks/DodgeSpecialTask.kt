@@ -20,22 +20,7 @@ class DodgeSpecialTask(script: DerangedArchaeologistMagicKiller) : Task(script) 
     override fun execute() {
         val player = Players.local()
 
-        // --- NEW: High-priority health check ---
-        // Before doing anything else, check if we need to eat.
-        if (Combat.healthPercent() < script.config.eatAtPercent) {
-            script.logger.info("Health is low during special attack, eating first!")
-            val food = Inventory.stream().name(script.config.foodName).firstOrNull()
-            if (food != null && food.interact("Eat")) {
-                // Wait for health to increase before proceeding.
-                Condition.wait({ Combat.healthPercent() > script.config.eatAtPercent + 10 }, 150, 5)
-            }
-            // End the task for this cycle to prioritize eating.
-            // The task will re-validate and run the dodge logic on the next tick.
-            return
-        }
-
-        // --- Standard Dodge Logic ---
-        // If we are already moving, we are in the process of dodging. Do nothing.
+        // If we are already moving, we are mid-dodge. Do nothing.
         if (player.inMotion()) {
             return
         }
@@ -57,7 +42,22 @@ class DodgeSpecialTask(script: DerangedArchaeologistMagicKiller) : Task(script) 
 
         if (safeTile != null) {
             if (Movement.step(safeTile)) {
-                Condition.wait({ player.inMotion() }, 150, 5)
+                // Wait until we have stopped moving (arrived at the destination).
+                if (Condition.wait({ !player.inMotion() }, 150, 20)) {
+
+                    // --- NEW LOGIC: Immediately re-attack after dodging ---
+                    script.logger.info("Dodge move complete, re-engaging boss...")
+                    val currentBoss = script.getBoss() // Get a fresh reference to the boss
+                    if (currentBoss != null && currentBoss.valid()) {
+                        if (!currentBoss.inViewport()) {
+                            Camera.turnTo(currentBoss)
+                        }
+                        if (currentBoss.interact("Attack")) {
+                            // Wait briefly to confirm we are interacting.
+                            Condition.wait({ player.interacting() == currentBoss }, 150, 10)
+                        }
+                    }
+                }
             }
         } else {
             script.logger.warn("Could not find a valid safe tile for dodge!")
