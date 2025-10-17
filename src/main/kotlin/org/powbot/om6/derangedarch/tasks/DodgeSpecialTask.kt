@@ -43,7 +43,7 @@ class DodgeSpecialTask(script: DerangedArchaeologistMagicKiller) : Task(script) 
         if (safeTile != null) {
             if (Movement.step(safeTile)) {
                 // Wait until we have stopped moving (arrived at the destination).
-                if (Condition.wait({ !player.inMotion() }, 150, 20)) {
+                if (Condition.wait({ !player.inMotion() }, 600, 20)) {
 
                     // --- NEW LOGIC: Immediately re-attack after dodging ---
                     script.logger.info("Dodge move complete, re-engaging boss...")
@@ -54,7 +54,7 @@ class DodgeSpecialTask(script: DerangedArchaeologistMagicKiller) : Task(script) 
                         }
                         if (currentBoss.interact("Attack")) {
                             // Wait briefly to confirm we are interacting.
-                            Condition.wait({ player.interacting() == currentBoss }, 150, 10)
+                            Condition.wait({ player.interacting() == currentBoss }, 600, 10)
                         }
                     }
                 }

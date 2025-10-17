@@ -24,7 +24,7 @@ class TravelToBossTask(script: DerangedArchaeologistMagicKiller) : Task(script) 
     private val CLIMB_ACTION = "Climb"
 
     override fun validate(): Boolean {
-        val inFightZone = Players.local().tile().distanceTo(script.BOSS_TRIGGER_TILE) <= 8
+        val inFightZone = Players.local().tile().distanceTo(script.BOSS_TRIGGER_TILE) <= 9
         // Run if we are not in the fight zone AND all banking/restoring is complete.
         return !inFightZone && !script.needsFullRestock() && !script.needsStatRestore()
     }
@@ -35,7 +35,7 @@ class TravelToBossTask(script: DerangedArchaeologistMagicKiller) : Task(script) 
         if (player.tile().distanceTo(TRUNK_SAFE_TILE) < 5) {
             val trunk = Objects.stream().name(TRUNK_NAME).action(CLIMB_ACTION).nearest().firstOrNull()
             if (trunk != null && trunk.interact(CLIMB_ACTION)) {
-                Condition.wait({ player.tile().distanceTo(script.BOSS_TRIGGER_TILE) <= 8 }, 200, 15)
+                Condition.wait({ player.tile().distanceTo(script.BOSS_TRIGGER_TILE) <= 8 }, 600, 15)
             }
             return
         }
@@ -63,17 +63,26 @@ class TravelToBossTask(script: DerangedArchaeologistMagicKiller) : Task(script) 
                 return
             }
             val firstMushtree = Objects.stream().id(MAGIC_MUSHTREE_ID).nearest().firstOrNull()
-            if (firstMushtree != null && firstMushtree.distance() < 20) {
-                // CORRECTED: Only interact with the mushtree if the player is not moving.
+            // Check if the Mushtree is nearby AND the Mushtree widget is NOT already visible.
+            if (firstMushtree != null && firstMushtree.distance() < 20 && !Widgets.widget(MUSHTREE_INTERFACE_ID).valid()) {
+
+                // Only interact with the mushtree if the player is not moving.
                 if (!player.inMotion() && firstMushtree.interact("Use")) {
-                    if (Condition.wait({ Widgets.widget(MUSHTREE_INTERFACE_ID).valid() }, 200, 15)) {
-                        // CORRECTED: Added the 600ms delay before clicking the widget.
+                    if (Condition.wait({ Widgets.widget(MUSHTREE_INTERFACE_ID).valid() }, 600, 15)) {
+                        // Added the 600ms delay before clicking the widget.
                         Condition.sleep(600)
                         val swampOption = Widgets.widget(MUSHTREE_INTERFACE_ID).component(MUSHTREE_SWAMP_OPTION_COMPONENT)
                         if (swampOption.valid() && swampOption.click()) {
-                            Condition.wait({ Objects.stream().id(SECOND_MUSHTREE_ID).isNotEmpty() }, 300, 10)
+                            Condition.wait({ Objects.stream().id(SECOND_MUSHTREE_ID).isNotEmpty() }, 600, 10)
                         }
                     }
+                }
+            } else if (firstMushtree != null && firstMushtree.distance() < 20 && Widgets.widget(MUSHTREE_INTERFACE_ID).valid()) {
+                // If the widget IS visible, proceed directly to clicking the option.
+                Condition.sleep(600) // Keep the delay before clicking the option
+                val swampOption = Widgets.widget(MUSHTREE_INTERFACE_ID).component(MUSHTREE_SWAMP_OPTION_COMPONENT)
+                if (swampOption.valid() && swampOption.click()) {
+                    Condition.wait({ Objects.stream().id(SECOND_MUSHTREE_ID).isNotEmpty() }, 600, 10)
                 }
             } else {
                 Movement.step(VINE_OBJECT_TILE)
@@ -85,7 +94,7 @@ class TravelToBossTask(script: DerangedArchaeologistMagicKiller) : Task(script) 
             }
             if (pendant.valid() && pendant.interact("Rub")) {
                 Condition.sleep(600)
-                if (Condition.wait({ Widgets.widget(PENDANT_WIDGET_ID).valid() }, 200, 15)) {
+                if (Condition.wait({ Widgets.widget(PENDANT_WIDGET_ID).valid() }, 600, 15)) {
                     val islandOption = Widgets.widget(PENDANT_WIDGET_ID).component(PENDANT_FOSSIL_ISLAND_COMPONENT).component(PENDANT_FOSSIL_ISLAND_OPTION_INDEX)
                     if (islandOption.valid() && islandOption.click()) {
                         Condition.wait({ player.tile().distanceTo(FIRST_MUSHTREE_TILE) < 20 }, 300, 10)

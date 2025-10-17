@@ -12,7 +12,7 @@ class DeactivatePrayerTask(script: DerangedArchaeologistMagicKiller) : Task(scri
      * 2. We are no longer in the boss fight area.
      */
     override fun validate(): Boolean {
-        val inFightArea = Players.local().tile().distanceTo(script.BOSS_TRIGGER_TILE) <= 8
+        val inFightArea = Players.local().tile().distanceTo(script.BOSS_TRIGGER_TILE) <= 9
         val bossIsGone = script.getBoss() == null
 
         // Trigger if prayer is active and we are either out of the fight area, or the boss is dead.

@@ -13,7 +13,7 @@ class FightTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
      */
     override fun validate(): Boolean {
         return script.getBoss() != null
-                && Players.local().tile().distanceTo(script.BOSS_TRIGGER_TILE) <= 8
+                && Players.local().tile().distanceTo(script.BOSS_TRIGGER_TILE) <= 9
                 && !script.needsTripResupply()
     }
 

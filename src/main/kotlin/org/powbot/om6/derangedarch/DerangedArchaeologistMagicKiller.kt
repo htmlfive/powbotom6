@@ -21,13 +21,13 @@ import org.powbot.om6.derangedarch.tasks.*
         ScriptConfiguration(
             "Required Equipment", "Define the gear to wear.",
             optionType = OptionType.EQUIPMENT,
-            defaultValue = "{\"4089\":0,\"21795\":1,\"12002\":2,\"11907\":3,\"4091\":4,\"25818\":5,\"4093\":7,\"7462\":9,\"4097\":10,\"9104\":12,\"20232\":13}"
+            defaultValue = "{\"4089\":0,\"21795\":1,\"12002\":2,\"11907\":3,\"4091\":4,\"25818\":5,\"4093\":7,\"7462\":9,\"4097\":10,\"30895\":12,\"20232\":13}"
         ),
         ScriptConfiguration(
             "Required Inventory",
             "Define your full inventory. Must include an axe, some food, prayer pots, ring of dueling, emergency teleport",
             optionType = OptionType.INVENTORY,
-            defaultValue = "{\"8013\":1,\"1351\":1,\"5341\":1,\"11194\":1,\"2434\":4,\"385\":15,\"2552\":1}"
+            defaultValue = "{\"4251\":1,\"1351\":1,\"5341\":1,\"11194\":1,\"2434\":4,\"385\":15,\"2552\":1}"
         ),
         ScriptConfiguration(
             "Food Name", "The name of the food in your inventory setup to eat.",
@@ -144,7 +144,7 @@ class DerangedArchaeologistMagicKiller : AbstractScript() {
                 interaction = "Break",
                 successCondition = { Players.local().tile().distanceTo(BOSS_TRIGGER_TILE) > 15 }
             ),
-            "Empty" to TeleportOption(
+            "Ectophial" to TeleportOption(
                 itemNameContains = "Ectophial",
                 interaction = "Empty",
                 successCondition = { Players.local().tile().distanceTo(BOSS_TRIGGER_TILE) > 15 }
