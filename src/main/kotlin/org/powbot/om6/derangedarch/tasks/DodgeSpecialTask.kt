@@ -12,7 +12,7 @@ class DodgeSpecialTask(script: DerangedArchaeologistMagicKiller) : Task(script) 
 
     private val PROJECTILE_DANGER_DISTANCE = 1.0
     private val MAX_DODGE_ATTEMPTS = 10
-    private val MIN_DODGE_ANGLE_DIFFERENCE = 30.0
+    private val MIN_DODGE_ANGLE_DIFFERENCE = 25.0
 
     private fun isSpecialAttackActive(): Boolean {
         val projectileExists = Projectiles.stream().id(script.SPECIAL_ATTACK_PROJECTILE).isNotEmpty()
@@ -106,7 +106,6 @@ class DodgeSpecialTask(script: DerangedArchaeologistMagicKiller) : Task(script) 
                     stepInitiatedForThisAttempt = true
                     script.logger.debug("Step initiated towards $safeTile. Monitoring movement...")
 
-                    // MODIFIED: Increased check frequency for faster reaction time.
                     val waitResult = Condition.wait({
                         val currentProjsDuringWait = Projectiles.stream().id(script.SPECIAL_ATTACK_PROJECTILE).toList()
                         val tooClose = currentProjsDuringWait.any { player.tile().distanceTo(it.tile()) <= PROJECTILE_DANGER_DISTANCE }
@@ -116,7 +115,7 @@ class DodgeSpecialTask(script: DerangedArchaeologistMagicKiller) : Task(script) 
                             return@wait false
                         }
                         !player.inMotion()
-                    }, 200, 60) // Check every 200ms for up to 12 seconds
+                    }, 200, 60)
 
                     if (waitResult) {
                         dodgeSuccess = true
@@ -138,19 +137,29 @@ class DodgeSpecialTask(script: DerangedArchaeologistMagicKiller) : Task(script) 
 
 
         if (dodgeSuccess) {
-            script.logger.info("Successfully dodged special attack. Re-engaging boss...")
-            val finalBoss = script.getBoss()
-            if (finalBoss != null && finalBoss.valid()) {
-                if (!finalBoss.inViewport()) {
-                    script.logger.debug("Turning camera to boss for re-attack.")
-                    Camera.turnTo(finalBoss)
-                }
-                if (finalBoss.interact("Attack")) {
-                    Condition.wait({ player.interacting() == finalBoss }, 600, 10)
+            script.logger.info("Successfully dodged special attack. Checking safety before re-engaging boss...")
+
+            val finalProjectiles = Projectiles.stream().id(script.SPECIAL_ATTACK_PROJECTILE).toList()
+            val isSafeFromProjectiles = finalProjectiles.all { player.tile().distanceTo(it.tile()) > PROJECTILE_DANGER_DISTANCE }
+
+            if (isSafeFromProjectiles) {
+                script.logger.debug("Player is in a safe position. Re-engaging boss...")
+                val finalBoss = script.getBoss()
+                if (finalBoss != null && finalBoss.valid()) {
+                    if (!finalBoss.inViewport()) {
+                        script.logger.debug("Turning camera to boss for re-attack.")
+                        Camera.turnTo(finalBoss)
+                    }
+                    if (finalBoss.interact("Attack")) {
+                        Condition.wait({ player.interacting() == finalBoss }, 600, 10)
+                    }
+                } else {
+                    script.logger.debug("Boss is null or invalid after dodging, cannot re-engage.")
                 }
             } else {
-                script.logger.debug("Boss is null or invalid after dodging, cannot re-engage.")
+                script.logger.warn("Dodge complete, but still too close to a projectile. Holding position before re-engaging.")
             }
+
         } else {
             script.logger.warn("Failed to complete dodge sequence after $MAX_DODGE_ATTEMPTS attempts!")
         }

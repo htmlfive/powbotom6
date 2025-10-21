@@ -9,7 +9,7 @@ import org.powbot.om6.derangedarch.DerangedArchaeologistMagicKiller
 
 class RepositionTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
 
-    private val repositionTile = Tile(3683, 3701, 0)
+    private val repositionTile = Tile(3688, 3705, 0)
 
     override fun validate(): Boolean {
         val player = Players.local()
