@@ -8,7 +8,6 @@ import org.powbot.om6.derangedarch.DerangedArchaeologistMagicKiller
 
 class TravelToBossTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
 
-    // --- Constants for travel logic ---
     private val PENDANT_WIDGET_ID = 219
     private val PENDANT_FOSSIL_ISLAND_COMPONENT = 1
     private val PENDANT_FOSSIL_ISLAND_OPTION_INDEX = 2
@@ -24,11 +23,10 @@ class TravelToBossTask(script: DerangedArchaeologistMagicKiller) : Task(script) 
     private val CLIMB_ACTION = "Climb"
 
     override fun validate(): Boolean {
-        val inFightZone = Players.local().tile().distanceTo(script.BOSS_TRIGGER_TILE) <= 8
+        val inFightZone = Players.local().tile().distanceTo(script.BOSS_TRIGGER_TILE) <= 9
         val needsRestock = script.needsFullRestock()
         val needsRestore = script.needsStatRestore()
 
-        // Run if we are not in the fight zone AND all banking/restoring is complete.
         val shouldRun = !inFightZone && !needsRestock && !needsRestore
         if (shouldRun) {
             script.logger.debug("Validate OK: Not in fight zone, not needing restock or restore.")
@@ -40,30 +38,27 @@ class TravelToBossTask(script: DerangedArchaeologistMagicKiller) : Task(script) 
         script.logger.debug("Executing TravelToBossTask...")
         val player = Players.local()
 
-        // --- 1. Final step: Climb trunk to boss ---
         if (player.tile().distanceTo(TRUNK_SAFE_TILE) < 5) {
             script.logger.debug("At safe tile, looking for trunk to climb.")
             val trunk = Objects.stream().name(TRUNK_NAME).action(CLIMB_ACTION).nearest().firstOrNull()
             if (trunk != null && trunk.interact(CLIMB_ACTION)) {
                 script.logger.debug("Climbing trunk...")
-                Condition.wait({ player.tile().distanceTo(script.BOSS_TRIGGER_TILE) <= 8 }, 200, 15)
+                // MODIFIED: Increased distance check to 9 to match validate()
+                Condition.wait({ player.tile().distanceTo(script.BOSS_TRIGGER_TILE) <= 9 }, 200, 15)
             }
             return
         }
 
-        // --- 2. Enable run energy ---
         if (!Movement.running() && Movement.energyLevel() > 40) {
             script.logger.debug("Enabling run energy.")
             Movement.running(true)
         }
 
-        // --- 3. Check if on Fossil Island ---
         val onFossilIsland = Objects.stream().id(MAGIC_MUSHTREE_ID, SECOND_MUSHTREE_ID).isNotEmpty() || player.tile().distanceTo(TRUNK_SAFE_TILE) < 200
 
         if (onFossilIsland) {
             script.logger.debug("On Fossil Island, navigating...")
 
-            // --- 3a. Past the vine ---
             if (player.tile().x < VINE_OBJECT_TILE.x()) {
                 if (player.tile().distanceTo(POST_VINE_STEP_TILE) < 5) {
                     script.logger.debug("Past vine, walking to trunk safe tile.")
@@ -75,7 +70,6 @@ class TravelToBossTask(script: DerangedArchaeologistMagicKiller) : Task(script) 
                 return
             }
 
-            // --- 3b. At the vine ---
             if (player.tile().distanceTo(VINE_OBJECT_TILE) < 5) {
                 script.logger.debug("At vine tile, looking for vine to chop.")
                 val vine = Objects.stream().name("Thick vine").within(VINE_OBJECT_TILE, 1.0).action("Chop").firstOrNull()
@@ -91,7 +85,6 @@ class TravelToBossTask(script: DerangedArchaeologistMagicKiller) : Task(script) 
                 return
             }
 
-            // --- 3c. At the first mushtree ---
             val firstMushtree = Objects.stream().id(MAGIC_MUSHTREE_ID).nearest().firstOrNull()
             if (firstMushtree != null && firstMushtree.distance() < 20) {
                 script.logger.debug("At first mushtree.")
@@ -108,12 +101,10 @@ class TravelToBossTask(script: DerangedArchaeologistMagicKiller) : Task(script) 
                     }
                 }
             } else {
-                // --- 3d. Walking to the vine ---
                 script.logger.debug("Not near any landmarks, walking to vine tile.")
                 Movement.step(VINE_OBJECT_TILE)
             }
         } else {
-            // --- 4. Not on Fossil Island - Teleport ---
             script.logger.debug("Not on Fossil Island. Attempting to use Digsite Pendant.")
             var pendant: Item = Equipment.itemAt(Equipment.Slot.NECK)
             if (!pendant.name().contains("Digsite pendant")) {

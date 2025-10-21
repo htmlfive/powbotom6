@@ -15,7 +15,6 @@ class FightTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
         val needsResupply = script.needsTripResupply()
 
         if (boss != null && inFightArea) {
-            // --- ADDED SAFETY CHECK ---
             val bossTarget = boss.interacting()
             // Check if the boss is interacting with another player
             if (bossTarget is Player && bossTarget != Players.local()) {
@@ -23,7 +22,6 @@ class FightTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
                 ScriptManager.stop()
                 return false // Stop script and invalidate task
             }
-            // --- END CHECK ---
         }
 
         val shouldFight = boss != null && inFightArea && !needsResupply
