@@ -9,19 +9,33 @@ import org.powbot.om6.derangedarch.DerangedArchaeologistMagicKiller
 class DodgeSpecialTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
 
     private fun isSpecialAttackActive(): Boolean {
-        return Projectiles.stream().id(script.SPECIAL_ATTACK_PROJECTILE).isNotEmpty() ||
-                Npcs.stream().name("Deranged archaeologist").any { it.overheadMessage() == script.SPECIAL_ATTACK_TEXT }
+        val projectile = Projectiles.stream().id(script.SPECIAL_ATTACK_PROJECTILE).isNotEmpty()
+        val overheadText = Npcs.stream().name("Deranged archaeologist").any { it.overheadMessage() == script.SPECIAL_ATTACK_TEXT }
+
+        if (projectile) script.logger.debug("Special attack projectile detected.")
+        if (overheadText) script.logger.debug("Special attack overhead text detected.")
+
+        return projectile || overheadText
     }
 
     override fun validate(): Boolean {
-        return isSpecialAttackActive() && Players.local().tile().distanceTo(script.BOSS_TRIGGER_TILE) <= 8
+        val inFightArea = Players.local().tile().distanceTo(script.BOSS_TRIGGER_TILE) <= 8
+        val specialActive = isSpecialAttackActive()
+
+        val shouldRun = specialActive && inFightArea
+        if (shouldRun) {
+            script.logger.debug("Validate OK: Special attack is active and player is in the fight area.")
+        }
+        return shouldRun
     }
 
     override fun execute() {
+        script.logger.debug("Executing DodgeSpecialTask...")
         val player = Players.local()
 
         // If we are already moving, we are mid-dodge. Do nothing.
         if (player.inMotion()) {
+            script.logger.debug("Player is already in motion, assuming mid-dodge.")
             return
         }
 
@@ -41,23 +55,27 @@ class DodgeSpecialTask(script: DerangedArchaeologistMagicKiller) : Task(script) 
         }.randomOrNull()
 
         if (safeTile != null) {
+            script.logger.debug("Found safe tile: $safeTile. Stepping...")
             if (Movement.step(safeTile)) {
                 // Wait until we have stopped moving (arrived at the destination).
                 if (Condition.wait({ !player.inMotion() }, 600, 20)) {
-
-                    // --- NEW LOGIC: Immediately re-attack after dodging ---
                     script.logger.info("Dodge move complete, re-engaging boss...")
                     val currentBoss = script.getBoss() // Get a fresh reference to the boss
                     if (currentBoss != null && currentBoss.valid()) {
                         if (!currentBoss.inViewport()) {
+                            script.logger.debug("Turning camera to boss for re-attack.")
                             Camera.turnTo(currentBoss)
                         }
                         if (currentBoss.interact("Attack")) {
                             // Wait briefly to confirm we are interacting.
                             Condition.wait({ player.interacting() == currentBoss }, 600, 10)
                         }
+                    } else {
+                        script.logger.debug("Boss is null or invalid, cannot re-engage after dodge.")
                     }
                 }
+            } else {
+                script.logger.warn("Movement.step() to safe tile failed.")
             }
         } else {
             script.logger.warn("Could not find a valid safe tile for dodge!")

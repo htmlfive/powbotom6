@@ -24,33 +24,50 @@ class GoToBankTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
     override fun validate(): Boolean {
         val needsFullRestock = script.needsFullRestock()
         val notAtBank = !script.FEROX_BANK_AREA.contains(Players.local())
-        // This is the key change: ensure we are not in the fight area.
         val notInFightArea = Players.local().tile().distanceTo(script.BOSS_TRIGGER_TILE) > 8
 
-        return needsFullRestock && notAtBank && notInFightArea
+        val shouldRun = needsFullRestock && notAtBank && notInFightArea
+        if (shouldRun) {
+            script.logger.debug("Validate OK: Needs restock ($needsFullRestock), not at bank ($notAtBank), not in fight area ($notInFightArea).")
+        }
+        return shouldRun
     }
 
     override fun execute() {
+        script.logger.debug("Executing GoToBankTask...")
         script.logger.info("Setup is incorrect, using Ring of Dueling to go to bank...")
 
         val duelRing = Inventory.stream().nameContains("Ring of dueling").firstOrNull()
 
         if (duelRing != null && duelRing.valid()) {
+            script.logger.debug("Found valid Ring of Dueling, interacting 'Rub'...")
             if (duelRing.interact("Rub")) {
+                script.logger.debug("Waiting for Dueling Ring widget ($DUELING_RING_WIDGET_ID)...")
                 if (Condition.wait({ Widgets.widget(DUELING_RING_WIDGET_ID).valid() }, 200, 15)) {
+                    script.logger.debug("Widget found. Clicking Ferox Enclave option.")
                     val enclaveOption = Widgets.widget(DUELING_RING_WIDGET_ID)
                         .component(OPTIONS_CONTAINER_COMPONENT)
                         .component(FEROX_ENCLAVE_OPTION_INDEX)
 
                     if (enclaveOption.valid() && enclaveOption.click()) {
+                        script.logger.debug("Clicked, waiting to arrive at $FEROX_ENTRANCE_TILE...")
                         // Step 1: Wait until we land near the Ferox Enclave entrance.
                         if (Condition.wait({ Players.local().tile().distanceTo(FEROX_ENTRANCE_TILE) < 6 }, 300, 15)) {
                             // Step 2: Once we've arrived, walk the rest of the way to the bank.
                             script.logger.info("Arrived at Ferox Enclave, walking to bank chest...")
+                            script.logger.debug("Walking to $FEROX_BANK_TILE.")
                             Movement.walkTo(FEROX_BANK_TILE)
+                        } else {
+                            script.logger.warn("Teleport click succeeded but did not arrive at Ferox Enclave.")
                         }
+                    } else {
+                        script.logger.warn("Could not find or click Ferox Enclave option on widget.")
                     }
+                } else {
+                    script.logger.warn("Dueling Ring widget did not appear after 'Rub'.")
                 }
+            } else {
+                script.logger.warn("Failed to interact 'Rub' with Ring of Dueling.")
             }
         } else {
             script.logger.warn("No Ring of Dueling found in inventory for banking! Please add one to your setup.")

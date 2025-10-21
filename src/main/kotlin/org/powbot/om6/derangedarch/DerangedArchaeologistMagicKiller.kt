@@ -10,8 +10,8 @@ import org.powbot.api.script.paint.PaintBuilder
 import org.powbot.om6.derangedarch.tasks.*
 
 @ScriptManifest(
-    name = "0m6 Deranged Archaeologist",
-    description = "Kills the Archaeologist with user-defined gear and inventory setups.",
+    name = "0m6 Deranged Archaeologist (BETA)",
+    description = "Must have ring of dueling in inventory to start.",
     version = "2.4.2",
     author = "0m6",
     category = ScriptCategory.Combat
@@ -25,16 +25,16 @@ import org.powbot.om6.derangedarch.tasks.*
         ),
         ScriptConfiguration(
             "Required Inventory",
-            "Define your full inventory. Must include an axe, some food, prayer pots, ring of dueling, emergency teleport",
+            "Define your full inventory. Must include an axe, some food, prayer pots, ring of dueling, emergency teleport, digsite pendant",
             optionType = OptionType.INVENTORY,
-            defaultValue = "{\"4251\":1,\"1351\":1,\"5341\":1,\"11194\":1,\"2434\":4,\"385\":15,\"2552\":1}"
+            defaultValue = "{\"1351\":1,\"13123\":1,\"2552\":1,\"11194\":1,\"2434\":5,\"385\":10}"
         ),
         ScriptConfiguration(
             "Food Name", "The name of the food in your inventory setup to eat.",
             optionType = OptionType.STRING, defaultValue = "Shark"
         ),
         ScriptConfiguration(
-            "Always Loot", "Comma-separated list of items to loot regardless of value (e.g., Shark,Numulite).",
+            "Always Loot", "Comma-separated list of items to loot regardless of value (e.g., Shark, Numulite).",
             optionType = OptionType.STRING,
             defaultValue = "Shark,Numulite"
         ),
@@ -53,8 +53,8 @@ import org.powbot.om6.derangedarch.tasks.*
         ScriptConfiguration(
             "Emergency Teleport Item", "Select the item to use for emergency teleports.",
             optionType = OptionType.STRING,
-            defaultValue = "Ectophial",
-            allowedValues = ["Teleport to house", "Ectophial"]
+            defaultValue = "Ardougne cloak",
+            allowedValues = ["Teleport to house", "Ectophial", "Ardougne cloak"]
         )
     ]
 )
@@ -75,6 +75,7 @@ class DerangedArchaeologistMagicKiller : AbstractScript() {
     lateinit var teleportOptions: Map<String, TeleportOption>
     private var startTime: Long = 0
 
+    // --- Constants ---
     val ARCHAEOLOGIST_ID = 7806
     val BOSS_TRIGGER_TILE = Tile(3683, 3707, 0)
     val FEROX_BANK_AREA = Area(Tile(3123, 3623, 0), Tile(3143, 3643, 0))
@@ -84,6 +85,7 @@ class DerangedArchaeologistMagicKiller : AbstractScript() {
     val SPECIAL_ATTACK_PROJECTILE = 1260
     val SPECIAL_ATTACK_TEXT = "Learn to Read!"
 
+    // --- Script State ---
     var totalLootValue: Long = 0
     var hasAttemptedPoolDrink: Boolean = true
     var emergencyTeleportJustHappened: Boolean = false
@@ -122,21 +124,22 @@ class DerangedArchaeologistMagicKiller : AbstractScript() {
     }
     override fun onStart() {
         startTime = System.currentTimeMillis()
+        logger.info("Deranged Archaeologist script started.")
 
         val alwaysLootString = getOption<String>("Always Loot") ?: ""
-
         val alwaysLootList = alwaysLootString.split(",").map { it.trim() }.filter { it.isNotBlank() }
 
         config = Config(
             requiredEquipment = getOption("Required Equipment"),
             requiredInventory = getOption("Required Inventory"),
             foodName = getOption("Food Name"),
-            alwaysLootItems = alwaysLootList, // Assign the list we just created
-            minLootValue = getOption<Int>("Minimum Loot Value"), // Use kotlin.Int
-            eatAtPercent = getOption<Int>("Eat At %"), // Use kotlin.Int
-            emergencyHpPercent = getOption<Int>("Emergency Teleport HP %"), // Use kotlin.Int
+            alwaysLootItems = alwaysLootList,
+            minLootValue = getOption<Int>("Minimum Loot Value"),
+            eatAtPercent = getOption<Int>("Eat At %"),
+            emergencyHpPercent = getOption<Int>("Emergency Teleport HP %"),
             emergencyTeleportItem = getOption("Emergency Teleport Item")
         )
+        logger.info("Configuration loaded: $config")
 
         teleportOptions = mapOf(
             "Teleport to house" to TeleportOption(
@@ -147,6 +150,11 @@ class DerangedArchaeologistMagicKiller : AbstractScript() {
             "Ectophial" to TeleportOption(
                 itemNameContains = "Ectophial",
                 interaction = "Empty",
+                successCondition = { Players.local().tile().distanceTo(BOSS_TRIGGER_TILE) > 15 }
+            ),
+            "Ardougne cloak" to TeleportOption(
+                itemNameContains = "Ardougne cloak",
+                interaction = "Monastery Teleport",
                 successCondition = { Players.local().tile().distanceTo(BOSS_TRIGGER_TILE) > 15 }
             )
         )
@@ -172,28 +180,46 @@ class DerangedArchaeologistMagicKiller : AbstractScript() {
             task.execute()
         } else {
             currentTask = "Idle"
+            logger.debug("No valid task found, idling.")
             Condition.sleep(150)
         }
     }
 
     override fun canBreak(): Boolean {
         val nearBank = Players.local().tile().distanceTo(FEROX_BANK_AREA.centralTile) < 10
-        return nearBank && !needsStatRestore()
+        val needsRestore = needsStatRestore()
+        val canBreak = nearBank && !needsRestore
+        logger.debug("canBreak check: nearBank=$nearBank, needsRestore=$needsRestore, result=$canBreak")
+        return canBreak
     }
 
     fun equipmentIsCorrect(): Boolean {
-        if (config.requiredEquipment.isEmpty()) { return true }
+        if (config.requiredEquipment.isEmpty()) {
+            logger.debug("Equipment check: No required equipment defined, returning true.")
+            return true
+        }
         for ((requiredId, slotIndex) in config.requiredEquipment) {
             val slot = Equipment.Slot.values()[slotIndex]
             val wornItem = Equipment.itemAt(slot)
+
             if (isDuelingRing(requiredId)) {
-                if (!wornItem.name().contains("Ring of dueling")) return false
+                if (!wornItem.name().contains("Ring of dueling")) {
+                    logger.debug("Equipment check FAIL: Slot $slot should be a Dueling Ring, but found '${wornItem.name()}'")
+                    return false
+                }
             } else if (isDigsitePendant(requiredId)) {
-                if (!wornItem.name().contains("Digsite pendant")) return false
+                if (!wornItem.name().contains("Digsite pendant")) {
+                    logger.debug("Equipment check FAIL: Slot $slot should be a Digsite Pendant, but found '${wornItem.name()}'")
+                    return false
+                }
             } else {
-                if (wornItem.id() != requiredId) return false
+                if (wornItem.id() != requiredId) {
+                    logger.debug("Equipment check FAIL: Slot $slot requires ID $requiredId, but found ID ${wornItem.id()}")
+                    return false
+                }
             }
         }
+        logger.debug("Equipment check PASS: All items correct.")
         return true
     }
 
@@ -201,35 +227,54 @@ class DerangedArchaeologistMagicKiller : AbstractScript() {
     private fun isDigsitePendant(id: Int): Boolean = id in 11190..11194
 
     fun inventoryIsCorrect(): Boolean {
-        if (config.requiredInventory.isEmpty()) { return true }
+        if (config.requiredInventory.isEmpty()) {
+            logger.debug("Inventory check: No required inventory defined, returning true.")
+            return true
+        }
         for ((id, amount) in config.requiredInventory) {
-            if (isDuelingRing(id)) {
-                if (Inventory.stream().nameContains("Ring of dueling").count(true) < amount) return false
+            val currentCount = if (isDuelingRing(id)) {
+                Inventory.stream().nameContains("Ring of dueling").count(true)
             } else if (isDigsitePendant(id)) {
-                if (Inventory.stream().nameContains("Digsite pendant").count(true) < amount) return false
+                Inventory.stream().nameContains("Digsite pendant").count(true)
             } else {
-                if (Inventory.stream().id(id).count(true) < amount) return false
+                Inventory.stream().id(id).count(true)
+            }
+
+            if (currentCount < amount) {
+                logger.debug("Inventory check FAIL: Need $amount of ID $id, but have $currentCount")
+                return false
             }
         }
+        logger.debug("Inventory check PASS: All items and counts correct.")
         return true
     }
+
     fun needsFullRestock(): Boolean {
-        return !equipmentIsCorrect() || !inventoryIsCorrect()
+        val equipCorrect = equipmentIsCorrect()
+        val invCorrect = inventoryIsCorrect()
+        val result = !equipCorrect || !invCorrect
+        logger.debug("needsFullRestock check: equipCorrect=$equipCorrect, invCorrect=$invCorrect, result=$result")
+        return result
     }
 
     fun needsTripResupply(): Boolean {
         val noFood = Inventory.stream().name(config.foodName).isEmpty()
         val noPrayerPotions = Inventory.stream().nameContains("Prayer potion").isEmpty()
-
-        return noFood || noPrayerPotions
+        val result = noFood || noPrayerPotions
+        logger.debug("needsTripResupply check: noFood=$noFood, noPrayerPotions=$noPrayerPotions, result=$result")
+        return result
     }
+
     fun needsStatRestore(): Boolean {
         if (!FEROX_BANK_AREA.contains(Players.local())) {
-            return false
+            return false // Only need to restore stats when at the bank.
         }
         val prayerNotFull = Prayer.prayerPoints() < Skills.realLevel(Skill.Prayer)
         val healthNotFull = Combat.healthPercent() < 100
+        val result = prayerNotFull || healthNotFull
+        logger.debug("needsStatRestore check: prayerNotFull=$prayerNotFull, healthNotFull=$healthNotFull, result=$result")
+        return result
+    }
 
-        return prayerNotFull || healthNotFull
-    }    fun getBoss(): Npc? = Npcs.stream().id(ARCHAEOLOGIST_ID).nearest().firstOrNull()
+    fun getBoss(): Npc? = Npcs.stream().id(ARCHAEOLOGIST_ID).nearest().firstOrNull()
 }

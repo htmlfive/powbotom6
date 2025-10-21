@@ -11,28 +11,31 @@ class RepositionTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
 
     private val repositionTile = Tile(3683, 3701, 0)
 
-    /**
-     * This task is valid if we are "idle" in the boss area:
-     * - The boss is gone.
-     * - Our prayer is off.
-     * - We are not already at the reposition tile.
-     * - We are not moving.
-     * The higher-priority LootTask will run first if there is loot, so we don't need to check for it here.
-     */
     override fun validate(): Boolean {
         val player = Players.local()
         val inFightArea = player.tile().distanceTo(script.BOSS_TRIGGER_TILE) <= 8
         val bossIsGone = script.getBoss() == null
         val prayerIsOff = !Prayer.prayerActive(script.REQUIRED_PRAYER)
         val notAtTargetTile = player.tile() != repositionTile
+        val notInMotion = !player.inMotion()
 
-        return inFightArea && bossIsGone && prayerIsOff && notAtTargetTile && !player.inMotion()
+        val shouldRun = inFightArea && bossIsGone && prayerIsOff && notAtTargetTile && notInMotion
+
+        if (shouldRun) {
+            script.logger.debug("Validate OK: In fight area, boss gone, prayer off, not at reposition tile, and not moving.")
+        }
+
+        return shouldRun
     }
 
     override fun execute() {
+        script.logger.debug("Executing RepositionTask...")
         script.logger.info("Repositioning for next kill...")
+
         if (Movement.step(repositionTile)) {
             Condition.wait({ Players.local().tile() == repositionTile }, 150, 10)
+        } else {
+            script.logger.warn("Movement.step() to reposition tile failed.")
         }
     }
 }
