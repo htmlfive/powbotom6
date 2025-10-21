@@ -8,12 +8,12 @@ import org.powbot.om6.derangedarch.DerangedArchaeologistMagicKiller
 
 class WalkToBankAfterEmergencyTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
 
-    // --- Constants for the Ring of Dueling widget interaction ---
+    // Constants for the Ring of Dueling widget interaction
     private val DUELING_RING_WIDGET_ID = 219
     private val OPTIONS_CONTAINER_COMPONENT = 1
     private val FEROX_ENCLAVE_OPTION_INDEX = 3
 
-    // --- Constants for the two-step travel ---
+    // Constants for the two-step travel
     private val FEROX_ENTRANCE_TILE = Tile(3151, 3635, 0) // The arrival point after teleporting
     private val FEROX_BANK_TILE = Tile(3135, 3631, 0)      // The final destination inside the bank
 
@@ -51,6 +51,29 @@ class WalkToBankAfterEmergencyTask(script: DerangedArchaeologistMagicKiller) : T
                             script.logger.info("Arrived at Ferox Enclave, walking to bank chest...")
                             script.logger.debug("Walking to $FEROX_BANK_TILE.")
                             Movement.walkTo(FEROX_BANK_TILE)
+
+                            // --- ADDED: Drink from pool after walking to bank ---
+                            if (Condition.wait({ script.FEROX_BANK_AREA.contains(Players.local()) }, 200, 30)) {
+                                script.logger.info("Arrived at bank, now restoring stats at the Pool of Refreshment.")
+                                val pool = Objects.stream().id(script.POOL_OF_REFRESHMENT_ID).nearest().firstOrNull()
+                                if (pool != null) {
+                                    if (pool.inViewport()) {
+                                        if (pool.interact("Drink")) {
+                                            if (Condition.wait({ !script.needsStatRestore() }, 150, 20)) {
+                                                script.logger.info("Stats restored after emergency teleport.")
+                                                Condition.sleep(1200)
+                                            }
+                                        }
+                                    } else {
+                                        script.logger.debug("Pool not in viewport, walking to it.")
+                                        Movement.walkTo(script.FEROX_POOL_AREA.randomTile)
+                                    }
+                                } else {
+                                    script.logger.warn("Could not find Pool of Refreshment after arriving at bank.")
+                                }
+                            }
+                            // --- END ADDED LOGIC ---
+
                         } else {
                             script.logger.warn("Teleport click succeeded but did not arrive at Ferox Enclave.")
                         }

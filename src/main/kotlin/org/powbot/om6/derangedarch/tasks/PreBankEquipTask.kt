@@ -37,9 +37,17 @@ class PreBankEquipTask(script: DerangedArchaeologistMagicKiller) : Task(script) 
         val requiredEquipmentIds = script.config.requiredEquipment.keys
 
         Inventory.stream()
-            // IMPORTANT: Filter the inventory to only include items that are part of our defined combat gear.
+            // Filter the inventory to only include items that are part of our defined combat gear.
             .filter { it.id() in requiredEquipmentIds }
             .forEach { itemToEquip ->
+
+                // --- ADDED CHECK: Skip if the item is already equipped ---
+                if (Equipment.stream().id(itemToEquip.id()).isNotEmpty()) {
+                    script.logger.debug("Skipping ${itemToEquip.name()}: item is already equipped.")
+                    return@forEach // Skips to the next item in the loop
+                }
+                // --- END ADDED CHECK ---
+
                 script.logger.debug("Attempting to pre-bank equip ${itemToEquip.name()} (ID: ${itemToEquip.id()})")
                 val actions = itemToEquip.actions()
                 var equipped = false

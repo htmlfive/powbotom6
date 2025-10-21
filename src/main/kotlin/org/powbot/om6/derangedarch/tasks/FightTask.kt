@@ -4,6 +4,7 @@ import org.powbot.api.Area
 import org.powbot.api.Condition
 import org.powbot.api.Tile
 import org.powbot.api.rt4.*
+import org.powbot.mobile.script.ScriptManager
 import org.powbot.om6.derangedarch.DerangedArchaeologistMagicKiller
 
 class FightTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
@@ -12,6 +13,18 @@ class FightTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
         val boss = script.getBoss()
         val inFightArea = Players.local().tile().distanceTo(script.BOSS_TRIGGER_TILE) <= 9
         val needsResupply = script.needsTripResupply()
+
+        if (boss != null && inFightArea) {
+            // --- ADDED SAFETY CHECK ---
+            val bossTarget = boss.interacting()
+            // Check if the boss is interacting with another player
+            if (bossTarget is Player && bossTarget != Players.local()) {
+                script.logger.warn("Another player is fighting the boss. Stopping script to avoid crashing.")
+                ScriptManager.stop()
+                return false // Stop script and invalidate task
+            }
+            // --- END CHECK ---
+        }
 
         val shouldFight = boss != null && inFightArea && !needsResupply
         if (shouldFight) {
@@ -27,6 +40,15 @@ class FightTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
     }
 
     override fun execute() {
+        // Redundant check in case state changes between validate() and execute()
+        val boss = script.getBoss() ?: return
+        val bossTarget = boss.interacting()
+        if (bossTarget is Player && bossTarget != Players.local()) {
+            script.logger.warn("Another player detected fighting the boss during execute. Stopping script.")
+            ScriptManager.stop()
+            return
+        }
+
         script.logger.debug("Executing FightTask...")
 
         // --- Prayer Activation ---
@@ -36,9 +58,6 @@ class FightTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
             Condition.wait({ Prayer.prayerActive(script.REQUIRED_PRAYER) }, 100, 5)
             return
         }
-
-        // The validation already confirms the boss exists, so we can safely use it.
-        val boss = script.getBoss() ?: return
 
         // --- Prayer Potion Management ---
         if (Prayer.prayerPoints() < 30) {
@@ -62,7 +81,7 @@ class FightTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
             val searchArea = Area(southWestTile, northEastTile)
 
             // Find a random tile in the area that is at least 2 tiles away and reachable
-            val safeSpot = searchArea.tiles.filter { it.distanceTo(boss) >= 2 && it.reachable() }.randomOrNull()
+            val safeSpot = searchArea.tiles.filter { Movement.reachable(playerTile, it) && it.distanceTo(boss) >= 2 }.randomOrNull()
 
             if (safeSpot != null) {
                 script.logger.debug("Stepping to safe spot: $safeSpot")
