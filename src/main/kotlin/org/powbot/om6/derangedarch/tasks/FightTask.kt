@@ -9,6 +9,29 @@ import org.powbot.om6.derangedarch.DerangedArchaeologistMagicKiller
 
 class FightTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
 
+    // --- Antipoison Logic ---
+    private val ANTIPOISON_NAMES = setOf(
+        "Antipoison (1)",
+        "Antipoison (2)",
+        "Antipoison (3)",
+        "Antipoison (4)"
+    )
+
+    /**
+     * Checks if the player is poisoned.
+     */
+    private fun isPoisoned(): Boolean {
+        return Combat.isPoisoned()
+    }
+
+    /**
+     * Finds the first available antipoison potion in the inventory.
+     */
+    private fun getAntipoison(): Item {
+        return Inventory.stream().name(*ANTIPOISON_NAMES.toTypedArray()).first()
+    }
+    // --- End Antipoison Logic ---
+
     override fun validate(): Boolean {
         val boss = script.getBoss()
         val inFightArea = Players.local().tile().distanceTo(script.BOSS_TRIGGER_TILE) <= 9
@@ -16,11 +39,10 @@ class FightTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
 
         if (boss != null && inFightArea) {
             val bossTarget = boss.interacting()
-            // Check if the boss is interacting with another player
             if (bossTarget is Player && bossTarget != Players.local()) {
                 script.logger.warn("Another player is fighting the boss. Stopping script to avoid crashing.")
                 ScriptManager.stop()
-                return false // Stop script and invalidate task
+                return false
             }
         }
 
@@ -38,7 +60,31 @@ class FightTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
     }
 
     override fun execute() {
-        // Redundant check in case state changes between validate() and execute()
+        // --- POISON CHECK ---
+        if (isPoisoned()) {
+            script.logger.info("Player is poisoned. Looking for antipoison...")
+            val antipoison = getAntipoison()
+
+            if (antipoison.valid()) {
+                script.logger.info("Found ${antipoison.name()}. Drinking...")
+
+                if (antipoison.interact("Drink")) {
+                    val waitSuccess = Condition.wait({ !isPoisoned() }, 300, 10)
+                    if (waitSuccess) {
+                        script.logger.info("Successfully cured poison.")
+                    } else {
+                        script.logger.warn("Drank antipoison but still poisoned (or wait timed out).")
+                    }
+                } else {
+                    script.logger.warn("Failed to interact 'Drink' with ${antipoison.name()}.")
+                }
+                return // Return after attempting to drink
+            } else {
+                script.logger.warn("Player is poisoned but no antipoison found!")
+            }
+        }
+        // --- END POISON CHECK ---
+
         val boss = script.getBoss() ?: return
         val bossTarget = boss.interacting()
         if (bossTarget is Player && bossTarget != Players.local()) {
@@ -49,7 +95,6 @@ class FightTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
 
         script.logger.debug("Executing FightTask...")
 
-        // --- Prayer Activation ---
         if (!Prayer.prayerActive(script.REQUIRED_PRAYER)) {
             script.logger.info("Activating prayer: ${script.REQUIRED_PRAYER.name}")
             Prayer.prayer(script.REQUIRED_PRAYER, true)
@@ -57,7 +102,6 @@ class FightTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
             return
         }
 
-        // --- Prayer Potion Management ---
         if (Prayer.prayerPoints() < 30) {
             script.logger.info("Prayer points low (${Prayer.prayerPoints()}), drinking potion.")
             val prayerPotion = Inventory.stream().nameContains("Prayer potion").firstOrNull()
@@ -69,7 +113,6 @@ class FightTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
             }
         }
 
-        // --- Positioning ---
         if (boss.distance() < 2) {
             script.logger.debug("Too close to boss, finding a safe spot to step back.")
             val playerTile = Players.local().tile()
@@ -78,7 +121,6 @@ class FightTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
             val northEastTile = Tile(playerTile.x() + searchRadius, playerTile.y() + searchRadius, playerTile.floor())
             val searchArea = Area(southWestTile, northEastTile)
 
-            // Find a random tile in the area that is at least 2 tiles away and reachable
             val safeSpot = searchArea.tiles.filter { Movement.reachable(playerTile, it) && it.distanceTo(boss) >= 2 }.randomOrNull()
 
             if (safeSpot != null) {
@@ -91,7 +133,6 @@ class FightTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
             }
         }
 
-        // --- Attacking ---
         if (Players.local().interacting() != boss) {
             script.logger.info("Not interacting with boss, attempting to attack.")
             if (!boss.inViewport()) {
