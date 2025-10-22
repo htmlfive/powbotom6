@@ -27,7 +27,7 @@ import org.powbot.om6.derangedarch.tasks.*
             "Required Inventory",
             "Define your full inventory. Must include an axe, some food, prayer pots, ring of dueling, emergency teleport, digsite pendant",
             optionType = OptionType.INVENTORY,
-            defaultValue = "{\"1351\":1,\"13123\":1,\"2552\":1,\"11194\":1,\"2434\":5,\"385\":10}"
+            defaultValue = "{\"1351\":1,\"13123\":1,\"2552\":1,\"11194\":1,\"2434\":5,\"385\":10,\"2446\":1}"
         ),
         ScriptConfiguration(
             "Food Name", "The name of the food in your inventory setup to eat.",
