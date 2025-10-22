@@ -54,6 +54,10 @@ class BankTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
         private const val AXE_NAME_SUFFIX = "axe"
         fun isAxe(name: String): Boolean = name.endsWith(AXE_NAME_SUFFIX, ignoreCase = true)
 
+        // Rune identifier
+        private const val RUNE_NAME_SUFFIX = " rune"
+        fun isRune(name: String): Boolean = name.endsWith(RUNE_NAME_SUFFIX, ignoreCase = true)
+
         // Prayer Potion (4) ID for withdrawal logic
         const val PRAYER_POTION_4_ID = KEEP_PRAYER_POTION_4_ID
     }
@@ -87,11 +91,20 @@ class BankTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
     }
 
     /**
-     * --- NEW: Centralized "Do Not Withdraw" logic ---
+     * --- MODIFIED: Centralized "Do Not Withdraw" logic ---
      * Checks if we should skip withdrawing an item because we already have one.
      * This is the "easily editable" place for skip logic.
+     * @param script Needs script instance to check config for runes
      */
-    private fun shouldSkipWithdrawal(id: Int, itemName: String, emergencyTeleName: String?): Boolean {
+    private fun shouldSkipWithdrawal(
+        id: Int,
+        itemName: String,
+        emergencyTeleName: String?,
+        script: DerangedArchaeologistMagicKiller
+    ): Boolean {
+        // --- MODIFIED: Removed the specific rune skip logic from here ---
+        // It's now handled in the partial withdrawal block
+
         // Skip Dueling Ring
         if (isDuelingRing(id) && Inventory.stream().nameContains(DUELING_RING_NAME_CONTAINS).isNotEmpty()) {
             script.logger.info("Skipping Ring of Dueling withdrawal, one already in inventory.")
@@ -175,11 +188,10 @@ class BankTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
         if (Inventory.isNotEmpty()) {
             script.logger.debug("Inventory not empty, depositing all except keep-items...")
 
-            // --- Find dynamic items to keep (food, axe, tele) ---
+            // --- Find dynamic items to keep (food, axe, tele, AND runes) ---
             val foodIdsToKeep = Inventory.stream().name(script.config.foodName).map { it.id() }.distinct().toList()
             script.logger.debug("Food IDs to keep: $foodIdsToKeep")
 
-            // Use the helper function from companion object
             val axeIdsToKeep = Inventory.stream()
                 .filter { isAxe(it.name()) }
                 .map { it.id() }
@@ -200,9 +212,23 @@ class BankTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
                 script.logger.warn("Could not find emergency teleport option for: ${script.config.emergencyTeleportItem}")
             }
 
+            // --- Find rune IDs from the required inventory to keep ---
+            val runeIdsToKeep = script.config.requiredInventory.keys.filter {
+                val name = ItemLoader.lookup(it)?.name() ?: ""
+                isRune(name)
+            }
+            script.logger.debug("Rune IDs to keep (from GUI): $runeIdsToKeep")
+
+
             // Create the final list of all items to keep
             // This combines the static list (BASE_ITEMS_TO_KEEP) with the dynamic ones
-            val finalIdsToKeep = (BASE_ITEMS_TO_KEEP + foodIdsToKeep + axeIdsToKeep + emergencyTeleIdsToKeep).distinct()
+            val finalIdsToKeep = (
+                    BASE_ITEMS_TO_KEEP +
+                            foodIdsToKeep +
+                            axeIdsToKeep +
+                            emergencyTeleIdsToKeep +
+                            runeIdsToKeep // <-- ADDED RUNES
+                    ).distinct()
             script.logger.debug("Final list of IDs to keep: $finalIdsToKeep")
 
             Bank.depositAllExcept(*finalIdsToKeep.toIntArray())
@@ -223,18 +249,23 @@ class BankTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
             script.logger.debug("Processing required item: $itemName (ID=$id, Amount=$requiredAmount)")
 
 
-            // --- MODIFIED: Centralized skip logic ---
+            // --- Centralized skip logic ---
             // Call the new helper function to see if we should skip this item
-            if (shouldSkipWithdrawal(id, itemName, emergencyTeleportName)) {
+            if (shouldSkipWithdrawal(id, itemName, emergencyTeleportName, script)) {
                 return@forEach // Skip to the next item in the loop
             }
-            // --- END MODIFIED ---
 
 
-            // --- Calculate missing amount for food and prayer pots ---
+            // --- Calculate missing amount for food, prayer pots, AND RUNES ---
             var amountToWithdraw = requiredAmount
 
-            if (id == PRAYER_POTION_4_ID || itemName.equals(script.config.foodName, ignoreCase = true)) {
+            // --- MODIFIED ---
+            // Check if it's a "top-up" item (food, prayer pot, or a configured rune)
+            if (id == PRAYER_POTION_4_ID
+                || itemName.equals(script.config.foodName, ignoreCase = true)
+                || (isRune(itemName) && script.config.requiredInventory.containsKey(id))
+            ) {
+                // --- END MODIFIED ---
                 val currentAmount = Inventory.stream().id(id).count(true).toInt()
                 amountToWithdraw = requiredAmount - currentAmount
                 script.logger.debug("Item $itemName (ID: $id) needs partial withdraw. Required: $requiredAmount, Have: $currentAmount, Withdrawing: $amountToWithdraw")
