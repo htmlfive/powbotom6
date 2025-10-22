@@ -11,12 +11,17 @@ class FightTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
 
     // --- Antipoison Logic ---
     private val ANTIPOISON_NAMES = setOf(
-        "Antipoison (1)",
-        "Antipoison (2)",
-        "Antipoison (3)",
-        "Antipoison (4)"
+        // Regular Antipoison
+        "Antipoison(1)", "Antipoison(2)", "Antipoison(3)", "Antipoison(4)",
+        // Superantipoison
+        "Superantipoison(1)", "Superantipoison(2)", "Superantipoison(3)", "Superantipoison(4)",
+        // Antidote+
+        "Antidote+ (1)", "Antidote+ (2)", "Antidote+ (3)", "Antidote+ (4)",
+        // Antidote++
+        "Antidote++ (1)", "Antidote++ (2)", "Antidote++ (3)", "Antidote++ (4)",
+        // Sanfew serum
+        "Sanfew serum (1)", "Sanfew serum (2)", "Sanfew serum (3)", "Sanfew serum (4)"
     )
-
     /**
      * Checks if the player is poisoned.
      */
@@ -60,7 +65,27 @@ class FightTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
     }
 
     override fun execute() {
-        // --- POISON CHECK ---
+        // --- MODIFIED: Prayer checks are now first priority ---
+
+        if (!Prayer.prayerActive(script.REQUIRED_PRAYER)) {
+            script.logger.info("Activating prayer: ${script.REQUIRED_PRAYER.name}")
+            Prayer.prayer(script.REQUIRED_PRAYER, true)
+            Condition.wait({ Prayer.prayerActive(script.REQUIRED_PRAYER) }, 100, 5)
+            return
+        }
+
+        if (Prayer.prayerPoints() < 30) {
+            script.logger.info("Prayer points low (${Prayer.prayerPoints()}), drinking potion.")
+            val prayerPotion = Inventory.stream().nameContains("Prayer potion").firstOrNull()
+            if (prayerPotion != null && prayerPotion.interact("Drink")) {
+                Condition.sleep(1200)
+                return
+            } else {
+                script.logger.warn("Prayer low but no prayer potions found!")
+            }
+        }
+
+        // --- POISON CHECK (Now runs after prayer) ---
         if (isPoisoned()) {
             script.logger.info("Player is poisoned. Looking for antipoison...")
             val antipoison = getAntipoison()
@@ -94,24 +119,6 @@ class FightTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
         }
 
         script.logger.debug("Executing FightTask...")
-
-        if (!Prayer.prayerActive(script.REQUIRED_PRAYER)) {
-            script.logger.info("Activating prayer: ${script.REQUIRED_PRAYER.name}")
-            Prayer.prayer(script.REQUIRED_PRAYER, true)
-            Condition.wait({ Prayer.prayerActive(script.REQUIRED_PRAYER) }, 100, 5)
-            return
-        }
-
-        if (Prayer.prayerPoints() < 30) {
-            script.logger.info("Prayer points low (${Prayer.prayerPoints()}), drinking potion.")
-            val prayerPotion = Inventory.stream().nameContains("Prayer potion").firstOrNull()
-            if (prayerPotion != null && prayerPotion.interact("Drink")) {
-                Condition.sleep(1200)
-                return
-            } else {
-                script.logger.warn("Prayer low but no prayer potions found!")
-            }
-        }
 
         if (boss.distance() < 2) {
             script.logger.debug("Too close to boss, finding a safe spot to step back.")
