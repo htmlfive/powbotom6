@@ -9,40 +9,53 @@ import org.powbot.om6.derangedarch.DerangedArchaeologistMagicKiller
 class BankTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
 
     companion object {
-        // --- ITEM IDs TO KEEP ---
+        // --- SECTION 1: "DO NOT DEPOSIT" (KEEP) LIST ---
+        // Add static item IDs here to keep them when depositing.
+        // Dynamic items (food, axes, emergency tele) are handled in execute().
 
         // Ring of dueling(8) down to Ring of dueling(2)
-        val DUELING_RING_IDS = listOf(
-            2552, // (8)
-            2554, // (7)
-            2556, // (6)
-            2558, // (5)
-            2560, // (4)
-            2562, // (3)
-            2564  // (2)
-        )
-
+        private val KEEP_DUELING_RING_IDS = (2552..2564 step 2).toList() // 2552, 2554, ..., 2564
         // Digsite pendant(5) down to Digsite pendant(2)
-        val DIGSITE_PENDANT_IDS = listOf(
-            11194, // (5)
-            11193, // (4)
-            11192, // (3)
-            11191  // (2)
-        )
-
+        private val KEEP_DIGSITE_PENDANT_IDS = (11191..11194).toList() // 11191, 11192, 11193, 11194
         // Prayer potion(4)
-        val PRAYER_POTION_4_ID = 2434
+        private const val KEEP_PRAYER_POTION_4_ID = 2434
+        // Antipoison(1-4)
+        private val KEEP_ANTIPOISON_IDS = listOf(2446, 175, 177, 179)
 
-        // Combine base items to keep
-        val BASE_ITEMS_TO_KEEP = DUELING_RING_IDS + DIGSITE_PENDANT_IDS + PRAYER_POTION_4_ID
+        /**
+         * The final, easily editable list of STATIC items to not deposit.
+         * These items will be kept by Bank.depositAllExcept().
+         */
+        val BASE_ITEMS_TO_KEEP = (
+                KEEP_DUELING_RING_IDS +
+                        KEEP_DIGSITE_PENDANT_IDS +
+                        KEEP_ANTIPOISON_IDS +
+                        KEEP_PRAYER_POTION_4_ID
+                ).distinct()
 
-        // --- HELPER FUNCTIONS ---
+        // --- SECTION 2: "DO NOT WITHDRAW" (SKIP) LOGIC HELPERS ---
+        // These are used to identify item *types* to skip withdrawing if we already have one.
 
-        // Check if an ID is any Ring of Dueling
-        fun isDuelingRing(id: Int): Boolean = id in 2552..2566
+        // All Dueling Rings (1-8)
+        private val ALL_DUELING_RING_IDS = 2552..2566
+        const val DUELING_RING_NAME_CONTAINS = "Ring of dueling"
+        fun isDuelingRing(id: Int): Boolean = id in ALL_DUELING_RING_IDS
 
-        // Check if an ID is any Digsite Pendant
-        fun isDigsitePendant(id: Int): Boolean = id in 11190..11194
+        // All Digsite Pendants (1-5)
+        private val ALL_DIGSITE_PENDANT_IDS = 11190..11194
+        const val DIGSITE_PENDANT_NAME_CONTAINS = "Digsite pendant"
+        fun isDigsitePendant(id: Int): Boolean = id in ALL_DIGSITE_PENDANT_IDS
+
+        // All Antidotes (1-4)
+        val ALL_ANTIPOISON_IDS = KEEP_ANTIPOISON_IDS // Re-use the list from above
+        fun isAntipoison(id: Int): Boolean = id in ALL_ANTIPOISON_IDS
+
+        // Axe identifier
+        private const val AXE_NAME_SUFFIX = "axe"
+        fun isAxe(name: String): Boolean = name.endsWith(AXE_NAME_SUFFIX, ignoreCase = true)
+
+        // Prayer Potion (4) ID for withdrawal logic
+        const val PRAYER_POTION_4_ID = KEEP_PRAYER_POTION_4_ID
     }
 
     override fun validate(): Boolean {
@@ -73,6 +86,44 @@ class BankTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
         return false // All retries failed
     }
 
+    /**
+     * --- NEW: Centralized "Do Not Withdraw" logic ---
+     * Checks if we should skip withdrawing an item because we already have one.
+     * This is the "easily editable" place for skip logic.
+     */
+    private fun shouldSkipWithdrawal(id: Int, itemName: String, emergencyTeleName: String?): Boolean {
+        // Skip Dueling Ring
+        if (isDuelingRing(id) && Inventory.stream().nameContains(DUELING_RING_NAME_CONTAINS).isNotEmpty()) {
+            script.logger.info("Skipping Ring of Dueling withdrawal, one already in inventory.")
+            return true
+        }
+        // Skip Digsite Pendant
+        if (isDigsitePendant(id) && Inventory.stream().nameContains(DIGSITE_PENDANT_NAME_CONTAINS).isNotEmpty()) {
+            script.logger.info("Skipping Digsite Pendant withdrawal, one already in inventory.")
+            return true
+        }
+        // Skip Antipoison
+        if (isAntipoison(id) && Inventory.stream().any { it.id() in ALL_ANTIPOISON_IDS }) {
+            script.logger.info("Skipping Antipoison withdrawal, one already in inventory.")
+            return true
+        }
+        // Skip Axe
+        if (isAxe(itemName) && Inventory.stream().any { isAxe(it.name()) }) {
+            script.logger.info("Skipping Axe ($itemName) withdrawal, one already in inventory.")
+            return true
+        }
+        // Skip Emergency Teleport
+        if (emergencyTeleName != null && itemName.contains(emergencyTeleName, ignoreCase = true)) {
+            if (Inventory.stream().nameContains(emergencyTeleName).isNotEmpty()) {
+                script.logger.info("Skipping Emergency Teleport ($itemName) withdrawal, one already in inventory.")
+                return true
+            }
+        }
+        // Did not match any skip rules
+        return false
+    }
+
+
     override fun execute() {
         script.logger.debug("Executing BankTask...")
         if (!Bank.opened()) {
@@ -86,24 +137,29 @@ class BankTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
         val requiredIds = script.config.requiredEquipment.keys
         val equippedIds = Equipment.stream().map { it.id }.toList()
 
-        // Find which required items are not currently equipped.
         val missingEquipmentIds = requiredIds.filter { it !in equippedIds }
         script.logger.debug("Required equip: $requiredIds, Worn equip: $equippedIds, Missing: $missingEquipmentIds")
 
-        // If there are any missing items, handle them first.
         if (missingEquipmentIds.isNotEmpty()) {
             script.logger.info("Mismatched equipment detected. Withdrawing missing items...")
 
+            if (Inventory.isNotEmpty()) {
+                script.logger.info("Depositing full inventory to make space for equipment...")
+                if (Bank.depositInventory()) {
+                    script.logger.debug("Waiting for inventory to be empty after deposit...")
+                    Condition.wait({ Inventory.isEmpty() }, 300, 10)
+                } else {
+                    script.logger.warn("Bank.depositInventory() failed! Proceeding anyway...")
+                }
+            }
+
             missingEquipmentIds.forEach { id ->
                 script.logger.info("Withdrawing item ID: $id")
-
-                // Use the retry logic
                 if (!withdrawWithRetries(id, 1, "Equip ID $id")) {
                     script.logger.warn("FATAL: Could not withdraw required equipment ID: $id after 3 attempts. Stopping script.")
                     ScriptManager.stop()
-                    return // Exit the execute() method entirely
+                    return
                 }
-                // Wait for the item to appear in inventory to ensure it was withdrawn successfully
                 Condition.wait({ Inventory.stream().id(id).isNotEmpty() }, 250, 10)
             }
 
@@ -116,23 +172,21 @@ class BankTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
 
         script.logger.info("Equipment check passed. Withdrawing inventory supplies...")
 
-        // Deposit inventory, keeping specified teleports, food, and prayer pots.
         if (Inventory.isNotEmpty()) {
             script.logger.debug("Inventory not empty, depositing all except keep-items...")
 
-            // Find the IDs of the food currently in the inventory
+            // --- Find dynamic items to keep (food, axe, tele) ---
             val foodIdsToKeep = Inventory.stream().name(script.config.foodName).map { it.id() }.distinct().toList()
             script.logger.debug("Food IDs to keep: $foodIdsToKeep")
 
-            // Find IDs of any axes
+            // Use the helper function from companion object
             val axeIdsToKeep = Inventory.stream()
-                .filter { it.name().endsWith("axe", ignoreCase = true) }
+                .filter { isAxe(it.name()) }
                 .map { it.id() }
                 .distinct()
                 .toList()
             script.logger.debug("Axe IDs to keep: $axeIdsToKeep")
 
-            // Find IDs of the emergency teleport item
             val emergencyTeleportName = script.teleportOptions[script.config.emergencyTeleportItem]?.itemNameContains
             var emergencyTeleIdsToKeep = emptyList<Int>()
             if (emergencyTeleportName != null) {
@@ -146,15 +200,13 @@ class BankTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
                 script.logger.warn("Could not find emergency teleport option for: ${script.config.emergencyTeleportItem}")
             }
 
-
             // Create the final list of all items to keep
+            // This combines the static list (BASE_ITEMS_TO_KEEP) with the dynamic ones
             val finalIdsToKeep = (BASE_ITEMS_TO_KEEP + foodIdsToKeep + axeIdsToKeep + emergencyTeleIdsToKeep).distinct()
             script.logger.debug("Final list of IDs to keep: $finalIdsToKeep")
 
-
             Bank.depositAllExcept(*finalIdsToKeep.toIntArray())
 
-            // Wait until the only items left are the ones we want to keep
             Condition.wait({
                 Inventory.stream().all { it.id() in finalIdsToKeep }
             }, 300, 10)
@@ -162,66 +214,46 @@ class BankTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
 
         // --- INVENTORY WITHDRAWAL LOOP ---
 
-        // Get the emergency teleport name ONCE before the loop
         val emergencyTeleportName = script.teleportOptions[script.config.emergencyTeleportItem]?.itemNameContains
 
         script.config.requiredInventory.forEach { (id, requiredAmount) ->
-            if (requiredAmount <= 0) return@forEach // Skip if amount is zero or less
+            if (requiredAmount <= 0) return@forEach
 
-            // Get item name first to use in skip logic
             val itemName = ItemLoader.lookup(id)?.name() ?: ""
             script.logger.debug("Processing required item: $itemName (ID=$id, Amount=$requiredAmount)")
 
 
-            // --- Skip withdrawing items if we already have any ---
-            if (isDuelingRing(id) && Inventory.stream().nameContains("Ring of dueling").isNotEmpty()) {
-                script.logger.info("Skipping Ring of Dueling withdrawal, one already in inventory.")
-                return@forEach
+            // --- MODIFIED: Centralized skip logic ---
+            // Call the new helper function to see if we should skip this item
+            if (shouldSkipWithdrawal(id, itemName, emergencyTeleportName)) {
+                return@forEach // Skip to the next item in the loop
             }
-            if (isDigsitePendant(id) && Inventory.stream().nameContains("Digsite pendant").isNotEmpty()) {
-                script.logger.info("Skipping Digsite Pendant withdrawal, one already in inventory.")
-                return@forEach
-            }
-            // Skip Axe
-            if (itemName.endsWith("axe", ignoreCase = true) && Inventory.stream().any { it.name().endsWith("axe", ignoreCase = true) }) {
-                script.logger.info("Skipping Axe ($itemName) withdrawal, one already in inventory.")
-                return@forEach
-            }
-            // Skip Emergency Teleport
-            if (emergencyTeleportName != null && itemName.contains(emergencyTeleportName, ignoreCase = true)) {
-                if (Inventory.stream().nameContains(emergencyTeleportName).isNotEmpty()) {
-                    script.logger.info("Skipping Emergency Teleport ($itemName) withdrawal, one already in inventory.")
-                    return@forEach
-                }
-            }
+            // --- END MODIFIED ---
+
 
             // --- Calculate missing amount for food and prayer pots ---
             var amountToWithdraw = requiredAmount
 
-            // Check if it's the specific prayer pot or the configured food
             if (id == PRAYER_POTION_4_ID || itemName.equals(script.config.foodName, ignoreCase = true)) {
                 val currentAmount = Inventory.stream().id(id).count(true).toInt()
                 amountToWithdraw = requiredAmount - currentAmount
                 script.logger.debug("Item $itemName (ID: $id) needs partial withdraw. Required: $requiredAmount, Have: $currentAmount, Withdrawing: $amountToWithdraw")
 
-
                 if (amountToWithdraw <= 0) {
                     script.logger.info("Already have enough $itemName (ID: $id). Skipping withdrawal.")
-                    return@forEach // Already have enough, skip to next item
+                    return@forEach
                 }
             }
 
             // --- Withdraw the calculated amount ---
             script.logger.debug("Withdrawing $amountToWithdraw of $itemName (ID: $id)")
 
-            // Use the retry logic
             if (!withdrawWithRetries(id, amountToWithdraw, itemName)) {
                 script.logger.warn("FATAL: Could not withdraw $amountToWithdraw of $itemName (ID: $id) after 3 attempts. Stopping script.")
                 ScriptManager.stop()
-                return@forEach // Stop iterating
+                return@forEach
             }
 
-            // Wait for the correct count to be in the inventory before moving to the next item
             Condition.wait({ Inventory.stream().id(id).count(true) >= requiredAmount }, 250, 12)
         }
 
@@ -230,8 +262,6 @@ class BankTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
         if (Bank.close()) {
             script.emergencyTeleportJustHappened = false
 
-            // --- FINAL VERIFICATION ---
-            // Wait a moment for inventory/equipment to settle after bank close
             Condition.sleep(300)
             script.logger.debug("Bank closed. Running final verification...")
 
