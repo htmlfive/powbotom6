@@ -21,13 +21,13 @@ import org.powbot.om6.derangedarch.tasks.*
         ScriptConfiguration(
             "Required Equipment", "Define the gear to wear.",
             optionType = OptionType.EQUIPMENT,
-            defaultValue = "{\"4089\":0,\"21795\":1,\"12002\":2,\"11907\":3,\"4091\":4,\"25818\":5,\"4093\":7,\"7462\":9,\"4097\":10,\"30895\":12,\"20232\":13}"
+            defaultValue = "{\"4089\":0,\"21795\":1,\"12002\":2,\"12658\":3,\"4091\":4,\"25818\":5,\"4093\":7,\"7462\":9,\"4097\":10,\"30895\":12,\"20232\":13}"
         ),
         ScriptConfiguration(
             "Required Inventory",
             "Define your full inventory. Must include an axe, some food, prayer pots, ring of dueling, emergency teleport, digsite pendant",
             optionType = OptionType.INVENTORY,
-            defaultValue = "{\"1351\":1,\"13123\":1,\"2552\":1,\"11194\":1,\"2434\":5,\"385\":10,\"2446\":1}"
+            defaultValue = "{\"1351\":1,\"13123\":1,\"2552\":1,\"11194\":1,\"2434\":5,\"385\":10,\"2446\":1,\"560\":1000,\"554\":5000}"
         ),
         ScriptConfiguration(
             "Food Name", "The name of the food in your inventory setup to eat.",
