@@ -1,20 +1,19 @@
 package org.powbot.om6.salvager
 
+import com.google.common.eventbus.Subscribe
 import org.powbot.api.Condition
-import org.powbot.api.Random
 import org.powbot.api.Input
-
-import org.powbot.api.rt4.*
-import org.powbot.api.rt4.walking.model.Skill
-
+import org.powbot.api.Random
+import org.powbot.api.Tile
 import org.powbot.api.event.MessageEvent
 import org.powbot.api.event.MessageType
-import com.google.common.eventbus.Subscribe
-
+import org.powbot.api.rt4.*
+import org.powbot.api.rt4.walking.model.Skill
 import org.powbot.api.script.AbstractScript
-import org.powbot.api.script.ScriptManifest
 import org.powbot.api.script.ScriptCategory
+import org.powbot.api.script.ScriptManifest
 import org.powbot.api.script.paint.PaintBuilder
+import org.powbot.mobile.script.ScriptManager
 import kotlin.math.abs
 
 private enum class SalvagePhase {
@@ -33,16 +32,17 @@ private enum class SalvagePhase {
 )
 class ShipwreckSalvager : AbstractScript() {
 
-    private val ACTION_TIMEOUT_MILLIS = 360 * 1000
 
-    private val RESPAWN_WAIT_MIN_MILLIS = 15 * 1000
-    private val RESPAWN_WAIT_MAX_MILLIS = 20 * 1000
-    private val DIALOGUE_RESTART_MIN_MILLIS = 25 * 1000
-    private val DIALOGUE_RESTART_MAX_MILLIS = 35 * 1000
+    private val ACTION_TIMEOUT_MILLIS = 450 * 1000
+
+    private val RESPAWN_WAIT_MIN_MILLIS = 25 * 100
+    private val RESPAWN_WAIT_MAX_MILLIS = 35 * 100
+    private val DIALOGUE_RESTART_MIN_MILLIS = 15 * 100
+    private val DIALOGUE_RESTART_MAX_MILLIS = 20 * 100
 
 
     private val SALVAGE_COMPLETE_MESSAGE = "You salvage all you can"
-    private val SALVAGE_NAME = "Small salvage"
+    private val SALVAGE_NAME = "Barracuda salvage"
 
     private var currentPhase: SalvagePhase = SalvagePhase.READY_TO_TAP
     private var phaseStartTime: Long = 0L
@@ -50,12 +50,16 @@ class ShipwreckSalvager : AbstractScript() {
 
     private var salvageMessageFound = false
 
+    // Variable to store the player's starting tile (X, Y, Z)
+    private var startTile: Tile? = null
+
     @Subscribe
     fun onMessageEvent(change: MessageEvent) {
         if (change.messageType == MessageType.Game && change.message.contains(SALVAGE_COMPLETE_MESSAGE)) {
             logger.info("EVENT: Salvage COMPLETE message detected via EventBus!")
             salvageMessageFound = true
-
+            startTile = Players.local().tile()
+            logger.info("Updated startTile after dialogue to: $startTile")
             Condition.sleep(100)
         }
     }
@@ -64,10 +68,20 @@ class ShipwreckSalvager : AbstractScript() {
         // If a chat dialogue is visible, click continue to clear it.
         if (Chat.canContinue()) {
             logger.info("DIALOGUE DETECTED: Clicking continue...")
-            // The flaw was here: the script was sleeping 15-20s instead of clicking the chat.
-            Condition.sleep(Random.nextInt(3000, 5000))
+
+            var count = 0
+            val sleepBetween = 15
+
+            while (count < sleepBetween) {
+                Condition.sleep(Random.nextInt(1000, 2000))
+                count++
+            }
+
             if (Chat.clickContinue()) {
-                // Short sleep after clicking the dialogue button
+
+                startTile = Players.local().tile()
+                logger.info("Updated startTile after dialogue to: $startTile")
+
                 Condition.sleep(Random.nextInt(DIALOGUE_RESTART_MIN_MILLIS, DIALOGUE_RESTART_MAX_MILLIS))
                 return true
             }
@@ -77,6 +91,7 @@ class ShipwreckSalvager : AbstractScript() {
 
     override fun poll() {
         try {
+
             if (Inventory.isFull()) {
                 if (currentPhase != SalvagePhase.DROPPING_SALVAGE) {
                     logger.info("SAFETY TRIGGER: Inventory full. Jumping to drop phase.")
@@ -156,15 +171,22 @@ class ShipwreckSalvager : AbstractScript() {
 
         salvageMessageFound = false
 
+        val currentTile = Players.local().tile()
+        if (startTile != null && (currentTile.x() != startTile!!.x() || currentTile.y() != startTile!!.y())) {
+            logger.warn("Position change detected (X/Y)! Start: $startTile, Current: $currentTile. Stopping script.")
+            ScriptManager.stop()
+            return
+        }
+
         // Target yaw is 30, the center of the required 28-32 range.
-        val targetYaw = 30
+        val targetYaw = 0
         val targetPitch = 0
 
         val currentYaw = Camera.yaw()
         val currentPitch = Camera.pitch()
 
         // Check if yaw is strictly within the 28-32 range.
-        val isYawCorrect = currentYaw in 28..32
+        val isYawCorrect = currentYaw in 0..2
 
         // Check for pitch (within 2 degrees tolerance)
         val isPitchCorrect = abs(currentPitch - targetPitch) <= 2
@@ -204,6 +226,21 @@ class ShipwreckSalvager : AbstractScript() {
     }
 
     private fun dropSalvage() {
+        // --- MODIFICATION: Ensure inventory tab is open before dropping ---
+        if (!Inventory.opened()) {
+            if (Inventory.open()) {
+                logger.info("Inventory tab opened successfully for dropping.")
+                // Wait for the tab to settle
+                Condition.sleep(Random.nextInt(200, 400))
+            } else {
+                logger.warn("Failed to open the inventory tab. Aborting drop sequence.")
+                return
+            }
+        } else {
+            logger.info("Inventory tab is already open.")
+        }
+        // --- END MODIFICATION ---
+
         val salvageItems = Inventory.stream().name(SALVAGE_NAME).list()
 
         if (salvageItems.isNotEmpty()) {
@@ -227,12 +264,18 @@ class ShipwreckSalvager : AbstractScript() {
 
     private fun executeCenterClick(): Boolean {
         val dimensions = Game.dimensions()
-        val centerX = dimensions.width / 2
-        val centerY = dimensions.height / 2
+        //val centerX = dimensions.width / 2
+        //val centerY = dimensions.height / 2
+        //val finalX = centerX + randomOffsetX + 15
+        // val finalY = centerY + randomOffsetY + 40
         val randomOffsetX = Random.nextInt(-10, 12)
         val randomOffsetY = Random.nextInt(-12, 9)
+
+        val centerX = 517
+        val centerY = 322
         val finalX = centerX + randomOffsetX
-        val finalY = centerY + randomOffsetY + 15
+        val finalY = centerY + randomOffsetY
+
 
         logger.info("Tapping screen at randomized point X=$finalX, Y=$finalY (Base: $centerX, $centerY).")
 
@@ -248,10 +291,13 @@ class ShipwreckSalvager : AbstractScript() {
         currentPhase = SalvagePhase.READY_TO_TAP
         salvageMessageFound = false
 
+        // Initialize startTile on script start
+        startTile = Players.local().tile()
+
         val paint = PaintBuilder.newBuilder()
             .x(40)
             .y(80)
-            .trackSkill(Skill.Overall)
+            //.trackSkill(Skill.Overall)
             .addString("Status") {
                 val elapsedTime = System.currentTimeMillis() - phaseStartTime
 
@@ -260,7 +306,7 @@ class ShipwreckSalvager : AbstractScript() {
                     SalvagePhase.WAITING_FOR_ACTION -> {
                         val remaining = (ACTION_TIMEOUT_MILLIS - elapsedTime) / 1000L
                         val status = if (salvageMessageFound) "Message DETECTED! (Dropping next)"
-                        else "Salvaging (Timeout in: ${if (remaining > 0) "${remaining}s" else "Expired"})"
+                        else "Salvaging '$SALVAGE_NAME' (Timeout in: ${if (remaining > 0) "${remaining}s" else "Expired"})"
 
                         if (Chat.canContinue()) {
                             "DIALOGUE BLOCKING - Clicking..."
