@@ -8,7 +8,6 @@ import org.powbot.api.Tile
 import org.powbot.api.event.MessageEvent
 import org.powbot.api.event.MessageType
 import org.powbot.api.rt4.*
-import org.powbot.api.rt4.walking.model.Skill
 import org.powbot.api.script.AbstractScript
 import org.powbot.api.script.ScriptCategory
 import org.powbot.api.script.ScriptManifest
@@ -263,7 +262,7 @@ class ShipwreckSalvager : AbstractScript() {
     }
 
     private fun executeCenterClick(): Boolean {
-        val dimensions = Game.dimensions()
+        //val dimensions = Game.dimensions()
         //val centerX = dimensions.width / 2
         //val centerY = dimensions.height / 2
         //val finalX = centerX + randomOffsetX + 15
