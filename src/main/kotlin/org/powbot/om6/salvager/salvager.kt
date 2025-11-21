@@ -33,23 +33,17 @@ class ShipwreckSalvager : AbstractScript() {
 
 
     private val ACTION_TIMEOUT_MILLIS = 450 * 1000
-
     private val RESPAWN_WAIT_MIN_MILLIS = 25 * 100
     private val RESPAWN_WAIT_MAX_MILLIS = 35 * 100
     private val DIALOGUE_RESTART_MIN_MILLIS = 15 * 100
     private val DIALOGUE_RESTART_MAX_MILLIS = 20 * 100
 
-
     private val SALVAGE_COMPLETE_MESSAGE = "You salvage all you can"
     private val SALVAGE_NAME = "Barracuda salvage"
-
     private var currentPhase: SalvagePhase = SalvagePhase.READY_TO_TAP
     private var phaseStartTime: Long = 0L
     private var currentRespawnWait: Long = RESPAWN_WAIT_MIN_MILLIS.toLong()
-
     private var salvageMessageFound = false
-
-    // Variable to store the player's starting tile (X, Y, Z)
     private var startTile: Tile? = null
 
     @Subscribe
@@ -64,7 +58,6 @@ class ShipwreckSalvager : AbstractScript() {
     }
 
     private fun handleDialogueCheck(): Boolean {
-        // If a chat dialogue is visible, click continue to clear it.
         if (Chat.canContinue()) {
             logger.info("DIALOGUE DETECTED: Clicking continue...")
 
@@ -108,9 +101,7 @@ class ShipwreckSalvager : AbstractScript() {
                 SalvagePhase.WAITING_FOR_ACTION -> {
                     val timeoutSeconds = ACTION_TIMEOUT_MILLIS / 1000L
 
-                    // Check for and handle dialogue interruptions
                     if (handleDialogueCheck()) {
-                        // If dialogue was handled, wait the defined restart time before retrying the action.
                         val waitTime = Random.nextInt(DIALOGUE_RESTART_MIN_MILLIS, DIALOGUE_RESTART_MAX_MILLIS)
                         logger.info("Dialogue cleared. Waiting ${waitTime / 1000L}s and restarting action.")
                         Condition.sleep(waitTime)
@@ -176,24 +167,18 @@ class ShipwreckSalvager : AbstractScript() {
             ScriptManager.stop()
             return
         }
-
-        // Target yaw is 30, the center of the required 28-32 range.
-        val targetYaw = 0
-        val targetPitch = 0
-
         val currentYaw = Camera.yaw()
         val currentPitch = Camera.pitch()
 
-        // Check if yaw is strictly within the 28-32 range.
+        val targetYaw = 0
         val isYawCorrect = currentYaw in 0..2
-
-        // Check for pitch (within 2 degrees tolerance)
+        val targetPitch = 0
         val isPitchCorrect = abs(currentPitch - targetPitch) <= 2
 
-        if (!isYawCorrect || !isPitchCorrect) {
-            logger.info("Adjusting camera. Required Yaw: 28-32 (Correcting to $targetYaw), Pitch: $targetPitch. Current Yaw: $currentYaw, Current Pitch: $currentPitch.")
 
-            // Set camera to the required position
+        if (!isYawCorrect || !isPitchCorrect) {
+            logger.info("Adjusting camera. Correcting to Yaw: $targetYaw, Pitch: $targetPitch. Current Yaw: $currentYaw, Current Pitch: $currentPitch.")
+
             Camera.angle(targetYaw)
             Camera.pitch(targetPitch)
 
@@ -225,11 +210,9 @@ class ShipwreckSalvager : AbstractScript() {
     }
 
     private fun dropSalvage() {
-        // --- MODIFICATION: Ensure inventory tab is open before dropping ---
         if (!Inventory.opened()) {
             if (Inventory.open()) {
                 logger.info("Inventory tab opened successfully for dropping.")
-                // Wait for the tab to settle
                 Condition.sleep(Random.nextInt(200, 400))
             } else {
                 logger.warn("Failed to open the inventory tab. Aborting drop sequence.")
@@ -238,7 +221,6 @@ class ShipwreckSalvager : AbstractScript() {
         } else {
             logger.info("Inventory tab is already open.")
         }
-        // --- END MODIFICATION ---
 
         val salvageItems = Inventory.stream().name(SALVAGE_NAME).list()
 
@@ -266,7 +248,7 @@ class ShipwreckSalvager : AbstractScript() {
         //val centerX = dimensions.width / 2
         //val centerY = dimensions.height / 2
         //val finalX = centerX + randomOffsetX + 15
-        // val finalY = centerY + randomOffsetY + 40
+        //val finalY = centerY + randomOffsetY + 40
         val randomOffsetX = Random.nextInt(-10, 12)
         val randomOffsetY = Random.nextInt(-12, 9)
 
@@ -290,13 +272,11 @@ class ShipwreckSalvager : AbstractScript() {
         currentPhase = SalvagePhase.READY_TO_TAP
         salvageMessageFound = false
 
-        // Initialize startTile on script start
         startTile = Players.local().tile()
 
         val paint = PaintBuilder.newBuilder()
             .x(40)
             .y(80)
-            //.trackSkill(Skill.Overall)
             .addString("Status") {
                 val elapsedTime = System.currentTimeMillis() - phaseStartTime
 
