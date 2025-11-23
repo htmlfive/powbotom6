@@ -84,7 +84,7 @@ class DropSalvageTask(private val script: ShipwreckSalvager) : Task {
      */
     private fun withdrawCargo() {
         script.logger.info("Executing WithdrawCargo sequence (Bank/Interface interaction) with randomization.")
-        val waitTime = Random.nextInt(1200, 1800)
+        val waitTime = Random.nextInt(900, 1200)
 
         // Function to get a random offset between -3 and +3 (inclusive)
         fun getRandomOffsetSmall() = Random.nextInt(-3, 4)
