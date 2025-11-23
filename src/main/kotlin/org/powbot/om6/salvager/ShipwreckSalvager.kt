@@ -12,6 +12,7 @@ import org.powbot.api.script.AbstractScript
 import org.powbot.api.script.ScriptCategory
 import org.powbot.api.script.paint.PaintBuilder
 import org.powbot.api.Tile
+import org.powbot.om6.salvager.tasks.CardinalDirection // <-- NEW IMPORT
 import org.powbot.om6.salvager.tasks.DropSalvageTask
 import org.powbot.om6.salvager.tasks.ReadyToTapTask
 import org.powbot.om6.salvager.tasks.RespawnWaitTask
@@ -63,6 +64,12 @@ class ShipwreckSalvager : AbstractScript() {
         const val SALVAGE_COMPLETE_MESSAGE = "You salvage all you can"
         const val SALVAGE_NAME = "Plundered salvage"
     }
+
+    // --- Centralized Direction Configuration (NEW) ---
+    // Camera direction required for the ReadyToTapTask (facing the salvage spot)
+    val requiredTapDirection = CardinalDirection.East
+    // Camera direction required for the DropSalvageTask (fixed screen taps, usually facing North)
+    val requiredDropDirection = CardinalDirection.East
 
     // --- Task List ---
     private val taskList: List<Task> by lazy {
@@ -167,18 +174,6 @@ class ShipwreckSalvager : AbstractScript() {
                     baseStatus
                 }
             }
-
-//            .addString("(Broken) Starting XP (Overall)") {
-//                String.format("%,d", initialOverallXp)
-//            }
-//            .addString("(Broken) Current XP (Overall)") {
-//                // Now directly calling API since calculation is done in poll()
-//                String.format("%,d", Skills.experience(Skill.Overall).toLong())
-//            }
-//            .addString("(Broken) XP Gained (Overall)") {
-//                // Read from pre-calculated class properties
-//                "Gained: ${String.format("%,d", currentGainedXp)} (XP/Hr: ${String.format("%,.0f", currentXpPerHour)})"
-//            }
             .build()
         addPaint(paint)
         logger.info("START: Shipwreck Salvager (Task System Initialized)")
