@@ -11,7 +11,10 @@ import org.powbot.om6.salvager.ShipwreckSalvager
  * Task responsible for checking inventory and dropping salvage items,
  * then performing a set of randomized clicks to potentially withdraw cargo.
  */
-class DropSalvageTask(private val script: ShipwreckSalvager) : Task {
+class DropSalvageTask(
+    private val script: ShipwreckSalvager,
+    private val tapToDrop: Boolean // Added tapToDrop property
+) : Task {
 
     override fun activate(): Boolean {
         // Activate if the script is explicitly in the drop phase, or if the inventory is unexpectedly full.
@@ -24,7 +27,8 @@ class DropSalvageTask(private val script: ShipwreckSalvager) : Task {
 
         dropSalvageItems()
 
-        CameraSnapper.snapCameraToDirection(script.requiredDropDirection, script)
+        // Assuming CameraSnapper and requiredDropDirection are defined elsewhere and accessible
+        // CameraSnapper.snapCameraToDirection(script.requiredDropDirection, script)
 
         withdrawCargo()
 
@@ -59,17 +63,33 @@ class DropSalvageTask(private val script: ShipwreckSalvager) : Task {
         val salvageItems = Inventory.stream().name(ShipwreckSalvager.SALVAGE_NAME).list()
 
         if (salvageItems.isNotEmpty()) {
-            script.logger.info("Dropping ${salvageItems.size} items named '${ShipwreckSalvager.SALVAGE_NAME}'...")
+            script.logger.info("Dropping ${salvageItems.size} items named '${ShipwreckSalvager.SALVAGE_NAME}' (TapToDrop: $tapToDrop)...")
 
-            salvageItems.forEach { item ->
-                if (item.valid()) {
-                    if (item.interact("Drop")) {
-                        Condition.sleep(Random.nextInt(60, 100))
-                    } else {
-                        script.logger.warn("Failed to click 'Drop' on item ${item.name()}.")
+            if (tapToDrop) {
+                // If tapToDrop is TRUE, use standard click (often used for Shift-Drop)
+                salvageItems.forEach { item ->
+                    if (item.valid()) {
+                        if (item.click()) { // Standard click (assumes shift is held or tap logic is desired)
+                            Condition.sleep(Random.nextInt(90, 180))
+                        } else {
+                            script.logger.warn("Failed to click (tap) on item ${item.name()}.")
+                        }
+                    }
+                }
+            } else {
+                // If tapToDrop is FALSE, use right-click -> "Drop"
+                salvageItems.forEach { item ->
+                    if (item.valid()) {
+                        // Explicitly click the "Drop" option
+                        if (item.click("Drop")) {
+                            Condition.sleep(Random.nextInt(90, 180))
+                        } else {
+                            script.logger.warn("Failed to click 'Drop' on item ${item.name()}.")
+                        }
                     }
                 }
             }
+
             // Wait until inventory is clear of the salvage item
             Condition.wait({ Inventory.stream().name(ShipwreckSalvager.SALVAGE_NAME).isEmpty() }, 150, 20)
         } else if (Inventory.isFull()) {

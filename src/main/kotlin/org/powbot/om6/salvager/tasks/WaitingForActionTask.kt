@@ -57,7 +57,7 @@ class WaitingForActionTask(private val script: ShipwreckSalvager) : Task {
             script.logger.info("DIALOGUE DETECTED: Clicking continue...")
 
             var count = 0
-            val sleepBetween = 15
+            val sleepBetween = 3
 
             while (count < sleepBetween) {
                 Condition.sleep(Random.nextInt(1000, 2000))

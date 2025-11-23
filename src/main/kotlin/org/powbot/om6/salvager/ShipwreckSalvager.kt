@@ -12,14 +12,13 @@ import org.powbot.api.script.AbstractScript
 import org.powbot.api.script.ScriptCategory
 import org.powbot.api.script.paint.PaintBuilder
 import org.powbot.api.Tile
-import org.powbot.om6.salvager.tasks.CardinalDirection // <-- NEW IMPORT
+import org.powbot.om6.salvager.tasks.CardinalDirection
 import org.powbot.om6.salvager.tasks.DropSalvageTask
 import org.powbot.om6.salvager.tasks.ReadyToTapTask
 import org.powbot.om6.salvager.tasks.RespawnWaitTask
 import org.powbot.om6.salvager.tasks.SalvagePhase
 import org.powbot.om6.salvager.tasks.Task
 import org.powbot.om6.salvager.tasks.WaitingForActionTask
-
 
 
 @ScriptManifest(
@@ -49,16 +48,19 @@ class ShipwreckSalvager : AbstractScript() {
     @Volatile
     private var xpTrackStartTime: Long = 0L
     @Volatile
-    private var currentGainedXp: Long = 0L // New variable for calculated gain
+    private var currentGainedXp: Long = 0L
     @Volatile
-    private var currentXpPerHour: Double = 0.0 // New variable for calculated rate
+    private var currentXpPerHour: Double = 0.0
 
+    // --- Configuration ---
+    // SET THIS VALUE: true enables Shift-Drop (direct click), false enables right-click -> 'Drop'
+    val tapToDrop: Boolean = true
 
     // --- Constants ---
     companion object {
         const val ACTION_TIMEOUT_MILLIS = 450 * 1000
-        const val RESPAWN_WAIT_MIN_MILLIS = 10 * 100
-        const val RESPAWN_WAIT_MAX_MILLIS = 20 * 100
+        const val RESPAWN_WAIT_MIN_MILLIS = 5 * 100
+        const val RESPAWN_WAIT_MAX_MILLIS = 8 * 100
         const val DIALOGUE_RESTART_MIN_MILLIS = 15 * 100
         const val DIALOGUE_RESTART_MAX_MILLIS = 20 * 100
         const val SALVAGE_COMPLETE_MESSAGE = "You salvage all you can"
@@ -74,10 +76,11 @@ class ShipwreckSalvager : AbstractScript() {
     // --- Task List ---
     private val taskList: List<Task> by lazy {
         listOf(
-            DropSalvageTask(this),      // Check for full inventory/drop flag first
-            RespawnWaitTask(this),      // Check for wait completion
-            ReadyToTapTask(this),       // Initiate action
-            WaitingForActionTask(this)  // Wait for completion/handle timeout/dialogue
+            // Pass the configuration value to the task
+            DropSalvageTask(this, tapToDrop),
+            RespawnWaitTask(this),
+            ReadyToTapTask(this),
+            WaitingForActionTask(this)
         )
     }
 
@@ -153,6 +156,12 @@ class ShipwreckSalvager : AbstractScript() {
         val paint = PaintBuilder.newBuilder()
             .x(40)
             .y(80)
+            // Display the tapToDrop setting prominently
+            .addString("Drop Mode") { if (tapToDrop) "Tap/Shift-Drop (Fast)" else "Right-Click (Safe)" }
+            // Added Tap Direction
+            .addString("Tap Direction") { requiredTapDirection.toString() }
+            // Added Drop Direction
+            .addString("Drop Direction") { requiredDropDirection.toString() }
             .addString("Status") {
                 val baseStatus = when (currentPhase) {
                     SalvagePhase.READY_TO_TAP -> "Ready to Tap"
@@ -161,6 +170,7 @@ class ShipwreckSalvager : AbstractScript() {
                         if (salvageMessageFound) "Message DETECTED! (Dropping next)"
                         else "Salvaging '$SALVAGE_NAME' (Timeout in: ${if (remaining > 0) "${remaining}s" else "Expired"})"
                     }
+                    // Removed the tapToDrop info from here as it's now on a separate line
                     SalvagePhase.DROPPING_SALVAGE -> "Dropping Salvage"
                     SalvagePhase.WAITING_FOR_RESPAWN -> {
                         val totalSeconds = currentRespawnWait / 1000L
