@@ -9,12 +9,15 @@ import org.powbot.om6.salvager.ShipwreckSalvager
 /**
  * Defines the required camera yaw and the corresponding compass action to snap to that direction.
  * Mappings: North=0, South=180, East=270, West=90.
+ *
+ * **FIXED:** Changed from sealed class with objects to a standard enum class
+ * so that the String configuration values can be easily mapped to enum instances using valueOf().
  */
-sealed class CardinalDirection(val yaw: Int, val action: String) {
-    object North : CardinalDirection(0, "Look North")
-    object South : CardinalDirection(180, "Look South")
-    object East : CardinalDirection(270, "Look East")
-    object West : CardinalDirection(90, "Look West")
+enum class CardinalDirection(val yaw: Int, val action: String) {
+    North(0, "Look North"),
+    South(180, "Look South"),
+    East(270, "Look East"),
+    West(90, "Look West")
 }
 
 /**
@@ -45,8 +48,12 @@ object CameraSnapper {
                 Condition.wait({ Camera.yaw() == yawNeeded }, 100, 10)
                 Condition.sleep(Random.nextInt(600, 1200))
             } else {
-                script.logger.warn("Camera Snapper: Failed to find or click compass component $COMPASS_WIDGET_ID:$COMPASS_COMPONENT_INDEX with action '$COMPASS_ACTION'.")
+                script.logger.warn("Camera Snapper: Failed to find or click compass component $COMPASS_WIDGET_ID:$COMPASS_COMPONENT_INDEX for action '$COMPASS_ACTION'.")
             }
+        } else {
+            script.logger.info("Camera Snapper: Already facing $COMPASS_ACTION ($yawNeeded).")
         }
     }
+
+
 }

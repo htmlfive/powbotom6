@@ -8,9 +8,7 @@ import org.powbot.api.rt4.Players
 import org.powbot.mobile.script.ScriptManager
 import org.powbot.om6.salvager.ShipwreckSalvager
 
-class ReadyToTapTask(private val script: ShipwreckSalvager) : Task {
-
-    // Removed: private val requiredDirection property is now read from the main script.
+class ReadyToTapTask(script: ShipwreckSalvager) : Task(script) {
 
     override fun activate(): Boolean {
         return script.currentPhase == SalvagePhase.READY_TO_TAP

@@ -3,8 +3,8 @@ package org.powbot.om6.salvager.tasks
 import org.powbot.api.Condition
 import org.powbot.api.Input
 import org.powbot.api.Random
-import org.powbot.api.rt4.Game
 import org.powbot.api.rt4.Inventory
+import org.powbot.api.rt4.Item // Import Item to allow explicit typing
 import org.powbot.om6.salvager.ShipwreckSalvager
 
 /**
@@ -12,9 +12,14 @@ import org.powbot.om6.salvager.ShipwreckSalvager
  * then performing a set of randomized clicks to potentially withdraw cargo.
  */
 class DropSalvageTask(
-    private val script: ShipwreckSalvager,
-    private val tapToDrop: Boolean // Added tapToDrop property
-) : Task {
+    script: ShipwreckSalvager, // Passed to Task superclass
+    private val salvageItemName: String
+) : Task(script) { // Correct inheritance
+
+    // NEW: Property to determine the current drop method based on script state
+    private val useTapToDrop: Boolean
+        // Read user preference AND confirmed state dynamically from the main script
+        get() = script.tapToDrop && script.isTapToDropEnabled
 
     override fun activate(): Boolean {
         // Activate if the script is explicitly in the drop phase, or if the inventory is unexpectedly full.
@@ -28,7 +33,7 @@ class DropSalvageTask(
         dropSalvageItems()
 
         // Assuming CameraSnapper and requiredDropDirection are defined elsewhere and accessible
-        // CameraSnapper.snapCameraToDirection(script.requiredDropDirection, script)
+        CameraSnapper.snapCameraToDirection(script.requiredDropDirection, script)
 
         withdrawCargo()
 
@@ -39,75 +44,70 @@ class DropSalvageTask(
             ShipwreckSalvager.RESPAWN_WAIT_MIN_MILLIS,
             ShipwreckSalvager.RESPAWN_WAIT_MAX_MILLIS
         ).toLong()
-
-        script.logger.info("Drop/Withdraw sequence complete. Starting randomized respawn wait (${script.currentRespawnWait / 1000L}s).")
         script.phaseStartTime = System.currentTimeMillis()
         script.currentPhase = SalvagePhase.WAITING_FOR_RESPAWN
+        script.logger.info("Transitioning to WAITING_FOR_RESPAWN for ${script.currentRespawnWait / 1000L} seconds.")
     }
 
-    /**
-     * Handles the logic for opening the inventory and dropping all items named 'Plundered salvage'.
-     * @return Boolean indicating if the process successfully completed the drop attempt.
-     */
-    private fun dropSalvageItems(): Boolean {
+    private fun dropSalvageItems() {
         if (!Inventory.opened()) {
             if (Inventory.open()) {
                 script.logger.info("Inventory tab opened successfully for dropping.")
                 Condition.sleep(Random.nextInt(200, 400))
             } else {
                 script.logger.warn("Failed to open the inventory tab. Aborting drop sequence.")
-                return false
+                return
             }
+        } else {
+            script.logger.info("Inventory tab is already open.")
+        }
+        // Use the injected salvageItemName property
+        val salvageItems = Inventory.stream().name(salvageItemName).list()
+
+        if (salvageItems.isEmpty()) {
+            script.logger.info("No '$salvageItemName' items found to drop.")
+            return
         }
 
-        val salvageItems = Inventory.stream().name(ShipwreckSalvager.SALVAGE_NAME).list()
+        script.logger.info("Dropping ${salvageItems.size} x '$salvageItemName'. Drop Mode: ${if (useTapToDrop) "Tap/Shift-Drop" else "Right-Click"}.")
 
-        if (salvageItems.isNotEmpty()) {
-            script.logger.info("Dropping ${salvageItems.size} items named '${ShipwreckSalvager.SALVAGE_NAME}' (TapToDrop: $tapToDrop)...")
-
-            if (tapToDrop) {
-                // If tapToDrop is TRUE, use standard click (often used for Shift-Drop)
-                salvageItems.forEach { item ->
-                    if (item.valid()) {
-                        if (item.click()) { // Standard click (assumes shift is held or tap logic is desired)
-                            Condition.sleep(Random.nextInt(90, 180))
-                        } else {
-                            script.logger.warn("Failed to click (tap) on item ${item.name()}.")
-                        }
-                    }
-                }
-            } else {
-                // If tapToDrop is FALSE, use right-click -> "Drop"
-                salvageItems.forEach { item ->
-                    if (item.valid()) {
-                        // Explicitly click the "Drop" option
-                        if (item.click("Drop")) {
-                            Condition.sleep(Random.nextInt(90, 180))
-                        } else {
-                            script.logger.warn("Failed to click 'Drop' on item ${item.name()}.")
-                        }
+        if (useTapToDrop) {
+            // Fast Shift-Drop Method
+            salvageItems.forEach { item: Item ->
+                if (item.valid()) {
+                    if (item.click()) {
+                        Condition.sleep(Random.nextInt(100, 200))
+                    } else {
+                        script.logger.warn("Failed to shift-drop item at slot.")
                     }
                 }
             }
-
-            // Wait until inventory is clear of the salvage item
-            Condition.wait({ Inventory.stream().name(ShipwreckSalvager.SALVAGE_NAME).isEmpty() }, 150, 20)
-        } else if (Inventory.isFull()) {
-            script.logger.warn("Inventory is full but no item named '${ShipwreckSalvager.SALVAGE_NAME}' was found to drop.")
+        } else {
+            // Safe Right-Click Drop Method
+            salvageItems.forEach { item: Item ->
+                if (item.valid()) {
+                    if (item.interact("Drop")) {
+                        Condition.wait({ !item.valid() }, 50, 10)
+                    } else {
+                        script.logger.warn("Failed to right-click drop item at slot .")
+                    }
+                }
+            }
         }
-        return true
+
+        // Wait until all items are dropped
+        Condition.wait({ Inventory.stream().name(salvageItemName).isEmpty() }, 100, 25)
+        script.logger.info("Finished dropping all '$salvageItemName' salvage items.")
     }
 
+
     /**
-     * Performs a series of fixed-coordinate clicks with randomization,
-     * likely to interact with a bank or deposit/withdraw interface.
+     * Executes randomized taps to simulate the cargo withdrawal sequence.
+     * Hard-coded coordinates based on fixed screen size/UI, requires correct camera direction.
      */
     private fun withdrawCargo() {
-        script.logger.info("Executing WithdrawCargo sequence (Bank/Interface interaction) with randomization.")
         val waitTime = Random.nextInt(900, 1200)
 
-        // Function to get a random offset between -3 and +3 (inclusive)
-        fun getRandomOffsetSmall() = Random.nextInt(-3, 4)
         // Function to get a random offset between -6 and +6 (inclusive)
         fun getRandomOffsetLarge() = Random.nextInt(-6, 7)
 
@@ -132,15 +132,15 @@ class DropSalvageTask(
         }
 
         // --- Tap 3: Close Cargo (569, 168) ---
-        val x3 = 569 + getRandomOffsetSmall()
-        val y3 = 168 + getRandomOffsetSmall()
+        val x3 = 569 + getRandomOffsetLarge()
+        val y3 = 168 + getRandomOffsetLarge()
         if (Input.tap(x3, y3)) {
-            script.logger.info("Click 3 ($x3, $y3) successful.")
+            script.logger.info("Click 3 ($x3, $y3) successful. Waiting $waitTime ms.")
             Condition.sleep(waitTime)
         } else {
             script.logger.warn("Click 3 ($x3, $y3) failed.")
         }
 
-        script.logger.info("WithdrawCargo sequence finished.")
+        Condition.sleep(Random.nextInt(500, 1000))
     }
 }

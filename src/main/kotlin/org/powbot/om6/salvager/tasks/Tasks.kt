@@ -1,19 +1,21 @@
 package org.powbot.om6.salvager.tasks
 
+import org.powbot.om6.salvager.ShipwreckSalvager
+
 /**
- * Interface for all runnable tasks in the script.
- * Each task is responsible for a single piece of logic (e.g., clicking, dropping, waiting).
+ * Abstract class for all runnable tasks in the script.
+ * Stores the reference to the main script instance for state access.
  */
-interface Task {
+abstract class Task(protected val script: ShipwreckSalvager) {
 
     /**
      * @return true if this task is currently applicable/active based on the script's state,
      * and should proceed to execute().
      */
-    fun activate(): Boolean
+    abstract fun activate(): Boolean
 
     /**
      * Executes the task's logic. Should handle phase transitions internally.
      */
-    fun execute()
+    abstract fun execute()
 }

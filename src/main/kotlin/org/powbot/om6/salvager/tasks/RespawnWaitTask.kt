@@ -7,7 +7,7 @@ import org.powbot.om6.salvager.ShipwreckSalvager
 /**
  * Task responsible for waiting a randomized time for the shipwreck to respawn.
  */
-class RespawnWaitTask(private val script: ShipwreckSalvager) : Task {
+class RespawnWaitTask(script: ShipwreckSalvager) : Task(script) {
 
     override fun activate(): Boolean {
         return script.currentPhase == SalvagePhase.WAITING_FOR_RESPAWN

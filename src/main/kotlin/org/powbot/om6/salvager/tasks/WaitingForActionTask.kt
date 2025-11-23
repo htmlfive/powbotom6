@@ -9,7 +9,7 @@ import org.powbot.om6.salvager.ShipwreckSalvager
  * Task responsible for waiting for the salvage completion message or handling dialogue.
  * Handles both dialogue interruption and the main action timeout.
  */
-class WaitingForActionTask(private val script: ShipwreckSalvager) : Task {
+class WaitingForActionTask(script: ShipwreckSalvager) : Task(script) {
 
     override fun activate(): Boolean {
         return script.currentPhase == SalvagePhase.WAITING_FOR_ACTION
@@ -40,7 +40,7 @@ class WaitingForActionTask(private val script: ShipwreckSalvager) : Task {
         if (elapsedTime > ShipwreckSalvager.ACTION_TIMEOUT_MILLIS) {
             val timeoutSeconds = ShipwreckSalvager.ACTION_TIMEOUT_MILLIS / 1000L
             script.logger.warn("TASK: Salvage action timed out after $timeoutSeconds seconds. Moving to drop phase for safety.")
-            // --- Phase Transition ---
+            // --- Phase Transition ---\r\n
             script.currentPhase = SalvagePhase.DROPPING_SALVAGE
             Condition.sleep(Random.nextInt(2000, 4000))
             return
