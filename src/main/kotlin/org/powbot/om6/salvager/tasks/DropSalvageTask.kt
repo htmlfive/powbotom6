@@ -22,11 +22,11 @@ class DropSalvageTask(
     override fun execute() {
         script.logger.info("TASK: DROPPING_SALVAGE. Initiating drop sequence.")
         script.currentPhase = SalvagePhase.DROPPING_SALVAGE
-
         dropSalvageItems()
 
         if (script.withdrawCargoOnDrop) {
             script.logger.info("CONFIG: Withdraw from Cargo Hold is TRUE. Attempting to withdraw cargo...")
+            CameraSnapper.snapCameraToDirection(script.requiredDropDirection, script)
             withdrawCargo()
             script.logger.info("LOGIC: Attempting to drop newly withdrawn items.")
             dropSalvageItems()

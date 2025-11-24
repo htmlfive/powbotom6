@@ -87,7 +87,7 @@ class ReadyToTapTask(script: ShipwreckSalvager) : Task(script) {
                     script.logger.info("FAILURE: Action start message NOT received, BUT Chat.canContinue() is TRUE. Assuming dialogue interrupted the action. Continuing to next poll.")
                     return false
                 } else {
-                    script.logger.info("FAILURE: Action start message NOT received within 600ms AND no dialogue found. Stopping script.")
+                    script.logger.info("STOPPING: Action start message NOT received within 600ms AND no dialogue found. Stopping script.")
                     ScriptManager.stop() // STOP SCRIPT if message is not found AND no dialogue is present
                     return false
                 }
