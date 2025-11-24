@@ -83,22 +83,16 @@ class ReadyToTapTask(script: ShipwreckSalvager) : Task(script) {
                 script.logger.info("SUCCESS: Action start message received. Continuing execution.")
                 return true
             } else {
-                // --- MODIFIED LOGIC START ---
                 if (Chat.canContinue()) {
                     script.logger.info("FAILURE: Action start message NOT received, BUT Chat.canContinue() is TRUE. Assuming dialogue interrupted the action. Continuing to next poll.")
-                    // Return false to let the main execute() method retry the tap on the next poll,
-                    // or rely on the WaitingForActionTask to handle the dialogue if it's the next task.
                     return false
                 } else {
                     script.logger.info("FAILURE: Action start message NOT received within 600ms AND no dialogue found. Stopping script.")
                     ScriptManager.stop() // STOP SCRIPT if message is not found AND no dialogue is present
                     return false
                 }
-                // --- MODIFIED LOGIC END ---
             }
         }
-
-        // If tap itself failed
         return false
     }
 }
