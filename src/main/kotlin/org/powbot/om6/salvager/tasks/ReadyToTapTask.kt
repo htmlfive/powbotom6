@@ -56,15 +56,15 @@ class ReadyToTapTask(script: ShipwreckSalvager) : Task(script) {
 
     private fun executeCenterClick(): Boolean {
         val dimensions = Game.dimensions()
-        val centerX = dimensions.width / 2
-        val centerY = dimensions.height / 2
+        val centerX = 406
+        val centerY = 341
         script.logger.debug("CLIENT: Screen dimensions (W x H): ${dimensions.width} x ${dimensions.height}. Center: ($centerX, $centerY).")
 
         val randomOffsetX = Random.nextInt(-10, 12)
         val randomOffsetY = Random.nextInt(-12, 9)
 
-        val finalX = centerX + randomOffsetX - 35
-        val finalY = centerY + randomOffsetY + 50
+        val finalX = centerX + randomOffsetX
+        val finalY = centerY + randomOffsetY
 
         script.logger.info("ACTION: Tapping screen at randomized point X=$finalX, Y=$finalY (Offset: X=$randomOffsetX, Y=$randomOffsetY).")
 

@@ -42,6 +42,18 @@ class DropSalvageTask(
     }
 
     private fun dropSalvageItems() {
+        if (!Inventory.opened()) {
+            if (Inventory.open()) {
+                script.logger.info("Inventory tab opened successfully for dropping.")
+                Condition.sleep(Random.nextInt(200, 400))
+            } else {
+                script.logger.warn("Failed to open the inventory tab. Aborting drop sequence.")
+                return
+            }
+        } else {
+            script.logger.info("Inventory tab is already open.")
+        }
+
         val salvageItems = Inventory.stream().name(salvageItemName).list()
 
         if (salvageItems.isEmpty()) {
@@ -89,9 +101,9 @@ class DropSalvageTask(
         fun getRandomOffsetLarge() = Random.nextInt(-6, 7)
         script.logger.info("CARGO: Starting 3-tap cargo withdrawal sequence.")
 
-        // Tap 1: Open Cargo (238, 326)
-        val x1 = 238 + getRandomOffsetLarge()
-        val y1 = 326 + getRandomOffsetLarge()
+        // Tap 1: Open Cargo (302, 308)
+        val x1 = 302 + getRandomOffsetLarge()
+        val y1 = 308 + getRandomOffsetLarge()
         if (Input.tap(x1, y1)) {
             script.logger.info("CARGO TAP 1 (Open): Tapped at ($x1, $y1). Waiting $waitTime ms.")
             Condition.sleep(waitTime)

@@ -16,13 +16,35 @@ enum class CardinalDirection(val yaw: Int, val action: String) {
 object CameraSnapper {
     private const val COMPASS_WIDGET_ID = 601
     private const val COMPASS_COMPONENT_INDEX = 35
+    private const val pitchNeeded = 0
 
     fun snapCameraToDirection(direction: CardinalDirection, script: ShipwreckSalvager) {
         val yawNeeded = direction.yaw
         val COMPASS_ACTION = direction.action
-        script.logger.info("LOGIC: Attempting to snap camera to ${direction.name} (Yaw: $yawNeeded). Current Yaw: ${Camera.yaw()}")
+        script.logger.info("LOGIC: Attempting to snap camera to ${direction.name} (Yaw: $yawNeeded). Current Yaw: ${Camera.yaw()}, Current Pitch: ${Camera.pitch()}")
+        fun setPitch (){
+            if (Camera.pitch() != pitchNeeded) {
 
+                if (Camera.pitch(pitchNeeded)) {
+                    val pitchSuccess = Condition.wait({ Camera.pitch() == pitchNeeded }, 600, 3)
+                    if (pitchSuccess) {
+                        script.logger.info("SUCCESS: Camera pitch stabilized at 0.")
+                    } else {
+                        script.logger.warn("FAIL: Camera pitch failed to stabilize at 0 after command.")
+                    }
+                    val sleepTime = Random.nextInt(400, 800)
+                    script.logger.info("SLEEP: Sleeping for $sleepTime ms after pitch reset attempt.")
+                    Condition.sleep(sleepTime)
+                    return
+                } else {
+                    script.logger.warn("FAIL: Failed to execute Camera.pitch(0).")
+                }
+            } else {
+                script.logger.info("CHECK: Pitch is already 0. No reset action needed.")
+            }
+        }
         if (Camera.yaw() != yawNeeded) {
+            //setPitch()
             script.logger.info("CHECK: Yaw is ${Camera.yaw()}, does not match target $COMPASS_ACTION ($yawNeeded).")
 
             val compassComponent = Widgets.widget(COMPASS_WIDGET_ID).component(COMPASS_COMPONENT_INDEX)
@@ -45,5 +67,7 @@ object CameraSnapper {
         } else {
             script.logger.info("CHECK: Already facing $COMPASS_ACTION ($yawNeeded). No snap action needed.")
         }
+
     }
+
 }
