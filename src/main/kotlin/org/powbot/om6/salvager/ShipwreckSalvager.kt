@@ -36,7 +36,7 @@ import org.powbot.om6.salvager.tasks.TapToDropTask
         ScriptConfiguration(
             "Tap to Drop",
             "If true, uses Shift-Click (Tap-to-Drop) for faster inventory dropping. Requires Shift-Click Drop to be enabled in game settings.",
-            optionType = OptionType.BOOLEAN, defaultValue = "true"
+            optionType = OptionType.BOOLEAN, defaultValue = "true", visible = false
         ),
         ScriptConfiguration(
             "Ready-to-Tap Direction",
