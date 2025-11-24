@@ -15,7 +15,7 @@ import org.powbot.api.script.ScriptConfiguration.List as ConfigList
 
 @ScriptManifest(
     name = "0m6 Shipwreck Salvager",
-    description = "Salvages Shipwrecks using a task-based system.",
+    description = "Start zoomed in all the way, with camera all the way down",
     version = "1.2.5",
     author = "You",
     category = ScriptCategory.Other
@@ -24,7 +24,7 @@ import org.powbot.api.script.ScriptConfiguration.List as ConfigList
     [
         ScriptConfiguration(
             "Withdraw Cargo",
-            "Will withdraw from cargo hold and drop items if true. Requires camera to be set to EAST.",
+            "Will withdraw from cargo hold and drop items if true. Requires you to be using the sloop and salvaging hook next to cargo hold",
             optionType = OptionType.BOOLEAN, defaultValue = "true"
         ),
         ScriptConfiguration(
@@ -218,7 +218,6 @@ class ShipwreckSalvager : AbstractScript() {
         initialOverallXp = Skills.experience(Skill.Overall).toLong()
         xpTrackStartTime = System.currentTimeMillis()
         logger.info("XP TRACKING: Overall XP started at ${String.format("%,d", initialOverallXp)}")
-
         val paint = PaintBuilder.newBuilder()
             .x(40)
             .y(80)
