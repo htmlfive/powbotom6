@@ -2,7 +2,8 @@ package org.powbot.om6.salvager.tasks
 
 import org.powbot.api.Condition
 import org.powbot.api.Random
-import org.powbot.api.rt4.*
+import org.powbot.api.rt4.Chat
+import org.powbot.api.rt4.Players
 import org.powbot.om6.salvager.ShipwreckSalvager
 
 class WaitingForActionTask(script: ShipwreckSalvager) : Task(script) {

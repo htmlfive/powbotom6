@@ -1,28 +1,17 @@
 package org.powbot.om6.salvager
 
 import com.google.common.eventbus.Subscribe
-import org.powbot.api.script.ScriptManifest
+import org.powbot.api.Tile
 import org.powbot.api.event.MessageEvent
 import org.powbot.api.event.MessageType
 import org.powbot.api.rt4.Chat
 import org.powbot.api.rt4.Players
 import org.powbot.api.rt4.Skills
 import org.powbot.api.rt4.walking.model.Skill
-import org.powbot.api.script.AbstractScript
-import org.powbot.api.script.ScriptCategory
+import org.powbot.api.script.*
 import org.powbot.api.script.paint.PaintBuilder
-import org.powbot.api.Tile
-import org.powbot.om6.salvager.tasks.CardinalDirection
-import org.powbot.om6.salvager.tasks.DropSalvageTask
-import org.powbot.om6.salvager.tasks.ReadyToTapTask
-import org.powbot.om6.salvager.tasks.RespawnWaitTask
-import org.powbot.om6.salvager.tasks.SalvagePhase
-import org.powbot.om6.salvager.tasks.Task
-import org.powbot.om6.salvager.tasks.WaitingForActionTask
-import org.powbot.api.script.ScriptConfiguration
+import org.powbot.om6.salvager.tasks.*
 import org.powbot.api.script.ScriptConfiguration.List as ConfigList
-import org.powbot.api.script.OptionType
-import org.powbot.om6.salvager.tasks.TapToDropTask
 
 @ScriptManifest(
     name = "0m6 Shipwreck Salvager",
@@ -103,12 +92,12 @@ class ShipwreckSalvager : AbstractScript() {
     var SALVAGE_NAME: String = "Plundered salvage"
 
     val requiredTapDirection: CardinalDirection
-        get() = CardinalDirection.valueOf(requiredTapDirectionStr).also { logger.info("ACCESS: requiredTapDirection returned $it") }
+        get() = CardinalDirection.valueOf(requiredTapDirectionStr)
 
     val requiredDropDirection: CardinalDirection
-        get() = CardinalDirection.valueOf(requiredDropDirectionStr).also { logger.info("ACCESS: requiredDropDirection returned $it") }
+        get() = CardinalDirection.valueOf(requiredDropDirectionStr)
 
-    val withdrawCargoOnDrop: Boolean get() = getOption<Boolean>("Withdraw Cargo").also { logger.info("ACCESS: withdrawCargoOnDrop returned $it") } ?: false
+    val withdrawCargoOnDrop: Boolean get() = getOption<Boolean>("Withdraw Cargo")
 
     companion object {
         const val ACTION_TIMEOUT_MILLIS = 450 * 1000

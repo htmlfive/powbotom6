@@ -3,7 +3,7 @@ package org.powbot.om6.salvager.tasks
 import org.powbot.api.Condition
 import org.powbot.api.Random
 import org.powbot.api.rt4.Widgets
-import org.powbot.om6.salvager.*
+import org.powbot.om6.salvager.ShipwreckSalvager
 
 class TapToDropTask(script: ShipwreckSalvager) : Task(script) {
 

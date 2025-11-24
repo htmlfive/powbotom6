@@ -4,7 +4,6 @@ import org.powbot.api.Condition
 import org.powbot.api.Input
 import org.powbot.api.Random
 import org.powbot.api.rt4.Inventory
-import org.powbot.api.rt4.Item
 import org.powbot.om6.salvager.ShipwreckSalvager
 
 class DropSalvageTask(
