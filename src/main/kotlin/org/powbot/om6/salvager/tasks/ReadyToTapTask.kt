@@ -7,6 +7,7 @@ import org.powbot.api.rt4.Game
 import org.powbot.api.rt4.Players
 import org.powbot.mobile.script.ScriptManager
 import org.powbot.om6.salvager.*
+import org.powbot.api.rt4.Chat
 
 
 class ReadyToTapTask(script: ShipwreckSalvager) : Task(script) {
@@ -73,19 +74,27 @@ class ReadyToTapTask(script: ShipwreckSalvager) : Task(script) {
         if (clicked) {
             val tapSleep = Random.nextInt(300, 500)
             Condition.sleep(tapSleep)
-            script.logger.debug("SLEEP: Slept for $tapSleep ms after tap, before message check.")
+            script.logger.info("SLEEP: Slept for $tapSleep ms after tap, before message check.")
 
             script.logger.info("CHECK: Waiting for confirmation message.")
-            // -----------------------------------------------------------------
             val messageFound = Condition.wait({ script.hookCastMessageFound }, 30, 60) // 10ms polling for max 60 iterations (600ms)
 
             if (messageFound) {
                 script.logger.info("SUCCESS: Action start message received. Continuing execution.")
                 return true
             } else {
-                script.logger.error("FAILURE: Action start message NOT received within 600ms. Stopping script.")
-                ScriptManager.stop() // STOP SCRIPT if message is not found
-                return false
+                // --- MODIFIED LOGIC START ---
+                if (Chat.canContinue()) {
+                    script.logger.info("FAILURE: Action start message NOT received, BUT Chat.canContinue() is TRUE. Assuming dialogue interrupted the action. Continuing to next poll.")
+                    // Return false to let the main execute() method retry the tap on the next poll,
+                    // or rely on the WaitingForActionTask to handle the dialogue if it's the next task.
+                    return false
+                } else {
+                    script.logger.info("FAILURE: Action start message NOT received within 600ms AND no dialogue found. Stopping script.")
+                    ScriptManager.stop() // STOP SCRIPT if message is not found AND no dialogue is present
+                    return false
+                }
+                // --- MODIFIED LOGIC END ---
             }
         }
 

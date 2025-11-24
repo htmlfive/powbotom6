@@ -260,7 +260,7 @@ class ShipwreckSalvager : AbstractScript() {
                 }
             }
             .addString("XP Gained") { String.format("%,d", currentGainedXp) }
-            .addString("XP/Hr (Overall)") { String.format("%,.0f", currentXpPerHour) }
+            .addString("XP/Hr") { String.format("%,.0f", currentXpPerHour) }
             .build()
         addPaint(paint)
         logger.info("START: Shipwreck Salvager (Task System Initialized and Paint Added)")

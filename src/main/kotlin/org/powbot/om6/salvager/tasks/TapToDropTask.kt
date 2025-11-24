@@ -45,7 +45,7 @@ class TapToDropTask(script: ShipwreckSalvager) : Task(script) {
 
         if (toggleAttempts >= MAX_TOGGLE_ATTEMPTS) {
             val failureAction = if (desiredState) "enabled" else "disabled"
-            script.logger.error("FAILURE: Failed to ensure Tap-to-drop is $failureAction after $MAX_TOGGLE_ATTEMPTS attempts. Continuing with safe drop.")
+            script.logger.info("FAILURE: Failed to ensure Tap-to-drop is $failureAction after $MAX_TOGGLE_ATTEMPTS attempts. Continuing with safe drop.")
 
             if (isInitializing) {
                 script.currentPhase = SalvagePhase.READY_TO_TAP
