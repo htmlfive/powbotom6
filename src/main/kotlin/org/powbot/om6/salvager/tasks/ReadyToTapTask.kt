@@ -6,7 +6,8 @@ import org.powbot.api.Random
 import org.powbot.api.rt4.Game
 import org.powbot.api.rt4.Players
 import org.powbot.mobile.script.ScriptManager
-import org.powbot.om6.salvager.ShipwreckSalvager
+import org.powbot.om6.salvager.*
+
 
 class ReadyToTapTask(script: ShipwreckSalvager) : Task(script) {
 
@@ -24,9 +25,15 @@ class ReadyToTapTask(script: ShipwreckSalvager) : Task(script) {
 
         val currentTile = Players.local().tile()
         if (script.startTile != null && (currentTile.x() != script.startTile!!.x() || currentTile.y() != script.startTile!!.y())) {
-            script.logger.error("POSITION DRIFT DETECTED! Start: ${script.startTile}, Current: $currentTile. Stopping script immediately.")
-            ScriptManager.stop()
-            return
+
+            // --- Position Drift Check (as previously modified) ---
+            if (script.stopIfMoved) {
+                script.logger.error("POSITION DRIFT DETECTED! Start: ${script.startTile}, Current: $currentTile. Stop if Moved is TRUE. Stopping script immediately.")
+                ScriptManager.stop()
+                return
+            } else {
+                script.logger.warn("POSITION DRIFT DETECTED! Start: ${script.startTile}, Current: $currentTile. Stop if Moved is FALSE. Continuing...")
+            }
         }
         script.logger.debug("POSITION CHECK: Player position stable at $currentTile.")
 
@@ -60,12 +67,29 @@ class ReadyToTapTask(script: ShipwreckSalvager) : Task(script) {
 
         script.logger.info("ACTION: Tapping screen at randomized point X=$finalX, Y=$finalY (Offset: X=$randomOffsetX, Y=$randomOffsetY).")
 
+        script.hookCastMessageFound = false // Reset message flag before tap
         val clicked = Input.tap(finalX, finalY)
 
-        val sleepTime = Random.nextInt(300, 500)
-        Condition.sleep(sleepTime)
-        script.logger.debug("SLEEP: Slept for $sleepTime ms after tap.")
+        if (clicked) {
+            val tapSleep = Random.nextInt(300, 500)
+            Condition.sleep(tapSleep)
+            script.logger.debug("SLEEP: Slept for $tapSleep ms after tap, before message check.")
 
-        return clicked
+            script.logger.info("CHECK: Waiting for confirmation message.")
+            // -----------------------------------------------------------------
+            val messageFound = Condition.wait({ script.hookCastMessageFound }, 30, 60) // 10ms polling for max 60 iterations (600ms)
+
+            if (messageFound) {
+                script.logger.info("SUCCESS: Action start message received. Continuing execution.")
+                return true
+            } else {
+                script.logger.error("FAILURE: Action start message NOT received within 600ms. Stopping script.")
+                ScriptManager.stop() // STOP SCRIPT if message is not found
+                return false
+            }
+        }
+
+        // If tap itself failed
+        return false
     }
 }

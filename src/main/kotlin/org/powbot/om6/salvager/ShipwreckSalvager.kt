@@ -28,6 +28,11 @@ import org.powbot.api.script.ScriptConfiguration.List as ConfigList
             optionType = OptionType.BOOLEAN, defaultValue = "true"
         ),
         ScriptConfiguration(
+            "Stop if Moved",
+            "If true, the script will stop immediately if player position drifts from the starting tile during the READY_TO_TAP phase.",
+            optionType = OptionType.BOOLEAN, defaultValue = "false"
+        ),
+        ScriptConfiguration(
             "Ready-to-Tap Direction",
             "The camera direction (e.g., North, East) required to reliably click the salvage spot.",
             optionType = OptionType.STRING, defaultValue = "East",
@@ -71,6 +76,8 @@ class ShipwreckSalvager : AbstractScript() {
     private var currentGainedXp: Long = 0L
     @Volatile
     private var currentXpPerHour: Double = 0.0
+    @Volatile
+    var hookCastMessageFound = false
 
     @ScriptConfiguration(
         "Tap to Drop",
@@ -99,6 +106,8 @@ class ShipwreckSalvager : AbstractScript() {
 
     val withdrawCargoOnDrop: Boolean get() = getOption<Boolean>("Withdraw Cargo")
 
+    val stopIfMoved: Boolean get() = getOption<Boolean>("Stop if Moved")
+
     companion object {
         const val ACTION_TIMEOUT_MILLIS = 450 * 1000
         const val RESPAWN_WAIT_MIN_MILLIS = 5 * 100
@@ -107,7 +116,8 @@ class ShipwreckSalvager : AbstractScript() {
         const val DIALOGUE_RESTART_MAX_MILLIS = 20 * 100
         const val SALVAGE_COMPLETE_MESSAGE = "You salvage all you can"
         const val SALVAGE_SUCCESS_MESSAGE = "You find some salvage"
-
+        const val HOOK_CAST_MESSAGE_1 = "You cast out your salvaging hook" // NEW: Hook message constant
+        const val HOOK_CAST_MESSAGE_2 = "You start operating"
         const val TAP_TO_DROP_ENABLED_MSG = "Tap-to-drop enabled!"
         const val TAP_TO_DROP_DISABLED_MSG = "Tap-to-drop disabled!"
     }
@@ -137,7 +147,10 @@ class ShipwreckSalvager : AbstractScript() {
                 phaseStartTime = System.currentTimeMillis()
                 logger.info("PHASE CHANGE: Transitioned to ${currentPhase.name}")
             }
-
+            if (change.message.contains(HOOK_CAST_MESSAGE_1) || change.message.contains(HOOK_CAST_MESSAGE_2)) {
+                logger.info("EVENT: CONFIRMATION - Action start message detected: ${change.message}")
+                hookCastMessageFound = true
+            }
             if (change.message.contains(TAP_TO_DROP_ENABLED_MSG)) {
                 logger.info("EVENT: CONFIRMATION - Tap-to-drop is now ENABLED.")
                 isTapToDropEnabled = true
