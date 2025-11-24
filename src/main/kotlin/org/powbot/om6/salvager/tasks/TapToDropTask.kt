@@ -82,7 +82,7 @@ class TapToDropTask(script: ShipwreckSalvager) : Task(script) {
             script.logger.info("Clicked '$ACTION' widget component. Waiting for chat confirmation...")
 
             // Wait for the script state (updated by EventBus) to match the desired state
-            Condition.wait({ script.isTapToDropEnabled == desiredState }, 500, 8)
+            Condition.wait({ script.isTapToDropEnabled == desiredState }, 500, 3)
 
             // 3. Handle success or failure post-wait
             if (script.isTapToDropEnabled == desiredState) {
