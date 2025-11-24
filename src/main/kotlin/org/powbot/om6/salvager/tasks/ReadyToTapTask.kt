@@ -35,7 +35,7 @@ class ReadyToTapTask(script: ShipwreckSalvager) : Task(script) {
                 script.logger.warn("POSITION DRIFT DETECTED! Start: ${script.startTile}, Current: $currentTile. Stop if Moved is FALSE. Continuing...")
             }
         }
-        script.logger.debug("POSITION CHECK: Player position stable at $currentTile.")
+        script.logger.info("POSITION CHECK: Player position stable at $currentTile.")
 
         script.salvageMessageFound = false
         script.logger.debug("LOGIC: Reset salvageMessageFound to false.")
