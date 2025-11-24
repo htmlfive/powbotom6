@@ -5,13 +5,8 @@ import org.powbot.api.Random
 import org.powbot.api.rt4.Widgets
 import org.powbot.om6.salvager.*
 
-/**
- * Ensures 'Tap-to-drop' is either enabled (true) or disabled (false) based on the script configuration,
- * by clicking the widget and confirming the state change via chat messages handled by the main script.
- */
 class TapToDropTask(script: ShipwreckSalvager) : Task(script) {
 
-    // Constants for the widget component (892 is often the Settings widget)
     private companion object {
         const val WIDGET_ID = 892
         const val COMPONENT_ID = 18
@@ -21,26 +16,23 @@ class TapToDropTask(script: ShipwreckSalvager) : Task(script) {
 
     private var toggleAttempts = 0
 
-    /**
-     * Activates if the in-game state (`script.isTapToDropEnabled`) does NOT match the desired config (`script.tapToDrop`).
-     */
     override fun activate(): Boolean {
-        // This is the core synchronization check: desired state (config) != current state (in-game)
         val needsToggle = script.tapToDrop != script.isTapToDropEnabled
+        script.logger.debug("ACTIVATE: Tap-to-drop Check - Desired: ${script.tapToDrop}, Current: ${script.isTapToDropEnabled}. Needs Toggle: $needsToggle.")
 
         if (!needsToggle) {
-            return false // State already matches config.
+            return false
         }
 
-        // A. Initializing Phase: Always run if there's a mismatch during startup (to ENABLE or DISABLE).
         if (script.currentPhase == SalvagePhase.INITIALIZING) {
+            script.logger.debug("ACTIVATE: Task active in INITIALIZING phase (Mismatch detected).")
             return true
         }
 
-        // B. Dropping Phase: Only run if the user wants it ENABLED AND it is currently disabled.
-        // If the user wants it disabled (script.tapToDrop == false), we rely on the initial check.
         if (script.currentPhase == SalvagePhase.DROPPING_SALVAGE) {
-            return script.tapToDrop
+            val activateInDrop = script.tapToDrop // Only run if we need to enable it during drop
+            script.logger.debug("ACTIVATE: Task active in DROPPING_SALVAGE phase (Tap-to-drop is desired: $activateInDrop).")
+            return activateInDrop
         }
 
         return false
@@ -48,61 +40,57 @@ class TapToDropTask(script: ShipwreckSalvager) : Task(script) {
 
     override fun execute() {
         val isInitializing = script.currentPhase == SalvagePhase.INITIALIZING
-        // Desired state comes directly from the GUI boolean
-        val desiredState = script.tapToDrop // true to enable, false to disable
+        val desiredState = script.tapToDrop
         val actionDescription = if (desiredState) "ENABLE" else "DISABLE"
 
-        // 1. Check for failure condition
         if (toggleAttempts >= MAX_TOGGLE_ATTEMPTS) {
             val failureAction = if (desiredState) "enabled" else "disabled"
-            script.logger.info("Failed to ensure Tap-to-drop is $failureAction after $MAX_TOGGLE_ATTEMPTS attempts. Continuing with safe drop.")
+            script.logger.error("FAILURE: Failed to ensure Tap-to-drop is $failureAction after $MAX_TOGGLE_ATTEMPTS attempts. Continuing with safe drop.")
 
             if (isInitializing) {
                 script.currentPhase = SalvagePhase.READY_TO_TAP
-                script.logger.info("Initial check failed. Transitioning to READY_TO_TAP.")
+                script.logger.info("PHASE CHANGE: Initial check failed. Transitioning to ${SalvagePhase.READY_TO_TAP.name}.")
             }
             toggleAttempts = 0
             return
         }
 
-        // 2. Perform the interaction attempt
         val phase = if (isInitializing) "INITIALIZING" else "DROPPING_SALVAGE"
-        script.logger.info("Attempting to $actionDescription Tap-to-drop (Phase: $phase, Attempt: ${toggleAttempts + 1})")
+        script.logger.info("ACTION: Attempting to $actionDescription Tap-to-drop (Phase: $phase, Attempt: ${toggleAttempts + 1})")
 
         val settingComponent = Widgets.widget(WIDGET_ID).component(COMPONENT_ID)
+        script.logger.debug("WIDGET: Checking widget $WIDGET_ID:$COMPONENT_ID (Valid: ${settingComponent.valid()}).")
+
 
         if (!settingComponent.valid()) {
-            script.logger.warn("Widget $WIDGET_ID:$COMPONENT_ID not valid/visible. Cannot check/toggle setting. Make sure the settings menu is open or loaded in the client.")
+            script.logger.warn("WIDGET FAIL: Widget $WIDGET_ID:$COMPONENT_ID not valid/visible. Cannot check/toggle setting. Sleeping.")
             Condition.sleep(1000)
             toggleAttempts++
             return
         }
 
         if (settingComponent.interact(ACTION)) {
-            script.logger.info("Clicked '$ACTION' widget component. Waiting for chat confirmation...")
+            script.logger.info("INTERACT: Clicked '$ACTION' widget component. Waiting for chat confirmation...")
 
-            // Wait for the script state (updated by EventBus) to match the desired state
-            Condition.wait({ script.isTapToDropEnabled == desiredState }, 500, 3)
+            val waitSuccess = Condition.wait({ script.isTapToDropEnabled == desiredState }, 500, 3)
 
-            // 3. Handle success or failure post-wait
-            if (script.isTapToDropEnabled == desiredState) {
-                script.logger.info("Tap-to-drop confirmed $actionDescription.")
+            if (waitSuccess) {
+                script.logger.info("SUCCESS: Tap-to-drop confirmed $actionDescription. State matches desired: $desiredState.")
 
-                // If we were initializing, now we transition to the main loop state
                 if (isInitializing) {
                     script.currentPhase = SalvagePhase.READY_TO_TAP
-                    script.logger.info("Initial check complete. Transitioning to READY_TO_TAP.")
+                    script.logger.info("PHASE CHANGE: Initial check complete. Transitioning to ${SalvagePhase.READY_TO_TAP.name}.")
                 }
 
-                toggleAttempts = 0 // Reset for future checks
+                toggleAttempts = 0
             } else {
-                script.logger.warn("Chat confirmation of Tap-to-drop $actionDescription FAILED to arrive after click. Retrying.")
+                script.logger.warn("WAIT FAIL: Chat confirmation of Tap-to-drop $actionDescription FAILED to arrive after click. Retrying. Current state: ${script.isTapToDropEnabled}")
             }
         } else {
-            script.logger.warn("Failed to interact with widget component for action '$ACTION'. Retrying.")
+            script.logger.warn("INTERACT FAIL: Failed to interact with widget component for action '$ACTION'. Retrying.")
             Condition.sleep(Random.nextInt(800, 1500))
         }
 
-        toggleAttempts++ // Count the attempt
+        toggleAttempts++
     }
 }

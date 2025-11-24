@@ -27,14 +27,14 @@ import org.powbot.om6.salvager.tasks.TapToDropTask
 @ScriptManifest(
     name = "0m6 Shipwreck Salvager",
     description = "Salvages Shipwrecks using a task-based system.",
-    version = "1.2.5", // Minor version bump for fix
+    version = "1.2.5",
     author = "You",
     category = ScriptCategory.Other
 )
 @ConfigList(
     [
         ScriptConfiguration(
-            "Withdraw Cargo", // FIX: Simplified name to avoid lookup issues
+            "Withdraw Cargo",
             "Will withdraw from cargo hold and drop items if true. Requires camera to be set to EAST.",
             optionType = OptionType.BOOLEAN, defaultValue = "true"
         ),
@@ -61,7 +61,6 @@ import org.powbot.om6.salvager.tasks.TapToDropTask
 )
 class ShipwreckSalvager : AbstractScript() {
 
-    // --- Script State (Public/Internal) ---
     @Volatile
     var currentPhase: SalvagePhase = SalvagePhase.INITIALIZING
     @Volatile
@@ -72,11 +71,9 @@ class ShipwreckSalvager : AbstractScript() {
     var salvageMessageFound = false
     @Volatile
     var startTile: Tile? = null
-    // State variable to track the actual enabled state (set to false to force initial check)
     @Volatile
     var isTapToDropEnabled: Boolean = false
 
-    // XP Tracking Variables (Restored)
     @Volatile
     private var initialOverallXp: Long = 0L
     @Volatile
@@ -86,7 +83,6 @@ class ShipwreckSalvager : AbstractScript() {
     @Volatile
     private var currentXpPerHour: Double = 0.0
 
-    // --- Configuration Variables (from @ScriptConfiguration) ---
     @ScriptConfiguration(
         "Tap to Drop",
         "If true, uses Shift-Click (Tap-to-Drop) for faster inventory dropping. Requires Shift-Click Drop to be enabled in game settings.",
@@ -107,15 +103,13 @@ class ShipwreckSalvager : AbstractScript() {
     var SALVAGE_NAME: String = "Plundered salvage"
 
     val requiredTapDirection: CardinalDirection
-        get() = CardinalDirection.valueOf(requiredTapDirectionStr)
+        get() = CardinalDirection.valueOf(requiredTapDirectionStr).also { logger.info("ACCESS: requiredTapDirection returned $it") }
 
     val requiredDropDirection: CardinalDirection
-        get() = CardinalDirection.valueOf(requiredDropDirectionStr)
+        get() = CardinalDirection.valueOf(requiredDropDirectionStr).also { logger.info("ACCESS: requiredDropDirection returned $it") }
 
-    // FIX: Retrieving the option using the simplified name
-    val withdrawCargoOnDrop: Boolean get() = getOption("Withdraw Cargo")
+    val withdrawCargoOnDrop: Boolean get() = getOption<Boolean>("Withdraw Cargo").also { logger.info("ACCESS: withdrawCargoOnDrop returned $it") } ?: false
 
-    // --- Constants ---
     companion object {
         const val ACTION_TIMEOUT_MILLIS = 450 * 1000
         const val RESPAWN_WAIT_MIN_MILLIS = 5 * 100
@@ -123,15 +117,14 @@ class ShipwreckSalvager : AbstractScript() {
         const val DIALOGUE_RESTART_MIN_MILLIS = 15 * 100
         const val DIALOGUE_RESTART_MAX_MILLIS = 20 * 100
         const val SALVAGE_COMPLETE_MESSAGE = "You salvage all you can"
-        const val SALVAGE_SUCCESS_MESSAGE = "You find some salvage" // Added for safety check
+        const val SALVAGE_SUCCESS_MESSAGE = "You find some salvage"
 
-        // Chat message constants used by EventBus and TapToDropTask
         const val TAP_TO_DROP_ENABLED_MSG = "Tap-to-drop enabled!"
         const val TAP_TO_DROP_DISABLED_MSG = "Tap-to-drop disabled!"
     }
 
-    // --- Task List ---
     private val taskList: kotlin.collections.List<Task> by lazy {
+        logger.info("INIT: Task list initialized.")
         listOf(
             TapToDropTask(this),
             DropSalvageTask(this, SALVAGE_NAME),
@@ -141,23 +134,21 @@ class ShipwreckSalvager : AbstractScript() {
         )
     }
 
-    // --- Event Handler ---
     @Subscribe
     fun onMessageEvent(change: MessageEvent) {
         if (change.messageType == MessageType.Game) {
-            // Check for both the "complete" and the general "success" message
+            logger.info("EVENT: Game Message received: ${change.message}")
             if (change.message.contains(SALVAGE_COMPLETE_MESSAGE) || change.message.contains(SALVAGE_SUCCESS_MESSAGE)) {
-                logger.info("EVENT: Salvage SUCCESS message detected via EventBus!")
+                logger.info("EVENT: Salvage SUCCESS message detected via EventBus! Message: ${change.message}")
                 salvageMessageFound = true
                 startTile = Players.local().tile()
-                logger.info("Updated startTile after dialogue to: $startTile")
+                logger.info("LOGIC: Updated startTile after dialogue to: $startTile")
 
-                // When salvage is complete, we transition to the drop phase
                 currentPhase = SalvagePhase.DROPPING_SALVAGE
                 phaseStartTime = System.currentTimeMillis()
+                logger.info("PHASE CHANGE: Transitioned to ${currentPhase.name}")
             }
 
-            // Handle Tap-to-Drop chat messages
             if (change.message.contains(TAP_TO_DROP_ENABLED_MSG)) {
                 logger.info("EVENT: CONFIRMATION - Tap-to-drop is now ENABLED.")
                 isTapToDropEnabled = true
@@ -168,14 +159,11 @@ class ShipwreckSalvager : AbstractScript() {
         }
     }
 
-    /**
-     * Calculates the current XP gained and XP/hr, updating the class member variables.
-     */
     private fun updateXpTracking() {
         val currentXp = Skills.experience(Skill.Overall).toLong()
-        // Handle initial case where overall XP might not be found immediately (shouldn't happen, but defensive)
         if (initialOverallXp == 0L) {
             initialOverallXp = currentXp
+            logger.info("XP TRACKING: Initial Overall XP set to ${String.format("%,d", initialOverallXp)}")
         }
 
         val gainedXp = currentXp - initialOverallXp
@@ -183,67 +171,60 @@ class ShipwreckSalvager : AbstractScript() {
 
         currentGainedXp = gainedXp
 
-        // Calculate XP per hour
         currentXpPerHour = if (elapsedTimeSeconds > 0) {
             (gainedXp / elapsedTimeSeconds) * 3600
         } else {
             0.0
         }
+        logger.debug("XP TRACKING: Gained XP: ${String.format("%,d", currentGainedXp)}, XP/hr: ${String.format("%,.0f", currentXpPerHour)}")
     }
 
-    // --- Main Loop ---
     override fun poll() {
         try {
             updateXpTracking()
 
-            // Find the task matching the current phase and execute it.
-            val activeTask = taskList.firstOrNull { it.activate() }
+            val activeTask = taskList.firstOrNull { it.activate().also { isActive -> logger.debug("TASK CHECK: ${it::class.simpleName} activate() returned $isActive") } }
 
             if (activeTask != null) {
-                logger.info("Executing Task: ${activeTask::class.simpleName} (Phase: $currentPhase)")
+                logger.info("EXECUTING: Task: ${activeTask::class.simpleName} (Phase: $currentPhase, TapEnabled: $isTapToDropEnabled, TapConfig: $tapToDrop)")
                 activeTask.execute()
             } else {
-                logger.warn("No active task found for phase: $currentPhase. Sleeping briefly.")
+                logger.warn("POLL: No active task found for phase: $currentPhase. Sleeping briefly.")
                 Thread.sleep(1000)
             }
 
         } catch (e: Exception) {
-            // Log the exception, but allow the script to continue attempting to find a task
-            logger.warn("CRASH in poll(): ${e.message}")
-            e.printStackTrace()
+            logger.error("CRASH in poll(): ${e.message}", e)
             Thread.sleep(1000)
         }
     }
 
 
     override fun onStart() {
+        logger.info("SCRIPT START: Initializing Shipwreck Salvager...")
         phaseStartTime = System.currentTimeMillis()
         salvageMessageFound = false
         startTile = Players.local().tile()
+        logger.info("LOGIC: Initial startTile set to $startTile")
 
-        // Reset tap state to false to force the initial check.
         isTapToDropEnabled = false
+        logger.info("LOGIC: isTapToDropEnabled reset to false to force initial check.")
 
-        // Always start in INITIALIZING phase. The task will figure out if it needs to enable or disable based on config.
         currentPhase = SalvagePhase.INITIALIZING
-        logger.info("INITIAL STATE: Tap-to-Drop configured as $tapToDrop. Starting in INITIALIZING phase to synchronize in-game setting.")
+        logger.info("PHASE CHANGE: Starting in ${currentPhase.name}. Tap-to-Drop configured: $tapToDrop.")
 
-
-        // Initialize XP tracking
         initialOverallXp = Skills.experience(Skill.Overall).toLong()
         xpTrackStartTime = System.currentTimeMillis()
-        logger.info("INITIAL XP: Overall XP started at ${String.format("%,d", initialOverallXp)}")
+        logger.info("XP TRACKING: Overall XP started at ${String.format("%,d", initialOverallXp)}")
 
-        // Set up the Paint
         val paint = PaintBuilder.newBuilder()
             .x(40)
             .y(80)
-            // Display the drop mode based on preference AND actual state
             .addString("Drop Mode") {
                 if (tapToDrop && isTapToDropEnabled) "Tap-to-Drop (FAST)"
                 else "Right-Click (SAFE)"
             }
-            .addString("Withdraw Cargo") { if (withdrawCargoOnDrop) "YES" else "NO" } // Added cargo status to paint
+            .addString("Withdraw Cargo") { if (withdrawCargoOnDrop) "YES" else "NO" }
             .addString("Tap Dir") { requiredTapDirection.toString() }
             .addString("Drop Dir") { requiredDropDirection.toString() }
             .addString("Salvage Item") { SALVAGE_NAME }
@@ -260,7 +241,6 @@ class ShipwreckSalvager : AbstractScript() {
                         else "Salvaging (Timeout in: ${if (remaining > 0) "${remaining}s" else "Expired"})"
                     }
                     SalvagePhase.DROPPING_SALVAGE -> {
-                        // Check the configuration and display it
                         val dropStatus = if (tapToDrop && !isTapToDropEnabled) "ENABLING Tap-to-Drop..."
                         else "Dropping Salvage (Cargo Withdraw: ${if (withdrawCargoOnDrop) "YES" else "NO"})"
                         dropStatus
@@ -277,8 +257,10 @@ class ShipwreckSalvager : AbstractScript() {
                     baseStatus
                 }
             }
+            .addString("XP Gained") { String.format("%,d", currentGainedXp) }
+            .addString("XP/Hr (Overall)") { String.format("%,.0f", currentXpPerHour) }
             .build()
         addPaint(paint)
-        logger.info("START: Shipwreck Salvager (Task System Initialized)")
+        logger.info("START: Shipwreck Salvager (Task System Initialized and Paint Added)")
     }
 }

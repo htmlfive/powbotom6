@@ -11,34 +11,38 @@ import org.powbot.om6.salvager.ShipwreckSalvager
 class ReadyToTapTask(script: ShipwreckSalvager) : Task(script) {
 
     override fun activate(): Boolean {
-        return script.currentPhase == SalvagePhase.READY_TO_TAP
+        val isActive = script.currentPhase == SalvagePhase.READY_TO_TAP
+        script.logger.debug("ACTIVATE: Checking if phase is ${SalvagePhase.READY_TO_TAP.name} ($isActive).")
+        return isActive
     }
 
     override fun execute() {
         script.logger.info("TASK: READY_TO_TAP. Initiating screen tap.")
 
-        // 1. Ensure the camera is facing the required direction using the shared utility
-        // Now using the direction configured in the main script (e.g., CardinalDirection.East).
+        script.logger.info("ACTION: Snapping camera to required tap direction: ${script.requiredTapDirection.name}.")
         CameraSnapper.snapCameraToDirection(script.requiredTapDirection, script)
 
-        // 2. Check for position drift and stop if detected
         val currentTile = Players.local().tile()
         if (script.startTile != null && (currentTile.x() != script.startTile!!.x() || currentTile.y() != script.startTile!!.y())) {
-            script.logger.warn("Position change detected (X/Y)! Start: ${script.startTile}, Current: $currentTile. Stopping script.")
+            script.logger.error("POSITION DRIFT DETECTED! Start: ${script.startTile}, Current: $currentTile. Stopping script immediately.")
             ScriptManager.stop()
             return
         }
+        script.logger.debug("POSITION CHECK: Player position stable at $currentTile.")
 
         script.salvageMessageFound = false
+        script.logger.debug("LOGIC: Reset salvageMessageFound to false.")
 
-        // 3. Execute the center click action
         if (executeCenterClick()) {
-            script.logger.info("Tap successful. Starting event-driven wait.")
+            script.logger.info("ACTION: Tap successful. Transitioning to WAITING_FOR_ACTION.")
             script.phaseStartTime = System.currentTimeMillis()
             script.currentPhase = SalvagePhase.WAITING_FOR_ACTION
+            script.logger.info("PHASE CHANGE: Transitioned to ${script.currentPhase.name}.")
         } else {
-            script.logger.warn("Failed to execute screen tap. Retrying on next poll.")
-            Condition.sleep(Random.nextInt(1000, 1500))
+            script.logger.warn("FAIL: Failed to execute screen tap. Retrying on next poll.")
+            val sleepTime = Random.nextInt(1000, 1500)
+            script.logger.info("SLEEP: Sleeping for $sleepTime ms before next poll attempt.")
+            Condition.sleep(sleepTime)
         }
     }
 
@@ -46,19 +50,21 @@ class ReadyToTapTask(script: ShipwreckSalvager) : Task(script) {
         val dimensions = Game.dimensions()
         val centerX = dimensions.width / 2
         val centerY = dimensions.height / 2
+        script.logger.debug("CLIENT: Screen dimensions (W x H): ${dimensions.width} x ${dimensions.height}. Center: ($centerX, $centerY).")
 
         val randomOffsetX = Random.nextInt(-10, 12)
         val randomOffsetY = Random.nextInt(-12, 9)
 
-        // Using the user's custom offsets: -35 on X, +50 on Y
         val finalX = centerX + randomOffsetX - 35
         val finalY = centerY + randomOffsetY + 50
 
-        script.logger.info("Tapping screen at randomized point X=$finalX, Y=$finalY (Base: $centerX, $centerY).")
+        script.logger.info("ACTION: Tapping screen at randomized point X=$finalX, Y=$finalY (Offset: X=$randomOffsetX, Y=$randomOffsetY).")
 
         val clicked = Input.tap(finalX, finalY)
 
-        Condition.sleep(Random.nextInt(300, 500))
+        val sleepTime = Random.nextInt(300, 500)
+        Condition.sleep(sleepTime)
+        script.logger.debug("SLEEP: Slept for $sleepTime ms after tap.")
 
         return clicked
     }
