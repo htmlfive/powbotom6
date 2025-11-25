@@ -40,20 +40,20 @@ import org.powbot.api.script.ScriptConfiguration.List as ConfigList
         ScriptConfiguration(
             "Ready-to-Tap Direction",
             "The camera direction (e.g., North, East) required to reliably click the salvage spot.",
-            optionType = OptionType.STRING, defaultValue = "East",
+            optionType = OptionType.STRING, defaultValue = "North",
             allowedValues = ["North", "East", "South", "West"]
         ),
         ScriptConfiguration(
             "Drop Salvage Direction",
             "The camera direction (e.g., North, East) required for fixed-screen tap locations during the drop phase.",
-            optionType = OptionType.STRING, defaultValue = "East",
+            optionType = OptionType.STRING, defaultValue = "North",
             allowedValues = ["North", "East", "South", "West"]
         ),
         ScriptConfiguration(
             "Salvage Item Name",
             "The exact name of the item dropped after salvaging the shipwreck (e.g., 'Plundered salvage').",
             optionType = OptionType.STRING,
-            defaultValue = "Plundered salvage",
+            defaultValue = "Fremennik salvage",
             allowedValues = ["Small salvage", "Fishy salvage", "Barracuda salvage", "Large salvage", "Plundered salvage", "Martial salvage", "Fremennik salvage", "Opulent salvage"]
         ),
         ScriptConfiguration(
