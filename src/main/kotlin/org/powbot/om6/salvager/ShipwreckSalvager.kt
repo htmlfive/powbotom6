@@ -68,6 +68,13 @@ class ShipwreckSalvager : AbstractScript() {
     @Volatile
     var isTapToDropEnabled: Boolean = false
 
+    // --- Extractor Timer Properties for conditional tap (x=571, y=294) ---
+    // INITIALIZATION CHANGE: Set the timer back by the interval (61s) to force immediate tap on start.
+    val extractorInterval: Long = 65 * 1000L // 61 seconds in milliseconds
+    @Volatile
+    var extractorTimer: Long = System.currentTimeMillis() - extractorInterval
+    // --------------------------------------------------------------------------
+
     @Volatile
     private var initialOverallXp: Long = 0L
     @Volatile
@@ -212,12 +219,18 @@ class ShipwreckSalvager : AbstractScript() {
         isTapToDropEnabled = false
         logger.info("LOGIC: isTapToDropEnabled reset to false to force initial check.")
 
+        // Timer Logic: Initialize/Reset the extractor timer to ensure an immediate tap.
+        extractorTimer = System.currentTimeMillis() - extractorInterval
+        logger.info("LOGIC: Extractor timer initialized to $extractorInterval ms in the past to trigger immediate tap.")
+
         currentPhase = SalvagePhase.INITIALIZING
         logger.info("PHASE CHANGE: Starting in ${currentPhase.name}. Tap-to-Drop configured: $tapToDrop.")
 
         initialOverallXp = Skills.experience(Skill.Overall).toLong()
         xpTrackStartTime = System.currentTimeMillis()
         logger.info("XP TRACKING: Overall XP started at ${String.format("%,d", initialOverallXp)}")
+
+        // --- PAINT BUILDER ---
         val paint = PaintBuilder.newBuilder()
             .x(40)
             .y(80)
@@ -229,6 +242,12 @@ class ShipwreckSalvager : AbstractScript() {
             .addString("Tap Dir") { requiredTapDirection.toString() }
             .addString("Drop Dir") { requiredDropDirection.toString() }
             .addString("Salvage Item") { SALVAGE_NAME }
+            // NEW: Extractor Countdown in Paint
+            .addString("Extractor Tap") {
+                val timeElapsed = System.currentTimeMillis() - extractorTimer
+                val remainingSeconds = ((extractorInterval - timeElapsed) / 1000L).coerceAtLeast(0) // Ensure it's not negative
+                "Next in: ${remainingSeconds}s"
+            }
             .addString("Status") {
                 val baseStatus = when (currentPhase) {
                     SalvagePhase.INITIALIZING -> {
