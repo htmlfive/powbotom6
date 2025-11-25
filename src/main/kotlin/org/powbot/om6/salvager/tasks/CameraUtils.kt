@@ -43,7 +43,13 @@ object CameraSnapper {
                 script.logger.info("CHECK: Pitch is already 0. No reset action needed.")
             }
         }
-        if (Camera.yaw() != yawNeeded) {
+
+          val PITCH_MIN = 35
+          val PITCH_MAX = 41
+
+        val isPitchIncorrect = Camera.pitch() !in PITCH_MIN..PITCH_MAX
+
+        if (Camera.yaw() != yawNeeded || isPitchIncorrect) {
             //setPitch()
             script.logger.info("CHECK: Yaw is ${Camera.yaw()}, does not match target $COMPASS_ACTION ($yawNeeded).")
 

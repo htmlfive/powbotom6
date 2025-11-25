@@ -4,9 +4,9 @@ import org.powbot.api.Condition
 import org.powbot.api.Random
 import org.powbot.api.rt4.Chat
 import org.powbot.api.rt4.Players
-import org.powbot.api.Input // Required for tapping
 import org.powbot.om6.salvager.ShipwreckSalvager
-import org.powbot.om6.salvager.* // Assuming SalvagePhase is imported or defined here
+
+
 
 class WaitingForActionTask(script: ShipwreckSalvager) : Task(script) {
 
@@ -17,17 +17,6 @@ class WaitingForActionTask(script: ShipwreckSalvager) : Task(script) {
     }
 
     override fun execute() {
-        // --- 1. EXTRACTOR TAP CHECK (Highest Priority) ---
-        if (executeExtractorTapCheck()) {
-            script.logger.info("TASK: Extractor tap completed during WAITING_FOR_ACTION. Transitioning back to READY_TO_TAP.")
-
-            // Go back to ReadyToTap after the successful extractor tap and wait
-            script.currentPhase = SalvagePhase.READY_TO_TAP
-            script.phaseStartTime = System.currentTimeMillis()
-            script.logger.info("PHASE CHANGE: Transitioned to ${script.currentPhase.name} after extractor tap.")
-            return
-        }
-        // --- END EXTRACTOR TAP CHECK ---
 
         if (handleDialogueCheck()) {
             script.logger.info("TASK: Dialogue cleared. Restarting action.")
@@ -66,45 +55,6 @@ class WaitingForActionTask(script: ShipwreckSalvager) : Task(script) {
         val sleepTime = Random.nextInt(500, 1000)
         Condition.sleep(sleepTime)
         script.logger.debug("SLEEP: Slept for $sleepTime ms.")
-    }
-
-    /**
-     * Checks the extractor timer and executes the specific tap if the interval has passed.
-     * Logic duplicated from ReadyToTapTask to allow execution during WAITING_FOR_ACTION.
-     * @return true if the tap was executed and succeeded, false otherwise.
-     */
-    private fun executeExtractorTapCheck(): Boolean {
-        val currentTime = System.currentTimeMillis()
-
-        // Check if 61 seconds (or more) have passed since the last extractor tap
-        if (currentTime - script.extractorTimer >= script.extractorInterval) {
-            script.logger.info("EXTRACTOR TIMER: 61-second timer finished. Executing specific tap at (571, 294) with randomization.")
-
-            // Execute the specific tap logic (x=571, y=294) with +-5 randomization
-            val x = 571
-            val y = 294
-            val randomOffsetX = Random.nextInt(-5, 6)
-            val randomOffsetY = Random.nextInt(-5, 6)
-            val finalX = x + randomOffsetX
-            val finalY = y + randomOffsetY
-
-            script.hookCastMessageFound = false
-            script.logger.info("ACTION: Executing extractor tap at X=$finalX, Y=$finalY (Base: $x, $y | Offset: $randomOffsetX, $randomOffsetY).")
-            val clicked = Input.tap(finalX, finalY)
-
-            if (clicked) {
-                // Success actions: Restart timer and wait 1800-2400 ms
-                script.extractorTimer = currentTime
-                val waitTime = Random.nextInt(1800, 2400)
-                script.logger.info("WAIT: Extractor tap successful. Waiting $waitTime ms. Timer restarted.")
-                Condition.sleep(waitTime)
-                return true
-            } else {
-                script.logger.warn("FAIL: Failed to execute extractor tap at ($finalX, $finalY).")
-                return false
-            }
-        }
-        return false
     }
 
     private fun handleDialogueCheck(): Boolean {

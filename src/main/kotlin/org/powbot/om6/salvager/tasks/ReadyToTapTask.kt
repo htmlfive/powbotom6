@@ -1,13 +1,12 @@
 package org.powbot.om6.salvager.tasks
 
 import org.powbot.api.Condition
-import org.powbot.api.Input
 import org.powbot.api.Random
 import org.powbot.api.rt4.Game
 import org.powbot.api.rt4.Players
 import org.powbot.mobile.script.ScriptManager
-import org.powbot.om6.salvager.* // Assuming this includes ShipwreckSalvager, SalvagePhase, CameraSnapper, and Task
-import org.powbot.api.rt4.Chat
+import org.powbot.om6.salvager.* import org.powbot.api.rt4.Chat
+import org.powbot.api.Input
 
 
 class ReadyToTapTask(script: ShipwreckSalvager) : Task(script) {
@@ -21,33 +20,7 @@ class ReadyToTapTask(script: ShipwreckSalvager) : Task(script) {
     override fun execute() {
         script.logger.info("TASK: READY_TO_TAP. Initiating screen tap.")
 
-        // --- SPECIFIC, TIMED TAP CHECK (The Extractor Tap) ---
-        val currentTime = System.currentTimeMillis()
-
-        // Check if 61 seconds (or more) have passed since the last extractor tap
-        if (currentTime - script.extractorTimer >= script.extractorInterval) {
-            script.logger.info("EXTRACTOR TIMER: 61-second extractor timer has finished. Executing specific tap at (571, 294) with randomization.")
-
-            if (executeSpecificTap(571, 294)) {
-                // SUCCESS: Update timer and wait
-                script.extractorTimer = currentTime // Restart the extractor timer
-                val waitTime = Random.nextInt(1800, 2400)
-                script.logger.info("WAIT: Extractor tap successful. Waiting $waitTime ms as requested. Extractor timer restarted.")
-                Condition.sleep(waitTime)
-
-                script.logger.info("CONTINUE: Finished extractor tap cycle. Continuing script.")
-                return // Exit execute() after the timed tap and wait
-            } else {
-                // FAILURE: Log and continue to next poll
-                script.logger.warn("FAIL: Failed to execute extractor tap at (571, 294). Retrying on next poll.")
-                return
-            }
-        }
-        // --- END EXTRACTOR TAP CHECK ---
-
-
-        // --- ORIGINAL GAME-SPECIFIC LOGIC (Runs if the extractor timer is NOT finished) ---
-        script.logger.info("LOGIC: Extractor timer not finished. Proceeding with regular game logic.")
+        script.logger.info("LOGIC: Proceeding with regular game logic.")
 
         script.logger.info("ACTION: Snapping camera to required tap direction: ${script.requiredTapDirection.name}.")
         CameraSnapper.snapCameraToDirection(script.requiredTapDirection, script)
@@ -55,7 +28,6 @@ class ReadyToTapTask(script: ShipwreckSalvager) : Task(script) {
         val currentTile = Players.local().tile()
         if (script.startTile != null && (currentTile.x() != script.startTile!!.x() || currentTile.y() != script.startTile!!.y())) {
 
-            // --- Position Drift Check ---
             if (script.stopIfMoved) {
                 script.logger.error("POSITION DRIFT DETECTED! Start: ${script.startTile}, Current: $currentTile. Stop if Moved is TRUE. Stopping script immediately.")
                 ScriptManager.stop()
@@ -82,33 +54,7 @@ class ReadyToTapTask(script: ShipwreckSalvager) : Task(script) {
         }
     }
 
-    /**
-     * Executes the specific, timed extractor tap with a random offset of +- 5.
-     */
-    private fun executeSpecificTap(x: Int, y: Int): Boolean {
-        // Generate random offsets between -5 and +5 (inclusive)
-        val randomOffsetX = Random.nextInt(-3, 3)
-        val randomOffsetY = Random.nextInt(-3, 3)
-
-        val finalX = x + randomOffsetX
-        val finalY = y + randomOffsetY
-
-        script.hookCastMessageFound = false // Reset message flag
-        script.logger.info("ACTION: Executing extractor tap at X=$finalX, Y=$finalY (Base: $x, $y | Offset: $randomOffsetX, $randomOffsetY).")
-        val clicked = Input.tap(finalX, finalY)
-        Condition.sleep(Random.nextInt(600,1800))
-
-        if (clicked) {
-            val tapSleep = Random.nextInt(1800, 2400) // A short, realistic sleep after input
-            Condition.sleep(tapSleep)
-            script.logger.debug("SLEEP: Slept for $tapSleep ms after extractor tap.")
-            return true
-        }
-        return false
-    }
-
     private fun executeCenterClick(): Boolean {
-        // Function for the original, main task center tap logic (with message/dialogue checks)
         val dimensions = Game.dimensions()
         val centerX = 406
         val centerY = 341

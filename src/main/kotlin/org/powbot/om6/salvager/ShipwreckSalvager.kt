@@ -11,17 +11,25 @@ import org.powbot.api.rt4.walking.model.Skill
 import org.powbot.api.script.*
 import org.powbot.api.script.paint.PaintBuilder
 import org.powbot.om6.salvager.tasks.*
+import org.powbot.api.Input
+import org.powbot.api.Condition
+import org.powbot.api.Random
 import org.powbot.api.script.ScriptConfiguration.List as ConfigList
 
 @ScriptManifest(
     name = "0m6 Shipwreck Salvager",
     description = "Start zoomed in all the way, with camera all the way down",
-    version = "1.2.5",
+    version = "1.2.8", // Version bump
     author = "You",
     category = ScriptCategory.Other
 )
 @ConfigList(
     [
+        ScriptConfiguration(
+            "Enable Extractor", // NEW CONFIGURATION
+            "If true, the script will perform the timed (61s) or message-triggered tap for the Extractor device.",
+            optionType = OptionType.BOOLEAN, defaultValue = "true"
+        ),
         ScriptConfiguration(
             "Withdraw Cargo",
             "Will withdraw from cargo hold and drop items if true. Requires you to be using the sloop and salvaging hook next to cargo hold",
@@ -68,12 +76,14 @@ class ShipwreckSalvager : AbstractScript() {
     @Volatile
     var isTapToDropEnabled: Boolean = false
 
-    // --- Extractor Timer Properties for conditional tap (x=571, y=294) ---
-    // INITIALIZATION CHANGE: Set the timer back by the interval (61s) to force immediate tap on start.
-    val extractorInterval: Long = 65 * 1000L // 61 seconds in milliseconds
+    // --- Extractor Timer Properties ---
+    val extractorInterval: Long = 64 * 1000L // 61 seconds in milliseconds
     @Volatile
-    var extractorTimer: Long = System.currentTimeMillis() - extractorInterval
-    // --------------------------------------------------------------------------
+    var extractorTimer: Long = 0L // Initialized in onStart based on config
+    // ----------------------------------
+
+    @Volatile
+    var harvesterMessageFound = false
 
     @Volatile
     private var initialOverallXp: Long = 0L
@@ -92,6 +102,8 @@ class ShipwreckSalvager : AbstractScript() {
         optionType = OptionType.BOOLEAN, defaultValue = "true", visible = false
     )
     var tapToDrop: Boolean = true
+
+    val enableExtractor: Boolean get() = getOption<Boolean>("Enable Extractor")
 
     @Volatile
     @ScriptConfiguration("Ready-to-Tap Direction", "Description")
@@ -123,8 +135,9 @@ class ShipwreckSalvager : AbstractScript() {
         const val DIALOGUE_RESTART_MAX_MILLIS = 20 * 100
         const val SALVAGE_COMPLETE_MESSAGE = "You salvage all you can"
         const val SALVAGE_SUCCESS_MESSAGE = "You find some salvage"
-        const val HOOK_CAST_MESSAGE_1 = "You cast out your salvaging hook" // NEW: Hook message constant
+        const val HOOK_CAST_MESSAGE_1 = "You cast out your salvaging hook"
         const val HOOK_CAST_MESSAGE_2 = "You start operating"
+        const val HARVESTER_MESSAGE = "Your crystal extractor has harvested"
         const val TAP_TO_DROP_ENABLED_MSG = "Tap-to-drop enabled!"
         const val TAP_TO_DROP_DISABLED_MSG = "Tap-to-drop disabled!"
     }
@@ -135,6 +148,7 @@ class ShipwreckSalvager : AbstractScript() {
             TapToDropTask(this),
             DropSalvageTask(this, SALVAGE_NAME),
             RespawnWaitTask(this),
+            CrystalExtractorTask(this), // <-- NEW TASK ADDED HERE
             ReadyToTapTask(this),
             WaitingForActionTask(this)
         )
@@ -157,6 +171,10 @@ class ShipwreckSalvager : AbstractScript() {
             if (change.message.contains(HOOK_CAST_MESSAGE_1) || change.message.contains(HOOK_CAST_MESSAGE_2)) {
                 logger.info("EVENT: CONFIRMATION - Action start message detected: ${change.message}")
                 hookCastMessageFound = true
+            }
+            if (change.message.contains(HARVESTER_MESSAGE)) {
+                logger.info("EVENT: HARVESTER MESSAGE DETECTED! Message: ${change.message}")
+                harvesterMessageFound = true
             }
             if (change.message.contains(TAP_TO_DROP_ENABLED_MSG)) {
                 logger.info("EVENT: CONFIRMATION - Tap-to-drop is now ENABLED.")
@@ -192,10 +210,11 @@ class ShipwreckSalvager : AbstractScript() {
         try {
             updateXpTracking()
 
+            // The task list runs sequentially. CrystalExtractorTask runs before the main tasks.
             val activeTask = taskList.firstOrNull { it.activate().also { isActive -> logger.debug("TASK CHECK: ${it::class.simpleName} activate() returned $isActive") } }
 
             if (activeTask != null) {
-                logger.info("EXECUTING: Task: ${activeTask::class.simpleName} (Phase: $currentPhase, TapEnabled: $isTapToDropEnabled, TapConfig: $tapToDrop)")
+                logger.info("EXECUTING: Task: ${activeTask::class.simpleName} (Phase: $currentPhase, TapEnabled: $isTapToDropEnabled, Extractor: $enableExtractor)")
                 activeTask.execute()
             } else {
                 logger.warn("POLL: No active task found for phase: $currentPhase. Sleeping briefly.")
@@ -219,12 +238,17 @@ class ShipwreckSalvager : AbstractScript() {
         isTapToDropEnabled = false
         logger.info("LOGIC: isTapToDropEnabled reset to false to force initial check.")
 
-        // Timer Logic: Initialize/Reset the extractor timer to ensure an immediate tap.
-        extractorTimer = System.currentTimeMillis() - extractorInterval
-        logger.info("LOGIC: Extractor timer initialized to $extractorInterval ms in the past to trigger immediate tap.")
+        // Timer Logic: Only initialize the extractor timer if enabled.
+        if (enableExtractor) {
+            extractorTimer = System.currentTimeMillis() - extractorInterval
+            logger.info("LOGIC: Extractor enabled. Timer initialized to $extractorInterval ms in the past to trigger immediate tap.")
+        } else {
+            extractorTimer = System.currentTimeMillis()
+            logger.info("LOGIC: Extractor disabled. Timer initialized to current time (will not trigger).")
+        }
 
         currentPhase = SalvagePhase.INITIALIZING
-        logger.info("PHASE CHANGE: Starting in ${currentPhase.name}. Tap-to-Drop configured: $tapToDrop.")
+        logger.info("PHASE CHANGE: Starting in ${currentPhase.name}. Tap-to-Drop configured: $tapToDrop. Extractor enabled: $enableExtractor.")
 
         initialOverallXp = Skills.experience(Skill.Overall).toLong()
         xpTrackStartTime = System.currentTimeMillis()
@@ -242,11 +266,15 @@ class ShipwreckSalvager : AbstractScript() {
             .addString("Tap Dir") { requiredTapDirection.toString() }
             .addString("Drop Dir") { requiredDropDirection.toString() }
             .addString("Salvage Item") { SALVAGE_NAME }
-            // NEW: Extractor Countdown in Paint
+            // Extractor Countdown in Paint
             .addString("Extractor Tap") {
-                val timeElapsed = System.currentTimeMillis() - extractorTimer
-                val remainingSeconds = ((extractorInterval - timeElapsed) / 1000L).coerceAtLeast(0) // Ensure it's not negative
-                "Next in: ${remainingSeconds}s"
+                if (enableExtractor) {
+                    val timeElapsed = System.currentTimeMillis() - extractorTimer
+                    val remainingSeconds = ((extractorInterval - timeElapsed) / 1000L).coerceAtLeast(0)
+                    "Next in: ${remainingSeconds}s"
+                } else {
+                    "Disabled (GUI)"
+                }
             }
             .addString("Status") {
                 val baseStatus = when (currentPhase) {

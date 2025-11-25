@@ -22,23 +22,34 @@ class DropSalvageTask(
     override fun execute() {
         script.logger.info("TASK: DROPPING_SALVAGE. Initiating drop sequence.")
         script.currentPhase = SalvagePhase.DROPPING_SALVAGE
+
         dropSalvageItems()
+
+        if (CrystalExtractorTask(script).checkAndExecuteInterrupt()) { return }
 
         if (script.withdrawCargoOnDrop) {
             script.logger.info("CONFIG: Withdraw from Cargo Hold is TRUE. Attempting to withdraw cargo...")
             CameraSnapper.snapCameraToDirection(script.requiredDropDirection, script)
             withdrawCargo()
-            script.logger.info("LOGIC: Attempting to drop newly withdrawn items.")
+
+            if (CrystalExtractorTask(script).checkAndExecuteInterrupt()) { return }
+
             dropSalvageItems()
-        } else {
-            script.logger.info("CONFIG: Withdraw from Cargo Hold is FALSE. Skipping cargo withdrawal.")
         }
 
-        script.logger.info("Drop/Withdraw sequence complete. Transitioning to respawn wait.")
-        script.currentPhase = SalvagePhase.WAITING_FOR_RESPAWN
-        script.currentRespawnWait = Random.nextInt(ShipwreckSalvager.RESPAWN_WAIT_MIN_MILLIS, ShipwreckSalvager.RESPAWN_WAIT_MAX_MILLIS).toLong()
-        script.phaseStartTime = System.currentTimeMillis()
-        script.logger.info("PHASE CHANGE: Transitioned to ${script.currentPhase.name}. Wait time set to ${script.currentRespawnWait}ms.")
+        if (!Inventory.isFull()) {
+            script.logger.info("TASK: Drop/Withdraw complete. Inventory is no longer full. Transitioning to respawn wait.")
+            script.currentPhase = SalvagePhase.WAITING_FOR_RESPAWN
+            script.currentRespawnWait = Random.nextInt(
+                ShipwreckSalvager.RESPAWN_WAIT_MIN_MILLIS,
+                ShipwreckSalvager.RESPAWN_WAIT_MAX_MILLIS
+            ).toLong()
+            script.phaseStartTime = System.currentTimeMillis()
+            script.logger.info("PHASE CHANGE: Transitioned to ${script.currentPhase.name} for ${script.currentRespawnWait / 1000L}s.")
+        } else {
+            script.logger.warn("TASK: Drop attempt failed. Inventory is still full. Retrying.")
+            Condition.sleep(Random.nextInt(500, 1000))
+        }
     }
 
     private fun dropSalvageItems() {
