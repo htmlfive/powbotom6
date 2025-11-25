@@ -85,6 +85,15 @@ class ReadyToTapTask(script: ShipwreckSalvager) : Task(script) {
                 return true
             } else {
                 if (Chat.canContinue()) {
+                    val sleepBetween = script.sleepLevel.toInt()
+                    var count = 0
+
+                    while (count < sleepBetween) {
+                        val sleepTime = Random.nextInt(1000, 2000)
+                        Condition.sleep(sleepTime)
+                        script.logger.debug("DIALOGUE: Sleeping $sleepTime ms before next continue click (Count: ${count + 1}).")
+                        count++
+                    }
                     script.logger.info("FAILURE: Action start message NOT received, BUT Chat.canContinue() is TRUE. Assuming dialogue interrupted the action. Continuing to next poll.")
                     return false
                 } else {

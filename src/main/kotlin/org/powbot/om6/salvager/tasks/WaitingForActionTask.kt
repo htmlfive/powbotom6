@@ -61,7 +61,7 @@ class WaitingForActionTask(script: ShipwreckSalvager) : Task(script) {
         if (Chat.canContinue()) {
             script.logger.info("DIALOGUE DETECTED: Clicking continue...")
 
-            val sleepBetween = 3
+            val sleepBetween = script.sleepLevel.toInt()
             var count = 0
 
             while (count < sleepBetween) {

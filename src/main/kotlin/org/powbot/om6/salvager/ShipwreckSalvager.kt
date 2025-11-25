@@ -38,6 +38,11 @@ import org.powbot.api.script.ScriptConfiguration.List as ConfigList
             optionType = OptionType.BOOLEAN, defaultValue = "false"
         ),
         ScriptConfiguration(
+            "Sleep Level (1000-2000ms x Level)",
+            "The camera direction (e.g., North, East) required to reliably click the salvage spot.",
+            optionType = OptionType.STRING, defaultValue = "5"
+        ),
+        ScriptConfiguration(
             "Ready-to-Tap Direction",
             "The camera direction (e.g., North, East) required to reliably click the salvage spot.",
             optionType = OptionType.STRING, defaultValue = "North",
@@ -99,7 +104,7 @@ class ShipwreckSalvager : AbstractScript() {
     val tapToDrop: Boolean get() = getOption<Boolean>("Tap to Drop")
 
     val enableExtractor: Boolean get() = getOption<Boolean>("Enable Extractor")
-
+    val sleepLevel: String get() = getOption<String>("Sleep Level (1000-2000ms x Level)")
     val requiredTapDirectionStr: String get() = getOption<String>("Ready-to-Tap Direction")
     val requiredDropDirectionStr: String get() = getOption<String>("Drop Salvage Direction")
     val SALVAGE_NAME: String get() = getOption<String>("Salvage Item Name")

@@ -95,7 +95,7 @@ class CrystalExtractorTask(script: ShipwreckSalvager) : Task(script) {
                 val tapSleep = Random.nextInt(150, 250)
                 Condition.sleep(tapSleep)
 
-                val waitTime = Random.nextInt(1800, 2400)
+                val waitTime = Random.nextInt(2400, 3000)
                 script.logger.info("WAIT: Extractor tap successful. Waiting $waitTime ms. Timer restarted.")
                 Condition.sleep(waitTime)
                 return true
