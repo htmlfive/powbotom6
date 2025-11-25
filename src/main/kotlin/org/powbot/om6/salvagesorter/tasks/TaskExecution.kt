@@ -21,7 +21,9 @@ fun executeCleanupLoot(script: SalvageSorter): Boolean {
             successfullyCleaned = true
 
             if (highAlchSpell.cast()) {
-                if (item.click()) {
+                Condition.sleep(Random.nextInt(300, 600))
+                // *** FIX: YOU MUST CLICK THE ITEM AFTER CASTING THE SPELL ***
+                if (item.click()) { // <--- Added/Fixed the item click here
                     script.logger.info("CLEANUP: Alch successful. Sleeping for animation/cooldown: 3000-3600ms.")
                     Condition.sleep(Random.nextInt(3000, 3600))
                     Condition.wait({ Inventory.stream().name(itemName).isEmpty() }, 300, 5)
@@ -34,6 +36,7 @@ fun executeCleanupLoot(script: SalvageSorter): Boolean {
             }
         }
     }
+
 
     if (!Inventory.opened()) {
         if (Inventory.open()) {
@@ -52,7 +55,7 @@ fun executeCleanupLoot(script: SalvageSorter): Boolean {
             script.logger.info("CLEANUP: Attempting to drop $itemName.")
             successfullyCleaned = true
             if (item.click()) {
-                Condition.wait({ Inventory.stream().name(itemName).isEmpty() }, 300, 5)
+                Condition.wait({ Inventory.stream().name(itemName).isEmpty() }, 100, 6)
             }
         }
     }

@@ -94,6 +94,7 @@ class ReadyToTapTask(script: ShipwreckSalvager) : Task(script) {
                         script.logger.debug("DIALOGUE: Sleeping $sleepTime ms before next continue click (Count: ${count + 1}).")
                         count++
                     }
+
                     script.logger.info("FAILURE: Action start message NOT received, BUT Chat.canContinue() is TRUE. Assuming dialogue interrupted the action. Continuing to next poll.")
                     return false
                 } else {

@@ -10,8 +10,11 @@ import org.powbot.api.event.MessageType
 import org.powbot.om6.salvagesorter.config.CardinalDirection
 import org.powbot.om6.salvagesorter.config.SalvagePhase
 import org.powbot.om6.salvagesorter.tasks.*
+import kotlin.random.Random
 
 private const val HARVESTER_MESSAGE = "Your crystal extractor has harvested"
+private const val MIN_COOLDOWN_SECONDS = 60
+private const val MAX_COOLDOWN_SECONDS = 90
 
 @ScriptManifest(
     name = "0m6 Shipwreck Sorter",
@@ -68,6 +71,18 @@ class SalvageSorter : AbstractScript() {
     @Volatile var phaseStartTime: Long = 0L
     @Volatile var xpMessageCount: Int = 0 // Proxy for number of items in cargo hold
 
+
+    // NEW STATE & CONSTANT
+// RETAIN these MIN/MAX values to define the range
+
+
+    // NEW: Use a helper property to calculate a random cooldown in milliseconds
+    val randomWithdrawCooldownMs: Long
+        get() = Random.nextLong(MIN_COOLDOWN_SECONDS.toLong(), MAX_COOLDOWN_SECONDS.toLong() + 1) * 1000L
+
+    // NEW STATE: This variable will store the actual cooldown length chosen for the current wait.
+    @Volatile var currentWithdrawCooldownMs: Long = 0L
+    @Volatile var lastWithdrawOrCleanupTime: Long = 0L // Keep this for tracking when the wait started    @Volatile var lastWithdrawOrCleanupTime: Long = 0L
     // --- Task List (Initialized with lazy to ensure proper setup) ---
     private val taskList: kotlin.collections.List<Task> by lazy {
         logger.info("INIT: Task list initialized with priority order: Extractor -> Sort -> Cleanup -> Withdraw.")
@@ -117,7 +132,15 @@ class SalvageSorter : AbstractScript() {
                     "Disabled (GUI)"
                 }
             }
-            .addString("Salvage in Cargo Hold") { xpMessageCount.toString() }
+            .addString("Withdraw Cooldown") {
+                // Use currentWithdrawCooldownMs for the maximum duration
+                val maxCooldown = currentWithdrawCooldownMs
+                val timeElapsed = System.currentTimeMillis() - lastWithdrawOrCleanupTime
+                val remainingSeconds = ((maxCooldown - timeElapsed) / 1000L).coerceAtLeast(0)
+
+                if (remainingSeconds > 0) "Next in: ${remainingSeconds}s (Target: ${maxCooldown / 1000}s)" else "Ready"
+            }
+            .addString("Salvage in Cargo Hold Approx") { xpMessageCount.toString() }
             .build()
         addPaint(paint)
     }

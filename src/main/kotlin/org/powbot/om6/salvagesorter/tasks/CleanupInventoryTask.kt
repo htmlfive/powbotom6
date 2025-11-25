@@ -29,5 +29,16 @@ class CleanupInventoryTask(script: SalvageSorter) : Task(script) {
 
         script.currentPhase = if (success) SalvagePhase.IDLE else SalvagePhase.CLEANING
         script.logger.info("PHASE: Cleanup complete/failed. Transitioned to ${script.currentPhase.name}.")
+        if (success) {
+            // --- NEW LOGIC: Calculate random cooldown and store it ---
+            script.currentWithdrawCooldownMs = script.randomWithdrawCooldownMs
+            script.lastWithdrawOrCleanupTime = System.currentTimeMillis()
+            script.logger.info("COOLDOWN: Cleanup successful. Starting ${script.currentWithdrawCooldownMs / 1000}s (Random) cooldown before next withdrawal attempt.")
+            // --------------------------------------------------------
+
+            script.currentPhase = SalvagePhase.IDLE
+        } else {
+            script.currentPhase = SalvagePhase.CLEANING
+        }
     }
 }

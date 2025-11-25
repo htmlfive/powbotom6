@@ -43,3 +43,4 @@ bin/
 
 ### Mac OS ###
 .DS_Store
+/src/main/kotlin/org/powbot/om6/salvagesorter/SalvageSorter.zip
