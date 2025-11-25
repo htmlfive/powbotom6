@@ -11,22 +11,19 @@ import org.powbot.api.rt4.walking.model.Skill
 import org.powbot.api.script.*
 import org.powbot.api.script.paint.PaintBuilder
 import org.powbot.om6.salvager.tasks.*
-import org.powbot.api.Input
-import org.powbot.api.Condition
-import org.powbot.api.Random
 import org.powbot.api.script.ScriptConfiguration.List as ConfigList
 
 @ScriptManifest(
     name = "0m6 Shipwreck Salvager",
     description = "Start zoomed in all the way, with camera all the way down",
-    version = "1.2.8", // Version bump
+    version = "1.2.8",
     author = "You",
     category = ScriptCategory.Other
 )
 @ConfigList(
     [
         ScriptConfiguration(
-            "Enable Extractor", // NEW CONFIGURATION
+            "Enable Extractor",
             "If true, the script will perform the timed (61s) or message-triggered tap for the Extractor device.",
             optionType = OptionType.BOOLEAN, defaultValue = "true"
         ),
@@ -58,6 +55,11 @@ import org.powbot.api.script.ScriptConfiguration.List as ConfigList
             optionType = OptionType.STRING,
             defaultValue = "Plundered salvage",
             allowedValues = ["Small salvage", "Fishy salvage", "Barracuda salvage", "Large salvage", "Plundered salvage", "Martial salvage", "Fremennik salvage", "Opulent salvage"]
+        ),
+        ScriptConfiguration(
+            "Tap to Drop",
+            "If true, uses Shift-Click (Tap-to-Drop) for faster inventory dropping. Requires Shift-Click Drop to be enabled in game settings.",
+            optionType = OptionType.BOOLEAN, defaultValue = "true", visible = false
         )
     ]
 )
@@ -76,11 +78,9 @@ class ShipwreckSalvager : AbstractScript() {
     @Volatile
     var isTapToDropEnabled: Boolean = false
 
-    // --- Extractor Timer Properties ---
-    val extractorInterval: Long = 64 * 1000L // 61 seconds in milliseconds
+    val extractorInterval: Long = 64 * 1000L
     @Volatile
-    var extractorTimer: Long = 0L // Initialized in onStart based on config
-    // ----------------------------------
+    var extractorTimer: Long = 0L
 
     @Volatile
     var harvesterMessageFound = false
@@ -96,36 +96,22 @@ class ShipwreckSalvager : AbstractScript() {
     @Volatile
     var hookCastMessageFound = false
 
-    @ScriptConfiguration(
-        "Tap to Drop",
-        "If true, uses Shift-Click (Tap-to-Drop) for faster inventory dropping. Requires Shift-Click Drop to be enabled in game settings.",
-        optionType = OptionType.BOOLEAN, defaultValue = "true", visible = false
-    )
-    var tapToDrop: Boolean = true
+    val tapToDrop: Boolean get() = getOption<Boolean>("Tap to Drop")
 
     val enableExtractor: Boolean get() = getOption<Boolean>("Enable Extractor")
 
-    @Volatile
-    @ScriptConfiguration("Ready-to-Tap Direction", "Description")
-    var requiredTapDirectionStr: String = "East"
+    val requiredTapDirectionStr: String get() = getOption<String>("Ready-to-Tap Direction")
+    val requiredDropDirectionStr: String get() = getOption<String>("Drop Salvage Direction")
+    val SALVAGE_NAME: String get() = getOption<String>("Salvage Item Name")
+    val withdrawCargoOnDrop: Boolean get() = getOption<Boolean>("Withdraw Cargo")
+    val stopIfMoved: Boolean get() = getOption<Boolean>("Stop if Moved")
 
-    @Volatile
-    @ScriptConfiguration("Drop Salvage Direction", "Description")
-    var requiredDropDirectionStr: String = "East"
-
-    @Volatile
-    @ScriptConfiguration("Salvage Item Name", "Description")
-    var SALVAGE_NAME: String = "Plundered salvage"
 
     val requiredTapDirection: CardinalDirection
         get() = CardinalDirection.valueOf(requiredTapDirectionStr)
 
     val requiredDropDirection: CardinalDirection
         get() = CardinalDirection.valueOf(requiredDropDirectionStr)
-
-    val withdrawCargoOnDrop: Boolean get() = getOption<Boolean>("Withdraw Cargo")
-
-    val stopIfMoved: Boolean get() = getOption<Boolean>("Stop if Moved")
 
     companion object {
         const val ACTION_TIMEOUT_MILLIS = 450 * 1000
@@ -148,7 +134,7 @@ class ShipwreckSalvager : AbstractScript() {
             TapToDropTask(this),
             DropSalvageTask(this, SALVAGE_NAME),
             RespawnWaitTask(this),
-            CrystalExtractorTask(this), // <-- NEW TASK ADDED HERE
+            CrystalExtractorTask(this),
             ReadyToTapTask(this),
             WaitingForActionTask(this)
         )
@@ -210,7 +196,6 @@ class ShipwreckSalvager : AbstractScript() {
         try {
             updateXpTracking()
 
-            // The task list runs sequentially. CrystalExtractorTask runs before the main tasks.
             val activeTask = taskList.firstOrNull { it.activate().also { isActive -> logger.debug("TASK CHECK: ${it::class.simpleName} activate() returned $isActive") } }
 
             if (activeTask != null) {
@@ -238,7 +223,6 @@ class ShipwreckSalvager : AbstractScript() {
         isTapToDropEnabled = false
         logger.info("LOGIC: isTapToDropEnabled reset to false to force initial check.")
 
-        // Timer Logic: Only initialize the extractor timer if enabled.
         if (enableExtractor) {
             extractorTimer = System.currentTimeMillis() - extractorInterval
             logger.info("LOGIC: Extractor enabled. Timer initialized to $extractorInterval ms in the past to trigger immediate tap.")
@@ -254,7 +238,6 @@ class ShipwreckSalvager : AbstractScript() {
         xpTrackStartTime = System.currentTimeMillis()
         logger.info("XP TRACKING: Overall XP started at ${String.format("%,d", initialOverallXp)}")
 
-        // --- PAINT BUILDER ---
         val paint = PaintBuilder.newBuilder()
             .x(40)
             .y(80)
@@ -266,7 +249,6 @@ class ShipwreckSalvager : AbstractScript() {
             .addString("Tap Dir") { requiredTapDirection.toString() }
             .addString("Drop Dir") { requiredDropDirection.toString() }
             .addString("Salvage Item") { SALVAGE_NAME }
-            // Extractor Countdown in Paint
             .addString("Extractor Tap") {
                 if (enableExtractor) {
                     val timeElapsed = System.currentTimeMillis() - extractorTimer
