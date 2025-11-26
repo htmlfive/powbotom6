@@ -11,26 +11,20 @@ import org.powbot.om6.salvagesorter.config.CardinalDirection
 import org.powbot.om6.salvagesorter.config.SalvagePhase
 import org.powbot.om6.salvagesorter.tasks.*
 import kotlin.random.Random
+import org.powbot.api.rt4.Inventory
 
 private const val HARVESTER_MESSAGE = "Your crystal extractor has harvested"
-private const val MIN_COOLDOWN_SECONDS = 60
-private const val MAX_COOLDOWN_SECONDS = 90
+private const val COINS_ID = 995
 
 @ScriptManifest(
     name = "0m6 Shipwreck Sorter",
     description = "Automates salvage sorting (High Prio), loot cleanup (Med Prio), cargo withdrawal (Low Prio), and crystal extractor taps (Highest Prio).",
     version = "1.2.2",
-    author = "You",
+    author = "0m6",
     category = ScriptCategory.Other
 )
 @ConfigList(
     [
-        ScriptConfiguration(
-            "Drop Salvage Direction",
-            "The camera direction required for fixed-screen tap locations during the sort phase.",
-            optionType = OptionType.STRING, defaultValue = "West",
-            allowedValues = ["North", "East", "South", "West"]
-        ),
         ScriptConfiguration(
             "Salvage Item Name",
             "The exact name of the item dropped after salvaging the shipwreck.",
@@ -38,23 +32,39 @@ private const val MAX_COOLDOWN_SECONDS = 90
             defaultValue = "Fremennik salvage",
             allowedValues = ["Small salvage", "Fishy salvage", "Barracuda salvage", "Large salvage", "Plundered salvage", "Martial salvage", "Fremennik salvage", "Opulent salvage"]
         ),
-
+        ScriptConfiguration(
+            "Min Withdraw Cooldown (s)",
+            "The minimum random time (in seconds) the script waits after cleanup/withdraw before trying again.",
+            optionType = OptionType.STRING,
+            defaultValue = "120"
+        ),
+        ScriptConfiguration(
+            "Max Withdraw Cooldown (s)",
+            "The maximum random time (in seconds) the script waits after cleanup/withdraw before trying again.",
+            optionType = OptionType.STRING,
+            defaultValue = "180"
+        ),
         ScriptConfiguration(
             "Enable Extractor",
             "If true, enables the automatic tapping of the Crystal Extractor every ~64 seconds.",
             optionType = OptionType.BOOLEAN, defaultValue = "true"
         ),
-
         ScriptConfiguration(
             "Extractor Tap Direction",
             "The camera direction required for fixed-screen tap locations during the extractor tap.",
+            optionType = OptionType.STRING, defaultValue = "West",
+            allowedValues = ["North", "East", "South", "West"]
+        ),
+        ScriptConfiguration(
+            "Drop Salvage Direction",
+            "The camera direction required for fixed-screen tap locations during the sort phase. Req. Camera Vertical Setting in OSRS Settings. Set zoom to max all the way in",
             optionType = OptionType.STRING, defaultValue = "West",
             allowedValues = ["North", "East", "South", "West"]
         )
     ]
 )
 class SalvageSorter : AbstractScript() {
-    // --- Configuration Accessors ---
+    val extractorTask = CrystalExtractorTask(this)
     val requiredDropDirectionStr: String get() = getOption<String>("Drop Salvage Direction")
     val SALVAGE_NAME: String get() = getOption<String>("Salvage Item Name")
     val requiredDropDirection: CardinalDirection get() = CardinalDirection.valueOf(requiredDropDirectionStr)
@@ -64,26 +74,32 @@ class SalvageSorter : AbstractScript() {
     val requiredTapDirectionStr: String get() = getOption<String>("Extractor Tap Direction")
     val requiredTapDirection: CardinalDirection get() = CardinalDirection.valueOf(requiredTapDirectionStr)
 
-    // --- State Variables ---
+    private val MIN_COOLDOWN_SECONDS: Int get() = getOption<String>("Min Withdraw Cooldown (s)").toInt()
+    private val MAX_COOLDOWN_SECONDS: Int get() = getOption<String>("Max Withdraw Cooldown (s)").toInt()
+
     @Volatile var harvesterMessageFound: Boolean = false
     @Volatile var extractorTimer: Long = 0L
     @Volatile var currentPhase: SalvagePhase = SalvagePhase.IDLE
     @Volatile var phaseStartTime: Long = 0L
-    @Volatile var xpMessageCount: Int = 0 // Proxy for number of items in cargo hold
+    @Volatile var xpMessageCount: Int = 0
+    @Volatile var initialCoinCount: Long = 0L
 
+    private val currentCoinCount: Long
+        get() {
+            val invCoins = Inventory.stream().id(COINS_ID).firstOrNull()?.stackSize() ?: 0
+            return invCoins.toLong()
+        }
 
-    // NEW STATE & CONSTANT
-// RETAIN these MIN/MAX values to define the range
-
-
-    // NEW: Use a helper property to calculate a random cooldown in milliseconds
     val randomWithdrawCooldownMs: Long
-        get() = Random.nextLong(MIN_COOLDOWN_SECONDS.toLong(), MAX_COOLDOWN_SECONDS.toLong() + 1) * 1000L
+        get() {
+            val min = MIN_COOLDOWN_SECONDS.toLong()
+            val max = MAX_COOLDOWN_SECONDS.toLong()
+            return Random.nextLong(min, max + 1) * 1000L
+        }
 
-    // NEW STATE: This variable will store the actual cooldown length chosen for the current wait.
     @Volatile var currentWithdrawCooldownMs: Long = 0L
-    @Volatile var lastWithdrawOrCleanupTime: Long = 0L // Keep this for tracking when the wait started    @Volatile var lastWithdrawOrCleanupTime: Long = 0L
-    // --- Task List (Initialized with lazy to ensure proper setup) ---
+    @Volatile var lastWithdrawOrCleanupTime: Long = 0L
+
     private val taskList: kotlin.collections.List<Task> by lazy {
         logger.info("INIT: Task list initialized with priority order: Extractor -> Sort -> Cleanup -> Withdraw.")
         listOf(
@@ -94,7 +110,6 @@ class SalvageSorter : AbstractScript() {
         )
     }
 
-    // --- Event Handlers ---
     @Subscribe
     fun onMessageEvent(change: MessageEvent) {
         if (change.messageType == MessageType.Game) {
@@ -112,10 +127,10 @@ class SalvageSorter : AbstractScript() {
         }
     }
 
-    // --- Lifecycle Methods ---
     override fun onStart() {
         logger.info("SCRIPT START: Initializing Shipwreck Sorter...")
-
+        initialCoinCount = currentCoinCount
+        logger.info("INIT: Tracking coins. Initial total GP (Inventory Only): $initialCoinCount")
         extractorTimer = 0L
         phaseStartTime = System.currentTimeMillis()
         currentPhase = SalvagePhase.IDLE
@@ -132,8 +147,11 @@ class SalvageSorter : AbstractScript() {
                     "Disabled (GUI)"
                 }
             }
+            .addString("Coins Gained") {
+                val gain = currentCoinCount - initialCoinCount
+                String.format("%,d GP", gain)
+            }
             .addString("Withdraw Cooldown") {
-                // Use currentWithdrawCooldownMs for the maximum duration
                 val maxCooldown = currentWithdrawCooldownMs
                 val timeElapsed = System.currentTimeMillis() - lastWithdrawOrCleanupTime
                 val remainingSeconds = ((maxCooldown - timeElapsed) / 1000L).coerceAtLeast(0)

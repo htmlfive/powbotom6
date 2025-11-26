@@ -11,11 +11,13 @@ class CrystalExtractorTask(script: SalvageSorter) : Task(script) {
     override fun activate(): Boolean {
         if (!script.enableExtractor) return false
 
+        // High Priority: Chat Message Override
         if (script.harvesterMessageFound) {
             script.logger.debug("ACTIVATE: Active due to Harvester message override.")
             return true
         }
 
+        // Low Priority: Timer Expiration
         val currentTime = System.currentTimeMillis()
         val timerExpired = currentTime - script.extractorTimer >= script.extractorInterval
 
@@ -44,6 +46,7 @@ class CrystalExtractorTask(script: SalvageSorter) : Task(script) {
 
     fun executeExtractorTap(): Boolean {
         try {
+            // Requires CameraSnapper object
             CameraSnapper.snapCameraToDirection(script.requiredTapDirection, script)
 
             val x = 289
@@ -76,6 +79,10 @@ class CrystalExtractorTask(script: SalvageSorter) : Task(script) {
         }
     }
 
+    /**
+     * Checks activation and executes the tap sequence if active.
+     * Used by other tasks to interrupt their flow.
+     */
     fun checkAndExecuteInterrupt(script: SalvageSorter): Boolean {
         if (this.activate()) {
             script.logger.info("INTERRUPT: Crystal Extractor Tap is ACTIVATED during task flow.")
