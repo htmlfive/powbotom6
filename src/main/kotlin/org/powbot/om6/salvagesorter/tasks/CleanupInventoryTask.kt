@@ -4,7 +4,6 @@ import org.powbot.api.rt4.Inventory
 import org.powbot.om6.salvagesorter.SalvageSorter
 import org.powbot.om6.salvagesorter.config.LootConfig
 import org.powbot.om6.salvagesorter.config.SalvagePhase
-import org.powbot.om6.salvagesorter.tasks.Task
 
 class CleanupInventoryTask(script: SalvageSorter) : Task(script) {
     private val extractorTask = CrystalExtractorTask(script)
@@ -29,13 +28,18 @@ class CleanupInventoryTask(script: SalvageSorter) : Task(script) {
 
         script.currentPhase = if (success) SalvagePhase.IDLE else SalvagePhase.CLEANING
         script.logger.info("PHASE: Cleanup complete/failed. Transitioned to ${script.currentPhase.name}.")
-        if (success) {
-            // --- NEW LOGIC: Calculate random cooldown and store it ---
-            script.currentWithdrawCooldownMs = script.randomWithdrawCooldownMs
-            script.lastWithdrawOrCleanupTime = System.currentTimeMillis()
-            script.logger.info("COOLDOWN: Cleanup successful. Starting ${script.currentWithdrawCooldownMs / 1000}s (Random) cooldown before next withdrawal attempt.")
-            // --------------------------------------------------------
 
+        if (success) {
+            val baseCooldownMs = script.randomWithdrawCooldownMs
+            val occupiedSlots = Inventory.stream().count()
+            val emptySlots = 28 - occupiedSlots
+            val penaltyPerSlotMs = 10000L
+            val penaltyMs = emptySlots * penaltyPerSlotMs
+            val finalCooldownMs = baseCooldownMs + penaltyMs
+
+            script.currentWithdrawCooldownMs = finalCooldownMs
+            script.lastWithdrawOrCleanupTime = System.currentTimeMillis()
+            script.logger.info("COOLDOWN APPLIED: Cleanup successful. Starting ${finalCooldownMs / 1000}s (Base + Penalty) cooldown.")
             script.currentPhase = SalvagePhase.IDLE
         } else {
             script.currentPhase = SalvagePhase.CLEANING
