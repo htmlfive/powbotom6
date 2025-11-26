@@ -29,17 +29,10 @@ class CleanupInventoryTask(script: SalvageSorter) : Task(script) {
         script.currentPhase = if (success) SalvagePhase.IDLE else SalvagePhase.CLEANING
         script.logger.info("PHASE: Cleanup complete/failed. Transitioned to ${script.currentPhase.name}.")
 
-        if (success) {
-            val baseCooldownMs = script.randomWithdrawCooldownMs
-            val occupiedSlots = Inventory.stream().count()
-            val emptySlots = 28 - occupiedSlots
-            val penaltyPerSlotMs = 10000L
-            val penaltyMs = emptySlots * penaltyPerSlotMs
-            val finalCooldownMs = baseCooldownMs + penaltyMs
 
-            script.currentWithdrawCooldownMs = finalCooldownMs
-            script.lastWithdrawOrCleanupTime = System.currentTimeMillis()
-            script.logger.info("COOLDOWN APPLIED: Cleanup successful. Starting ${finalCooldownMs / 1000}s (Base + Penalty) cooldown.")
+
+        if (success) {
+
             script.currentPhase = SalvagePhase.IDLE
         } else {
             script.currentPhase = SalvagePhase.CLEANING

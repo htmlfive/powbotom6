@@ -104,7 +104,7 @@ fun executeWithdrawCargo(script: SalvageSorter): Long {
 
     if (!hasSalvage) {
         script.logger.warn("STOP: Withdrawal failed to provide salvage item (${script.SALVAGE_NAME}). Stopping script.")
-        ScriptManager.stop()
+        //ScriptManager.stop()
         return 0L
     }
 
@@ -113,7 +113,7 @@ fun executeWithdrawCargo(script: SalvageSorter): Long {
     val occupiedSlots = Inventory.stream().count()
     val emptySlots = 28 - occupiedSlots
 
-    val penaltyPerSlotMs = 10000L
+    val penaltyPerSlotMs = 20000L
     val penaltyMs = emptySlots * penaltyPerSlotMs
 
     val finalCooldownMs = baseCooldownMs + penaltyMs
@@ -126,8 +126,8 @@ fun executeWithdrawCargo(script: SalvageSorter): Long {
 fun executeTapSortSalvage(script: SalvageSorter, salvageItemName: String): Boolean {
     val SORT_BUTTON_X = 669
     val SORT_BUTTON_Y = 265
-    val SORT_BUTTON_TOLERANCEX = 25
-    val SORT_BUTTON_TOLERANCEY = 25
+    val SORT_BUTTON_TOLERANCEX = 10
+    val SORT_BUTTON_TOLERANCEY = 10
 
     CameraSnapper.snapCameraToDirection(script.requiredDropDirection, script)
     Condition.sleep(Random.nextInt(500, 800))
@@ -144,16 +144,16 @@ fun executeTapSortSalvage(script: SalvageSorter, salvageItemName: String): Boole
     Condition.sleep(Random.nextInt(600, 1200))
 
     if (Input.tap(finalX, finalY)) {
-        val initialWaitTime = 2400L
         val checkInterval = 2400
+        val initialWaitTime = 7200L
         var elapsed = 0L
         var currentSalvageCount = salvageCountBefore
         var lastSalvageCount = salvageCountBefore
 
         var retapFailureCount = 0
-        val MAX_RETAP_FAILURES = 5
+        val MAX_RETAP_FAILURES = 2 // FIXED: Max retap attempts is 2 (initial check + 2 retries = 3 total checks)
 
-        script.logger.info("RETAP: Starting $initialWaitTime ms check for active sorting.")
+        script.logger.info("RETAP: Starting $initialWaitTime ms check for active sorting (1800ms check interval).")
 
         while (elapsed < initialWaitTime) {
             Condition.sleep(checkInterval)
@@ -165,11 +165,15 @@ fun executeTapSortSalvage(script: SalvageSorter, salvageItemName: String): Boole
                 script.logger.info("RETAP: Sort started successfully. Items removed: ${salvageCountBefore - currentSalvageCount}.")
                 break
             }
-
+            if (Chat.canContinue()) {
+                Chat.clickContinue()
+                Condition.sleep(Random.nextInt(500, 800))
+            }
             if (currentSalvageCount >= lastSalvageCount) {
                 retapFailureCount++
 
-                if (retapFailureCount >= MAX_RETAP_FAILURES) {
+                if (retapFailureCount > MAX_RETAP_FAILURES) { // Using '>' here to respect 2 retries (0, 1, 2)
+                    // The logic here is triggered after the 3rd check (initial + 2 retries)
                     script.logger.error("FATAL ERROR: Sort stalled after $MAX_RETAP_FAILURES retap attempts. Stopping script.")
                     ScriptManager.stop()
                     return true
@@ -190,7 +194,7 @@ fun executeTapSortSalvage(script: SalvageSorter, salvageItemName: String): Boole
         }
 
         val timeoutTicks = 20
-        val mainCheckInterval = 1200
+        val mainCheckInterval = 1800
         var waitSuccess = currentSalvageCount.toInt() == 0
         var attempts = 0
         val POST_INTERRUPT_WAIT = 600

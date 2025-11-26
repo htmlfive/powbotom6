@@ -12,6 +12,7 @@ import org.powbot.om6.salvagesorter.config.SalvagePhase
 import org.powbot.om6.salvagesorter.tasks.*
 import kotlin.random.Random
 import org.powbot.api.rt4.Inventory
+import org.powbot.mobile.script.ScriptManager
 
 private const val HARVESTER_MESSAGE = "Your crystal extractor has harvested"
 private const val COINS_ID = 995
@@ -36,7 +37,7 @@ private const val COINS_ID = 995
             "Min Withdraw Cooldown (s)",
             "The minimum random time (in seconds) the script waits after cleanup/withdraw before trying again.",
             optionType = OptionType.STRING,
-            defaultValue = "120"
+            defaultValue = "160"
         ),
         ScriptConfiguration(
             "Max Withdraw Cooldown (s)",
@@ -174,6 +175,9 @@ class SalvageSorter : AbstractScript() {
                 logger.debug("POLL: No task currently active. Sleeping.")
                 currentPhase = SalvagePhase.IDLE
                 Condition.sleep(300)
+            }
+            if (!org.powbot.api.rt4.Game.loggedIn()) {
+                ScriptManager.stop()
             }
         } catch (e: Exception) {
             logger.error("CRASH in poll(): ${e.message}", e)
