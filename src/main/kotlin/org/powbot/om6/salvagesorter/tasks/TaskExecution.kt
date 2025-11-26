@@ -65,7 +65,6 @@ fun executeCleanupLoot(script: SalvageSorter): Boolean {
             script.logger.info("CLEANUP: Attempting to randomly drop $itemName (Slot: ${itemToDrop.inventoryIndex()}).")
             successfullyCleaned = true
 
-            //if (itemToDrop.interact("Drop")) {
             if (itemToDrop.click()) {
                 Condition.wait({ Inventory.stream().name(itemName).none { it.inventoryIndex() == itemToDrop.inventoryIndex() } }, 300, 5)
             }
@@ -79,34 +78,26 @@ fun executeCleanupLoot(script: SalvageSorter): Boolean {
     return successfullyCleaned
 }
 
-fun executeWithdrawCargo(script: SalvageSorter): Boolean {
+fun executeWithdrawCargo(script: SalvageSorter): Long {
     fun getRandomOffsetLarge() = Random.nextInt(-3, 3)
     val mainWait = Random.nextInt(600, 900)
 
     script.logger.info("CARGO: Starting 4-tap cargo withdrawal sequence.")
 
-    val x1 = 364 + getRandomOffsetLarge()
-    val y1 = 144 + getRandomOffsetLarge()
-    if (!Input.tap(x1, y1)) return false
-    script.logger.info("CARGO TAP 1 (Open): Tapped at ($x1, $y1). Waiting for interaction.")
+    if (!Input.tap(364 + getRandomOffsetLarge(), 144 + getRandomOffsetLarge())) return 0L
+    script.logger.info("CARGO TAP 1 (Open): Tapped. Waiting for interaction.")
     Condition.sleep(Random.nextInt(1800, 2400))
 
-    val x2 = 143 + getRandomOffsetLarge()
-    val y2 = 237 + getRandomOffsetLarge()
-    if (!Input.tap(x2, y2)) return false
-    script.logger.info("CARGO TAP 2 (Withdraw): Tapped at ($x2, $y2). Waiting $mainWait ms.")
+    if (!Input.tap(143 + getRandomOffsetLarge(), 237 + getRandomOffsetLarge())) return 0L
+    script.logger.info("CARGO TAP 2 (Withdraw): Tapped. Waiting $mainWait ms.")
     Condition.sleep(mainWait)
 
-    val x3 = 571 + getRandomOffsetLarge()
-    val y3 = 159 + getRandomOffsetLarge()
-    if (!Input.tap(x3, y3)) return false
-    script.logger.info("CARGO TAP 3 (Close): Tapped at ($x3, $y3). Waiting $mainWait ms.")
+    if (!Input.tap(571 + getRandomOffsetLarge(), 159 + getRandomOffsetLarge())) return 0L
+    script.logger.info("CARGO TAP 3 (Close): Tapped. Waiting $mainWait ms.")
     Condition.sleep(mainWait)
 
-    val x4 = 567 + getRandomOffsetLarge()
-    val y4 = 460 + getRandomOffsetLarge()
-    if (!Input.tap(x4, y4)) return false
-    script.logger.info("CARGO TAP 4 (Walk back): Tapped at ($x4, $y4). Waiting for walk back.")
+    if (!Input.tap(567 + getRandomOffsetLarge(), 460 + getRandomOffsetLarge())) return 0L
+    script.logger.info("CARGO TAP 4 (Walk back): Tapped. Waiting for walk back.")
     Condition.sleep(Random.nextInt(1800, 2400))
 
     val hasSalvage = Inventory.stream().name(script.SALVAGE_NAME).isNotEmpty()
@@ -114,10 +105,22 @@ fun executeWithdrawCargo(script: SalvageSorter): Boolean {
     if (!hasSalvage) {
         script.logger.warn("STOP: Withdrawal failed to provide salvage item (${script.SALVAGE_NAME}). Stopping script.")
         ScriptManager.stop()
-        return true
+        return 0L
     }
 
-    return true
+    val baseCooldownMs = script.randomWithdrawCooldownMs
+
+    val occupiedSlots = Inventory.stream().count()
+    val emptySlots = 28 - occupiedSlots
+
+    val penaltyPerSlotMs = 10000L
+    val penaltyMs = emptySlots * penaltyPerSlotMs
+
+    val finalCooldownMs = baseCooldownMs + penaltyMs
+
+    script.logger.info("COOLDOWN ADJUST: Base: ${baseCooldownMs / 1000}s. Empty Slots: $emptySlots. Penalty: ${penaltyMs / 1000}s. Final Cooldown: ${finalCooldownMs / 1000}s.")
+
+    return finalCooldownMs
 }
 
 fun executeTapSortSalvage(script: SalvageSorter, salvageItemName: String): Boolean {
@@ -125,21 +128,22 @@ fun executeTapSortSalvage(script: SalvageSorter, salvageItemName: String): Boole
     val SORT_BUTTON_Y = 265
     val SORT_BUTTON_TOLERANCEX = 25
     val SORT_BUTTON_TOLERANCEY = 25
+
     CameraSnapper.snapCameraToDirection(script.requiredDropDirection, script)
     Condition.sleep(Random.nextInt(500, 800))
 
-    val randomOffsetX = Random.nextInt(-SORT_BUTTON_TOLERANCEX, SORT_BUTTON_TOLERANCEX +13)
+    val randomOffsetX = Random.nextInt(-SORT_BUTTON_TOLERANCEX, SORT_BUTTON_TOLERANCEX + 13)
     val randomOffsetY = Random.nextInt(-SORT_BUTTON_TOLERANCEY, SORT_BUTTON_TOLERANCEY + 1)
     val finalX = SORT_BUTTON_X + randomOffsetX
     val finalY = SORT_BUTTON_Y + randomOffsetY
 
-    var salvageCountBefore = Inventory.stream().name(salvageItemName).count()
+    val salvageCountBefore = Inventory.stream().name(salvageItemName).count()
 
     script.logger.info("ACTION: Tapping 'Sort Salvage' button at X=$finalX, Y=$finalY. Count before: $salvageCountBefore.")
     Game.closeOpenTab()
     Condition.sleep(Random.nextInt(600, 1200))
-    if (Input.tap(finalX, finalY)) {
 
+    if (Input.tap(finalX, finalY)) {
         val initialWaitTime = 2400L
         val checkInterval = 2400
         var elapsed = 0L
@@ -154,10 +158,6 @@ fun executeTapSortSalvage(script: SalvageSorter, salvageItemName: String): Boole
         while (elapsed < initialWaitTime) {
             Condition.sleep(checkInterval)
             elapsed += checkInterval
-
-            if (script.extractorTask.checkAndExecuteInterrupt(script)) {
-                script.logger.debug("INTERRUPT: Extractor ran during initial sort wait.")
-            }
 
             currentSalvageCount = Inventory.stream().name(salvageItemName).count()
 
@@ -177,11 +177,11 @@ fun executeTapSortSalvage(script: SalvageSorter, salvageItemName: String): Boole
 
                 script.logger.warn("RETAP: Count (${currentSalvageCount}) has not decreased. Retapping Sort Salvage (Attempt $retapFailureCount).")
 
-                if (!Input.tap(finalX, finalY)) {
-                    script.logger.warn("RETAP FAILED: Could not retap. Proceeding to next check.")
-                } else {
+                if (Input.tap(finalX, finalY)) {
                     Condition.sleep(Random.nextInt(500, 800))
                     lastSalvageCount = currentSalvageCount
+                } else {
+                    script.logger.warn("RETAP FAILED: Could not retap. Proceeding to next check.")
                 }
             } else {
                 retapFailureCount = 0
@@ -193,6 +193,7 @@ fun executeTapSortSalvage(script: SalvageSorter, salvageItemName: String): Boole
         val mainCheckInterval = 1200
         var waitSuccess = currentSalvageCount.toInt() == 0
         var attempts = 0
+        val POST_INTERRUPT_WAIT = 600
 
         if (!waitSuccess) {
             script.logger.info("POLLING: Starting non-blocking wait for remaining inventory clear.")
@@ -200,13 +201,16 @@ fun executeTapSortSalvage(script: SalvageSorter, salvageItemName: String): Boole
             while (attempts < timeoutTicks) {
 
                 if (script.extractorTask.checkAndExecuteInterrupt(script)) {
-                    script.logger.warn("INTERRUPT: Extractor ran. Retapping Sort Salvage to ensure stream resumes.")
-                    if (!Input.tap(finalX, finalY)) {
-                        script.logger.warn("RETAP FAILED: Could not retap after interrupt. Proceeding to next check.")
+                    script.logger.warn("INTERRUPT: Extractor ran. Re-tapping Sort Salvage and restarting wait loop.")
+
+                    if (Input.tap(finalX, finalY)) {
+                        script.logger.info("RETAP SUCCESS: Re-tapped Sort Salvage after interrupt. Waiting ${POST_INTERRUPT_WAIT}ms.")
+                        Condition.sleep(POST_INTERRUPT_WAIT)
+                        attempts = 0
+                        continue
+                    } else {
+                        script.logger.warn("RETAP FAILED: Could not re-tap after interrupt. Continuing check loop.")
                     }
-                    Condition.sleep(Random.nextInt(500, 800))
-                    attempts = 0
-                    continue
                 }
 
                 if (Inventory.stream().name(salvageItemName).isEmpty()) {
@@ -223,6 +227,7 @@ fun executeTapSortSalvage(script: SalvageSorter, salvageItemName: String): Boole
 
         if (waitSuccess) {
             script.logger.info("SUCCESS: 'Sort Salvage' complete. Extended AFK wait: 5000-8000ms.")
+            Condition.sleep(Random.nextInt(5000, 8000))
             return true
         } else {
             script.logger.warn("FAIL: 'Sort Salvage' wait timed out. Salvage still present.")

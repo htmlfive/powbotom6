@@ -4,22 +4,18 @@ import org.powbot.api.rt4.Inventory
 import org.powbot.om6.salvagesorter.SalvageSorter
 import org.powbot.om6.salvagesorter.config.LootConfig
 import org.powbot.om6.salvagesorter.config.SalvagePhase
-import org.powbot.om6.salvagesorter.tasks.Task
 
 class WithdrawCargoTask(script: SalvageSorter) : Task(script) {
     private val extractorTask = CrystalExtractorTask(script)
 
     override fun activate(): Boolean {
-        // Check 1: Must be clean
         val hasJunk = Inventory.stream().name(script.SALVAGE_NAME).isNotEmpty() ||
                 Inventory.stream().name(*LootConfig.DISCARD_OR_ALCH_LIST).isNotEmpty()
 
         if (hasJunk) return false
 
-        // Check 2: Must not be full (to make withdrawal meaningful)
         if (Inventory.isFull()) return false
 
-        // Check 3 (NEW): Check the cooldown timer
         val timeElapsedSinceLastWithdraw = System.currentTimeMillis() - script.lastWithdrawOrCleanupTime
         val cooldownExpired = timeElapsedSinceLastWithdraw >= script.currentWithdrawCooldownMs
 
@@ -31,23 +27,24 @@ class WithdrawCargoTask(script: SalvageSorter) : Task(script) {
     override fun execute() {
         script.currentPhase = SalvagePhase.WITHDRAWING
         script.logger.info("PHASE: Transitioned to ${script.currentPhase.name} (Priority 4).")
-        script.currentWithdrawCooldownMs = script.randomWithdrawCooldownMs
-        script.lastWithdrawOrCleanupTime = System.currentTimeMillis()
-        script.logger.info("COOLDOWN: Withdrawal successful. Starting ${script.currentWithdrawCooldownMs / 1000}s (Random) cooldown before next withdrawal attempt.")
 
         val emptySlotsBefore = Inventory.emptySlotCount()
         script.logger.info("CARGO: Empty slots before withdrawal: $emptySlotsBefore.")
 
         if (extractorTask.checkAndExecuteInterrupt(script)) return
 
-        val success = executeWithdrawCargo(script)
+        val finalCooldownMs = executeWithdrawCargo(script)
 
         if (extractorTask.checkAndExecuteInterrupt(script)) return
 
-        if (success) {
+        if (finalCooldownMs > 0L) {
             val emptySlotsAfter = Inventory.emptySlotCount()
             val withdrawnCount = emptySlotsBefore - emptySlotsAfter
+
+            script.currentWithdrawCooldownMs = finalCooldownMs
             script.lastWithdrawOrCleanupTime = System.currentTimeMillis()
+            script.logger.info("COOLDOWN APPLIED: Starting ${finalCooldownMs / 1000}s (Base + Penalty) cooldown.")
+
             if (withdrawnCount > 0) {
                 script.xpMessageCount = (script.xpMessageCount - withdrawnCount).coerceAtLeast(0)
                 script.logger.info("CARGO: Withdrew $withdrawnCount items. Remaining cargo proxy: ${script.xpMessageCount}.")
@@ -58,7 +55,9 @@ class WithdrawCargoTask(script: SalvageSorter) : Task(script) {
             script.currentPhase = SalvagePhase.IDLE
         } else {
             script.logger.warn("PHASE: Withdraw failed. Retrying in next cycle.")
-            script.currentPhase = SalvagePhase.WITHDRAWING
+            script.currentWithdrawCooldownMs = script.randomWithdrawCooldownMs.coerceAtLeast(3000L)
+            script.lastWithdrawOrCleanupTime = System.currentTimeMillis()
+            script.currentPhase = SalvagePhase.IDLE
         }
         script.logger.info("PHASE: Withdraw complete/failed. Transitioned to ${script.currentPhase.name}.")
     }
