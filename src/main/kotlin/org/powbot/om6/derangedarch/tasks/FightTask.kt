@@ -6,86 +6,120 @@ import org.powbot.api.Tile
 import org.powbot.api.rt4.*
 import org.powbot.mobile.script.ScriptManager
 import org.powbot.om6.derangedarch.DerangedArchaeologistMagicKiller
-import org.powbot.om6.derangedarch.IDs
 
 class FightTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
 
     // --- Antipoison Logic ---
-
+    private val ANTIPOISON_NAMES = setOf(
+        // Regular Antipoison
+        "Antipoison(1)", "Antipoison(2)", "Antipoison(3)", "Antipoison(4)",
+        // Superantipoison
+        "Superantipoison(1)", "Superantipoison(2)", "Superantipoison(3)", "Superantipoison(4)",
+        // Antidote+
+        "Antidote+ (1)", "Antidote+ (2)", "Antidote+ (3)", "Antidote+ (4)",
+        // Antidote++
+        "Antidote++ (1)", "Antidote++ (2)", "Antidote++ (3)", "Antidote++ (4)",
+        // Sanfew serum
+        "Sanfew serum (1)", "Sanfew serum (2)", "Sanfew serum (3)", "Sanfew serum (4)"
+    )
     /**
      * Checks if the player is poisoned.
      */
     private fun isPoisoned(): Boolean {
-        // Status.stream().nameContains("Poison").isNotEmpty()
-        return Combat.poisoned() || Combat.venomed()
+        return Combat.isPoisoned()
     }
 
     /**
-     * Finds and uses an antipoison dose from the inventory.
+     * Finds the first available antipoison potion in the inventory.
      */
-    private fun curePoison(): Boolean {
-        if (!isPoisoned()) {
-            return true
-        }
-
-        script.logger.info("Poisoned/Venomed! Attempting to drink antipoison.")
-
-        val antipoison = Inventory.stream().name(*IDs.ANTIPOISON_NAMES.toTypedArray()).firstOrNull()
-
-        if (antipoison != null) {
-            if (antipoison.interact("Drink")) {
-                script.logger.debug("Drank antipoison: ${antipoison.name()}. Waiting for poison to be cured.")
-                // Wait for poison status to clear
-                return Condition.wait({ !isPoisoned() }, 150, 10)
-            } else {
-                script.logger.warn("Failed to interact 'Drink' with antipoison: ${antipoison.name()}.")
-            }
-        } else {
-            script.logger.warn("No antipoison found in inventory while poisoned/venomed!")
-        }
-        return false
+    private fun getAntipoison(): Item {
+        return Inventory.stream().name(*ANTIPOISON_NAMES.toTypedArray()).first()
     }
+    // --- End Antipoison Logic ---
 
     override fun validate(): Boolean {
         val boss = script.getBoss()
-        val inFightArea = Players.local().tile().distanceTo(script.BOSS_TRIGGER_TILE) <= 8
+        val inFightArea = Players.local().tile().distanceTo(script.BOSS_TRIGGER_TILE) <= 9
+        val needsResupply = script.needsTripResupply()
 
-        // Only run if a boss is present and we are in the fight area
-        val shouldRun = boss != null && inFightArea
-
-        if (shouldRun) {
-            script.logger.debug("Validate OK: Boss is present and in fight area.")
+        if (boss != null && inFightArea) {
+            val bossTarget = boss.interacting()
+            if (bossTarget is Player && bossTarget != Players.local()) {
+                script.logger.warn("Another player is fighting the boss. Stopping script to avoid crashing.")
+                ScriptManager.stop()
+                return false
+            }
         }
 
-        return shouldRun
+        val shouldFight = boss != null && inFightArea && !needsResupply
+        if (shouldFight) {
+            script.logger.debug("Validate OK: Boss is present, in fight area, and no resupply needed.")
+        } else if (boss == null) {
+            script.logger.debug("Validate FAIL: Boss is null.")
+        } else if (!inFightArea) {
+            script.logger.debug("Validate FAIL: Not in fight area.")
+        } else if (needsResupply) {
+            script.logger.debug("Validate FAIL: Needs trip resupply.")
+        }
+        return shouldFight
     }
 
     override fun execute() {
-        script.logger.debug("Executing FightTask...")
-        val boss = script.getBoss()
-        if (boss == null || boss.healthPercent() == 0) {
-            script.logger.debug("Boss is dead or null, stopping fight task.")
-            return
-        }
+        // --- MODIFIED: Prayer checks are now first priority ---
 
-        // 1. Check/Cure Poison
-        if (isPoisoned()) {
-            curePoison()
-        }
-
-        // 2. Activate Prayer
         if (!Prayer.prayerActive(script.REQUIRED_PRAYER)) {
-            script.logger.info("Activating ${script.REQUIRED_PRAYER.name} prayer.")
-            if (Prayer.prayer(script.REQUIRED_PRAYER, true)) {
-                Condition.wait({ Prayer.prayerActive(script.REQUIRED_PRAYER) }, 150, 10)
-            } else {
-                script.logger.warn("Failed to activate prayer: ${script.REQUIRED_PRAYER.name}.")
-            }
-            // Let the task run again on the next loop to ensure prayer activates
+            script.logger.info("Activating prayer: ${script.REQUIRED_PRAYER.name}")
+            Prayer.prayer(script.REQUIRED_PRAYER, true)
+            Condition.wait({ Prayer.prayerActive(script.REQUIRED_PRAYER) }, 100, 5)
             return
         }
 
-        // 3. Keep distance (The boss's melee attack is deadly)
+        if (Prayer.prayerPoints() < 30) {
+            script.logger.info("Prayer points low (${Prayer.prayerPoints()}), drinking potion.")
+            val prayerPotion = Inventory.stream().nameContains("Prayer potion").firstOrNull()
+            if (prayerPotion != null && prayerPotion.interact("Drink")) {
+                Condition.sleep(1200)
+                return
+            } else {
+                script.logger.warn("Prayer low but no prayer potions found!")
+            }
+        }
+
+        // --- POISON CHECK (Now runs after prayer) ---
+        if (isPoisoned()) {
+            script.logger.info("Player is poisoned. Looking for antipoison...")
+            val antipoison = getAntipoison()
+
+            if (antipoison.valid()) {
+                script.logger.info("Found ${antipoison.name()}. Drinking...")
+
+                if (antipoison.interact("Drink")) {
+                    val waitSuccess = Condition.wait({ !isPoisoned() }, 300, 10)
+                    if (waitSuccess) {
+                        script.logger.info("Successfully cured poison.")
+                    } else {
+                        script.logger.warn("Drank antipoison but still poisoned (or wait timed out).")
+                    }
+                } else {
+                    script.logger.warn("Failed to interact 'Drink' with ${antipoison.name()}.")
+                }
+                return // Return after attempting to drink
+            } else {
+                script.logger.warn("Player is poisoned but no antipoison found!")
+            }
+        }
+        // --- END POISON CHECK ---
+
+        val boss = script.getBoss() ?: return
+        val bossTarget = boss.interacting()
+        if (bossTarget is Player && bossTarget != Players.local()) {
+            script.logger.warn("Another player detected fighting the boss during execute. Stopping script.")
+            ScriptManager.stop()
+            return
+        }
+
+        script.logger.debug("Executing FightTask...")
+
         if (boss.distance() < 2) {
             script.logger.debug("Too close to boss, finding a safe spot to step back.")
             val playerTile = Players.local().tile()
@@ -106,7 +140,6 @@ class FightTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
             }
         }
 
-        // 4. Attack
         if (Players.local().interacting() != boss) {
             script.logger.info("Not interacting with boss, attempting to attack.")
             if (!boss.inViewport()) {
@@ -114,9 +147,7 @@ class FightTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
                 Camera.turnTo(boss)
             }
             if (boss.interact("Attack")) {
-                Condition.wait({ Players.local().interacting() == boss }, 600, 10)
-            } else {
-                script.logger.warn("Failed to interact 'Attack' with boss.")
+                Condition.wait({ Players.local().interacting() == boss }, 150, 10)
             }
         }
     }

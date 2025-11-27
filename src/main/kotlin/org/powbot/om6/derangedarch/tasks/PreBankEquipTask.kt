@@ -4,7 +4,6 @@ import org.powbot.api.Condition
 import org.powbot.api.rt4.Equipment
 import org.powbot.api.rt4.Inventory
 import org.powbot.om6.derangedarch.DerangedArchaeologistMagicKiller
-import org.powbot.om6.derangedarch.IDs
 
 class PreBankEquipTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
 
@@ -12,7 +11,7 @@ class PreBankEquipTask(script: DerangedArchaeologistMagicKiller) : Task(script) 
         // Define the conditions that would trigger a resupply trip.
         val noFood = Inventory.stream().name(script.config.foodName).isEmpty()
         val inventoryFull = Inventory.isFull()
-        val noPrayerPotions = Inventory.stream().nameContains(IDs.PRAYER_POTION_NAME_CONTAINS).isEmpty()
+        val noPrayerPotions = Inventory.stream().nameContains("Prayer potion").isEmpty()
         val needsResupply = noFood || inventoryFull || noPrayerPotions
 
         script.logger.debug("PreBankEquip validate: noFood=$noFood, inventoryFull=$inventoryFull, noPrayerPotions=$noPrayerPotions, needsResupply=$needsResupply")
@@ -29,47 +28,55 @@ class PreBankEquipTask(script: DerangedArchaeologistMagicKiller) : Task(script) 
         val hasGearInInv = Inventory.stream().any { it.id() in requiredEquipmentIds }
         script.logger.debug("PreBankEquip validate: hasGearInInv=$hasGearInInv")
 
-        return hasGearInInv
+        return hasGearInInv // `needsResupply` is already confirmed to be true here
     }
 
     override fun execute() {
+        script.logger.info("Equipping required combat gear from inventory before banking...")
         script.logger.debug("Executing PreBankEquipTask...")
+        val requiredEquipmentIds = script.config.requiredEquipment.keys
 
-        // Find the first required item that is currently in the inventory.
-        val itemToEquip = Inventory.stream().filter { it.id() in script.config.requiredEquipment.keys }.firstOrNull()
+        Inventory.stream()
+            // Filter the inventory to only include items that are part of our defined combat gear.
+            .filter { it.id() in requiredEquipmentIds }
+            .forEach { itemToEquip ->
 
-        if (itemToEquip != null) {
-            val actions = itemToEquip.actions()
-            var equipped = false
-            script.logger.info("Equipping ${itemToEquip.name()} before banking.")
-
-            // Prioritize "Wield" for weapons
-            if ("Wield" in actions) {
-                script.logger.debug("Using action 'Wield' for ${itemToEquip.name()}")
-                if (itemToEquip.interact("Wield")) {
-                    equipped = Condition.wait({ Equipment.stream().id(itemToEquip.id()).isNotEmpty() }, 250, 10)
+                // --- ADDED CHECK: Skip if the item is already equipped ---
+                if (Equipment.stream().id(itemToEquip.id()).isNotEmpty()) {
+                    script.logger.debug("Skipping ${itemToEquip.name()}: item is already equipped.")
+                    return@forEach // Skips to the next item in the loop
                 }
-                // Fallback to "Wear" for armor, capes, etc.
-            } else if ("Wear" in actions) {
-                script.logger.debug("Using action 'Wear' for ${itemToEquip.name()}")
-                if (itemToEquip.interact("Wear")) {
-                    equipped = Condition.wait({ Equipment.stream().id(itemToEquip.id()).isNotEmpty() }, 250, 10)
+                // --- END ADDED CHECK ---
+
+                script.logger.debug("Attempting to pre-bank equip ${itemToEquip.name()} (ID: ${itemToEquip.id()})")
+                val actions = itemToEquip.actions()
+                var equipped = false
+
+                // Prioritize "Wield" for weapons
+                if ("Wield" in actions) {
+                    script.logger.debug("Using action 'Wield' for ${itemToEquip.name()}")
+                    if (itemToEquip.interact("Wield")) {
+                        equipped = Condition.wait({ Equipment.stream().id(itemToEquip.id()).isNotEmpty() }, 250, 10)
+                    }
+                    // Fallback to "Wear" for armor, capes, etc.
+                } else if ("Wear" in actions) {
+                    script.logger.debug("Using action 'Wear' for ${itemToEquip.name()}")
+                    if (itemToEquip.interact("Wear")) {
+                        equipped = Condition.wait({ Equipment.stream().id(itemToEquip.id()).isNotEmpty() }, 250, 10)
+                    }
+                    // Fallback for "Equip" for ammo, blessings, etc.
+                } else if ("Equip" in actions) {
+                    script.logger.debug("Using action 'Equip' for ${itemToEquip.name()}")
+                    if (itemToEquip.interact("Equip")) {
+                        equipped = Condition.wait({ Equipment.stream().id(itemToEquip.id()).isNotEmpty() }, 250, 10)
+                    }
                 }
-                // Fallback for "Equip" for ammo, blessings, etc.
-            } else if ("Equip" in actions) {
-                script.logger.debug("Using action 'Equip' for ${itemToEquip.name()}")
-                if (itemToEquip.interact("Equip")) {
-                    equipped = Condition.wait({ Equipment.stream().id(itemToEquip.id()).isNotEmpty() }, 250, 10)
+
+                if (equipped) {
+                    script.logger.info("Successfully equipped ${itemToEquip.name()}.")
+                } else {
+                    script.logger.warn("Failed to equip ${itemToEquip.name()} during pre-bank. Could not find a valid action or wait timed out.")
                 }
             }
-
-            if (equipped) {
-                script.logger.info("Successfully equipped ${itemToEquip.name()}.")
-            } else {
-                script.logger.warn("Failed to equip ${itemToEquip.name()} during pre-bank. Could not find a valid action or wait timed out.")
-            }
-        } else {
-            script.logger.debug("No combat gear found in inventory, PreBankEquipTask finished.")
-        }
     }
 }

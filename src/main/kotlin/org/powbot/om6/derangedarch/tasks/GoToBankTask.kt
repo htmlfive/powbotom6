@@ -5,9 +5,13 @@ import org.powbot.api.Tile
 import org.powbot.api.rt4.*
 import org.powbot.mobile.script.ScriptManager
 import org.powbot.om6.derangedarch.DerangedArchaeologistMagicKiller
-import org.powbot.om6.derangedarch.IDs
 
 class GoToBankTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
+
+    // --- Constants for the Ring of Dueling widget interaction ---
+    private val DUELING_RING_WIDGET_ID = 219
+    private val OPTIONS_CONTAINER_COMPONENT = 1
+    private val FEROX_ENCLAVE_OPTION_INDEX = 3
 
     // --- New constants for the two-step travel ---
     private val FEROX_ENTRANCE_TILE = Tile(3151, 3635, 0) // The arrival point after teleporting
@@ -21,32 +25,29 @@ class GoToBankTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
         val needsFullRestock = script.needsFullRestock()
         val notAtBank = !script.FEROX_BANK_AREA.contains(Players.local())
         val notInFightArea = Players.local().tile().distanceTo(script.BOSS_TRIGGER_TILE) > 8
-        val shouldRun = needsFullRestock && notAtBank && notInFightArea
 
+        val shouldRun = needsFullRestock && notAtBank && notInFightArea
         if (shouldRun) {
-            script.logger.debug("Validate OK: Needs full restock, not at bank, not in fight area.")
+            script.logger.debug("Validate OK: Needs restock ($needsFullRestock), not at bank ($notAtBank), not in fight area ($notInFightArea).")
         }
         return shouldRun
     }
 
     override fun execute() {
         script.logger.debug("Executing GoToBankTask...")
+        script.logger.info("Setup is incorrect, using Ring of Dueling to go to bank...")
 
-        // 1. Teleport to Ferox Enclave
-        script.logger.info("Teleporting to Ferox Enclave bank.")
+        val duelRing = Inventory.stream().nameContains("Ring of dueling").firstOrNull()
 
-        val ring = Inventory.stream().nameContains(IDs.RING_OF_DUELING_NAME).firstOrNull()
-
-        if (ring != null) {
-            script.logger.debug("Found Ring of Dueling, attempting to 'Rub'.")
-            if (ring.interact("Rub")) {
-                Condition.sleep(600) // Wait for item delay
-
-                if (Condition.wait({ Widgets.widget(IDs.DUELING_RING_WIDGET_ID).valid() }, 200, 15)) {
-                    script.logger.debug("Dueling Ring widget open.")
-                    val enclaveOption = Widgets.widget(IDs.DUELING_RING_WIDGET_ID)
-                        .component(IDs.WIDGET_OPTIONS_CONTAINER)
-                        .component(IDs.FEROX_ENCLAVE_OPTION_INDEX)
+        if (duelRing != null && duelRing.valid()) {
+            script.logger.debug("Found valid Ring of Dueling, interacting 'Rub'...")
+            if (duelRing.interact("Rub")) {
+                script.logger.debug("Waiting for Dueling Ring widget ($DUELING_RING_WIDGET_ID)...")
+                if (Condition.wait({ Widgets.widget(DUELING_RING_WIDGET_ID).valid() }, 200, 15)) {
+                    script.logger.debug("Widget found. Clicking Ferox Enclave option.")
+                    val enclaveOption = Widgets.widget(DUELING_RING_WIDGET_ID)
+                        .component(OPTIONS_CONTAINER_COMPONENT)
+                        .component(FEROX_ENCLAVE_OPTION_INDEX)
 
                     if (enclaveOption.valid() && enclaveOption.click()) {
                         script.logger.debug("Clicked, waiting to arrive at $FEROX_ENTRANCE_TILE...")

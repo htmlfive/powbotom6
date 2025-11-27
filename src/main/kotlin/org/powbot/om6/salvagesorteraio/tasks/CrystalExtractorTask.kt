@@ -1,10 +1,9 @@
-package org.powbot.om6.salvagesorter.tasks
+package org.powbot.om6.salvagesorteraio.tasks
 
 import org.powbot.api.Condition
 import org.powbot.api.Input
 import org.powbot.api.Random
-import org.powbot.om6.salvagesorter.SalvageSorter
-import org.powbot.om6.salvagesorter.tasks.Task
+import org.powbot.om6.salvagesorteraio.SalvageSorter
 
 class CrystalExtractorTask(script: SalvageSorter) : Task(script) {
 
@@ -47,7 +46,7 @@ class CrystalExtractorTask(script: SalvageSorter) : Task(script) {
     fun executeExtractorTap(): Boolean {
         try {
             // Requires CameraSnapper object
-            CameraSnapper.snapCameraToDirection(script.requiredTapDirection, script)
+            //CameraSnapper.snapCameraToDirection(script.requiredTapDirection, script)
 
             val x = 289
             val y = 299

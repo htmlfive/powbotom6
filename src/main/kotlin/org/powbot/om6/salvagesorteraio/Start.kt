@@ -1,6 +1,4 @@
-package org.powbot.om6.salvagesorter
-
-import org.powbot.om6.salvagesorter.SalvageSorter
+package org.powbot.om6.salvagesorteraio
 
 fun main() {
     val script = SalvageSorter()

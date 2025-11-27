@@ -1,11 +1,11 @@
-package org.powbot.om6.salvagesorter.tasks
+package org.powbot.om6.salvagesorteraio.tasks
 
 import org.powbot.api.Condition
 import org.powbot.api.Random
 import org.powbot.api.rt4.Camera
 import org.powbot.api.rt4.Widgets
-import org.powbot.om6.salvagesorter.SalvageSorter
-import org.powbot.om6.salvagesorter.config.CardinalDirection
+import org.powbot.om6.salvagesorteraio.SalvageSorter
+import org.powbot.om6.salvagesorteraio.config.CardinalDirection
 
 object CameraSnapper {
     private const val COMPASS_WIDGET_ID = 601

@@ -6,7 +6,6 @@ import org.powbot.api.rt4.GroundItems
 import org.powbot.api.rt4.Inventory
 import org.powbot.api.rt4.Players
 import org.powbot.om6.derangedarch.DerangedArchaeologistMagicKiller
-import org.powbot.om6.derangedarch.IDs
 
 class LootTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
 
@@ -25,39 +24,38 @@ class LootTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
             val itemName = item.name()
             val gePrice = GrandExchange.getItemPrice(item.id()) ?: 0
             val stackValue = gePrice * item.stackSize()
-            val isValuable = itemName != IDs.BONES_NAME && (itemName in script.config.alwaysLootItems || stackValue > script.config.minLootValue)
+            val isValuable = itemName != "Bones" && (itemName in script.config.alwaysLootItems || stackValue > script.config.minLootValue)
+
+            if (isValuable) {
+                script.logger.debug("LootTask Validate OK: Found valuable item: $itemName (StackValue: $stackValue)")
+            }
             isValuable
         }
 
-        val shouldRun = valuableItemExists
-        if (shouldRun) {
-            script.logger.debug("Validate OK: Boss is dead and valuable item exists nearby.")
-        }
-        return shouldRun
+        return valuableItemExists
     }
 
     override fun execute() {
         script.logger.debug("Executing LootTask...")
 
-        // 1. Find the best item to loot
-        val itemToLoot = GroundItems.stream().within(Players.local(), 15)
-            .sortedByDescending { item ->
-                val itemName = item.name()
-                val gePrice = GrandExchange.getItemPrice(item.id()) ?: 0
-                val stackValue = gePrice * item.stackSize()
-                val isValuable = itemName != IDs.BONES_NAME && (itemName in script.config.alwaysLootItems || stackValue > script.config.minLootValue)
-                if (isValuable) stackValue else 0
+        // Find the closest valuable item
+        val itemToLoot = GroundItems.stream()
+            .within(Players.local(), 15)
+            .filter {
+                val itemName = it.name()
+                val gePrice = GrandExchange.getItemPrice(it.id()) ?: 0
+                val stackValue = gePrice * it.stackSize()
+                itemName != "Bones" && (itemName in script.config.alwaysLootItems || stackValue > script.config.minLootValue)
             }
-            .firstOrNull()
+            .minByOrNull { it.distance() }
 
         if (itemToLoot == null) {
-            script.logger.debug("No valuable items found after re-check. Looting complete for now.")
+            script.logger.debug("LootTask execute check failed: No item to loot found (it may have despawned).")
             return
         }
 
-        // 2. Make space if inventory is full
         if (Inventory.isFull()) {
-            script.logger.warn("Inventory full! Attempting to eat food to make space.")
+            script.logger.debug("Inventory is full, attempting to eat food to make space.")
             val food = Inventory.stream().name(script.config.foodName).firstOrNull()
             if (food != null && food.interact("Eat")) {
                 Condition.wait({ !Inventory.isFull() }, 150, 10)
@@ -67,7 +65,6 @@ class LootTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
             }
         }
 
-        // 3. Loot the item
         if (!Inventory.isFull()) {
             val itemValue = (GrandExchange.getItemPrice(itemToLoot.id()) ?: 0) * itemToLoot.stackSize()
             script.logger.info("Looting ${itemToLoot.name()} (Value: $itemValue)")

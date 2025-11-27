@@ -1,12 +1,13 @@
-package org.powbot.om6.salvagesorter.tasks
+package org.powbot.om6.salvagesorteraio.tasks
 
 import org.powbot.api.Condition
 import org.powbot.api.Input
 import org.powbot.api.Random
 import org.powbot.api.rt4.*
 import org.powbot.mobile.script.ScriptManager
-import org.powbot.om6.salvagesorter.SalvageSorter
-import org.powbot.om6.salvagesorter.config.LootConfig
+import org.powbot.om6.salvagesorteraio.SalvageSorter
+import org.powbot.om6.salvagesorteraio.config.CardinalDirection // Import needed for type
+import org.powbot.om6.salvagesorteraio.config.LootConfig
 import kotlin.random.Random as KotlinRandom
 
 fun executeCleanupLoot(script: SalvageSorter): Boolean {
@@ -103,33 +104,23 @@ fun executeWithdrawCargo(script: SalvageSorter): Long {
     val hasSalvage = Inventory.stream().name(script.SALVAGE_NAME).isNotEmpty()
 
     if (!hasSalvage) {
-        script.logger.warn("STOP: Withdrawal failed to provide salvage item (${script.SALVAGE_NAME}). Stopping script.")
-        //ScriptManager.stop()
+        script.logger.warn("CARGO: Withdrawal failed to provide salvage item (${script.SALVAGE_NAME}).")
         return 0L
     }
 
-    val baseCooldownMs = script.randomWithdrawCooldownMs
-
-    val occupiedSlots = Inventory.stream().count()
-    val emptySlots = 28 - occupiedSlots
-
-    val penaltyPerSlotMs = 20000L
-    val penaltyMs = emptySlots * penaltyPerSlotMs
-
-    val finalCooldownMs = baseCooldownMs + penaltyMs
-
-    script.logger.info("COOLDOWN ADJUST: Base: ${baseCooldownMs / 1000}s. Empty Slots: $emptySlots. Penalty: ${penaltyMs / 1000}s. Final Cooldown: ${finalCooldownMs / 1000}s.")
-
-    return finalCooldownMs
+    script.logger.info("CARGO: Withdrawal successful. Salvage found in inventory.")
+    return 1L
 }
 
-fun executeTapSortSalvage(script: SalvageSorter, salvageItemName: String): Boolean {
+// MODIFIED: Added requiredDropDirection parameter and used it with CameraSnapper.
+fun executeTapSortSalvage(script: SalvageSorter, salvageItemName: String, extractorTask: CrystalExtractorTask, requiredDropDirection: CardinalDirection): Boolean {
     val SORT_BUTTON_X = 669
     val SORT_BUTTON_Y = 265
     val SORT_BUTTON_TOLERANCEX = 10
     val SORT_BUTTON_TOLERANCEY = 10
 
-    CameraSnapper.snapCameraToDirection(script.requiredDropDirection, script)
+    // FIXED: Use the passed requiredDropDirection from script config
+    CameraSnapper.snapCameraToDirection(requiredDropDirection, script)
     Condition.sleep(Random.nextInt(500, 800))
 
     val randomOffsetX = Random.nextInt(-SORT_BUTTON_TOLERANCEX, SORT_BUTTON_TOLERANCEX + 13)
@@ -151,7 +142,7 @@ fun executeTapSortSalvage(script: SalvageSorter, salvageItemName: String): Boole
         var lastSalvageCount = salvageCountBefore
 
         var retapFailureCount = 0
-        val MAX_RETAP_FAILURES = 2 // FIXED: Max retap attempts is 2 (initial check + 2 retries = 3 total checks)
+        val MAX_RETAP_FAILURES = 2
 
         script.logger.info("RETAP: Starting $initialWaitTime ms check for active sorting (1800ms check interval).")
 
@@ -172,8 +163,7 @@ fun executeTapSortSalvage(script: SalvageSorter, salvageItemName: String): Boole
             if (currentSalvageCount >= lastSalvageCount) {
                 retapFailureCount++
 
-                if (retapFailureCount > MAX_RETAP_FAILURES) { // Using '>' here to respect 2 retries (0, 1, 2)
-                    // The logic here is triggered after the 3rd check (initial + 2 retries)
+                if (retapFailureCount > MAX_RETAP_FAILURES) {
                     script.logger.error("FATAL ERROR: Sort stalled after $MAX_RETAP_FAILURES retap attempts. Stopping script.")
                     ScriptManager.stop()
                     return true
@@ -204,7 +194,7 @@ fun executeTapSortSalvage(script: SalvageSorter, salvageItemName: String): Boole
 
             while (attempts < timeoutTicks) {
 
-                if (script.extractorTask.checkAndExecuteInterrupt(script)) {
+                if (extractorTask.checkAndExecuteInterrupt(script)) {
                     script.logger.warn("INTERRUPT: Extractor ran. Re-tapping Sort Salvage and restarting wait loop.")
 
                     if (Input.tap(finalX, finalY)) {
@@ -239,4 +229,35 @@ fun executeTapSortSalvage(script: SalvageSorter, salvageItemName: String): Boole
         }
     }
     return false
+}
+fun executeDeployHook(script: SalvageSorter): Boolean {
+    // These coordinates are based on typical fixed-screen interfaces for salvaging hook deployment.
+    val BUTTON_X = 669
+    val BUTTON_Y = 265
+    val TOLERANCEX = 10
+    val TOLERANCEY = 10
+
+    fun getRandomOffset() = org.powbot.api.Random.nextInt(-TOLERANCEX, TOLERANCEX + 1)
+
+    // Tap 1: Tap the deploy hook button
+    val finalX = BUTTON_X + getRandomOffset()
+    val finalY = BUTTON_Y + org.powbot.api.Random.nextInt(-TOLERANCEY, TOLERANCEY + 1) // Using a similar random range as sorting button
+
+    script.logger.info("HOOK: Attempting to tap Deploy Hook button at X=$finalX, Y=$finalY.")
+
+    if (!org.powbot.api.Input.tap(finalX, finalY)) {
+        script.logger.warn("HOOK: Failed to execute Input.tap() for Deploy Hook.")
+        return false
+    }
+
+    // Wait for the hook to deploy and the action to finish
+    val waitTime = org.powbot.api.Random.nextInt(5000, 7500)
+    script.logger.info("HOOK: Tap successful. Waiting for hook animation/salvaging to start ($waitTime ms).")
+    org.powbot.api.Condition.sleep(waitTime)
+
+    // Optional: Check a chat message or inventory change if possible, but for a simple
+    // hook deploy, a long wait is often sufficient.
+
+    script.logger.info("HOOK: Deploy Hook sequence complete.")
+    return true
 }

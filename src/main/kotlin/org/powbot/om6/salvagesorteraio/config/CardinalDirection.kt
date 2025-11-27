@@ -1,4 +1,4 @@
-package org.powbot.om6.salvagesorter.config
+package org.powbot.om6.salvagesorteraio.config
 
 enum class CardinalDirection(val yaw: Int, val action: String) {
     North(0, "Look North"),

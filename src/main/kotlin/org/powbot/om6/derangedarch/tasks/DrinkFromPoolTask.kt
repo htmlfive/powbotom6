@@ -3,7 +3,6 @@ package org.powbot.om6.derangedarch.tasks
 import org.powbot.api.Condition
 import org.powbot.api.rt4.*
 import org.powbot.om6.derangedarch.DerangedArchaeologistMagicKiller
-import org.powbot.om6.derangedarch.IDs
 
 class DrinkFromPoolTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
 
@@ -32,7 +31,7 @@ class DrinkFromPoolTask(script: DerangedArchaeologistMagicKiller) : Task(script)
         }
 
         script.logger.info("Restoring stats at the Pool of Refreshment.")
-        val pool = Objects.stream().id(IDs.POOL_OF_REFRESHMENT_ID).nearest().firstOrNull()
+        val pool = Objects.stream().id(script.POOL_OF_REFRESHMENT_ID).nearest().firstOrNull()
 
         if (pool != null) {
             if (pool.inViewport()) {

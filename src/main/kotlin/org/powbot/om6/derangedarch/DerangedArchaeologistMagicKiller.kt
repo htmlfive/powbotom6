@@ -25,155 +25,223 @@ import org.powbot.om6.derangedarch.tasks.*
         ),
         ScriptConfiguration(
             "Required Inventory",
-            "Define your full inventory. Must include an axe, some food, prayer pots, ring of dueling, emergency teleport, and digsite pendant.",
+            "Define your full inventory. Must include an axe, some food, prayer pots, ring of dueling, emergency teleport, digsite pendant",
             optionType = OptionType.INVENTORY,
-            defaultValue = "{\"1387\":\"1\",\"3144\":\"10\",\"3024\":\"4\",\"2552\":\"1\",\"12793\":\"1\",\"30895\":\"1\"}"
+            defaultValue = "{\"1351\":1,\"13123\":1,\"2552\":1,\"11194\":1,\"2434\":5,\"385\":10,\"2446\":1,\"560\":1000,\"554\":5000}"
         ),
         ScriptConfiguration(
-            "Food Name", "The name of the food to eat.",
+            "Food Name", "The name of the food in your inventory setup to eat.",
+            optionType = OptionType.STRING, defaultValue = "Shark"
+        ),
+        ScriptConfiguration(
+            "Always Loot", "Comma-separated list of items to loot regardless of value (e.g., Shark, Numulite).",
             optionType = OptionType.STRING,
-            defaultValue = "Manta ray"
+            defaultValue = "Shark,Numulite"
         ),
         ScriptConfiguration(
-            "Eat at Health Percent", "The health percentage to eat at.",
-            optionType = OptionType.INTEGER,
-            defaultValue = "60"
+            "Minimum Loot Value", "Don't loot items worth less than this (unless in 'Always Loot').",
+            optionType = OptionType.INTEGER, defaultValue = "1000"
         ),
         ScriptConfiguration(
-            "Emergency Teleport Item", "The item to use for emergency teleport (Dueling Ring or Royal Seed Pod are recommended).",
+            "Eat At %", "What health percentage should the script eat at?",
+            optionType = OptionType.INTEGER, defaultValue = "65"
+        ),
+        ScriptConfiguration(
+            "Emergency Teleport HP %", "Teleport out if HP drops below this percentage.",
+            optionType = OptionType.INTEGER, defaultValue = "25"
+        ),
+        ScriptConfiguration(
+            "Emergency Teleport Item", "Select the item to use for emergency teleports.",
             optionType = OptionType.STRING,
-            defaultValue = "Ring of Dueling"
-        ),
-        ScriptConfiguration(
-            "Emergency HP Percent", "The health percentage to trigger an emergency teleport at.",
-            optionType = OptionType.INTEGER,
-            defaultValue = "25"
-        ),
-        ScriptConfiguration(
-            "Min Loot Value", "The minimum GE value of an item stack to pick up.",
-            optionType = OptionType.INTEGER,
-            defaultValue = "15000"
-        ),
-        ScriptConfiguration(
-            "Always Loot Items", "A comma-separated list of item names that should always be looted, regardless of value.",
-            optionType = OptionType.STRING,
-            defaultValue = "Runes,Grinding"
-        ),
-        ScriptConfiguration(
-            "Disable Looting", "Disable the Loot task.",
-            optionType = OptionType.BOOLEAN,
-            defaultValue = "false"
+            defaultValue = "Ardougne cloak",
+            allowedValues = ["Teleport to house", "Ectophial", "Ardougne cloak"]
         )
     ]
 )
 class DerangedArchaeologistMagicKiller : AbstractScript() {
-    val config: DerangedArchaeologistConfig = DerangedArchaeologistConfig.instance(this)
-    var totalLootValue: Long = 0L
 
-    // Flag set by EmergencyTeleportTask to ensure other tasks wait until we are safe
+    data class Config(
+        val requiredEquipment: Map<Int, Int>,
+        val requiredInventory: Map<Int, Int>,
+        val foodName: String,
+        val alwaysLootItems: List<String>,
+        val minLootValue: Int,
+        val eatAtPercent: Int,
+        val emergencyHpPercent: Int,
+        val emergencyTeleportItem: String
+    )
+
+    lateinit var config: Config
+    lateinit var teleportOptions: Map<String, TeleportOption>
+    private var startTime: Long = 0
+
+    // --- Constants ---
+    val ARCHAEOLOGIST_ID = 7806
+    val BOSS_TRIGGER_TILE = Tile(3683, 3707, 0)
+    val FEROX_BANK_AREA = Area(Tile(3123, 3623, 0), Tile(3143, 3643, 0))
+    val FEROX_POOL_AREA = Area(Tile(3128, 3637), Tile(3130, 3634))
+    val POOL_OF_REFRESHMENT_ID = 39651
+    val REQUIRED_PRAYER = Prayer.Effect.PROTECT_FROM_MISSILES
+    val SPECIAL_ATTACK_PROJECTILE = 1260
+    val SPECIAL_ATTACK_TEXT = "Learn to Read!"
+
+    // --- Script State ---
+    var totalLootValue: Long = 0
+    var hasAttemptedPoolDrink: Boolean = true
     var emergencyTeleportJustHappened: Boolean = false
 
-    // Flag set by DrinkFromPoolTask to skip the task if stats are full on arrival
-    var hasAttemptedPoolDrink: Boolean = false
+    private var currentTask: String = "Starting..."
+    private val tasks: List<Task> = listOf(
+        EmergencyTeleportTask(this),
+        DeactivatePrayerTask(this),
+        WalkToBankAfterEmergencyTask(this),
+        GoToBankTask(this),
+        EquipItemsTask(this),
+        BankTask(this),
+        PreBankEquipTask(this),
+        DrinkFromPoolTask(this),
+        TravelToBossTask(this),
+        DodgeSpecialTask(this),
+        EatTask(this),
+        FightTask(this),
+        FixPitchTask(this),
+        LootTask(this),
+        RepositionTask(this)
+    )
 
-    // --- Area and Tile Constants ---
-    val FEROX_BANK_TILE = Tile(3135, 3631, 0)
-    val FEROX_BANK_AREA = Area(Tile(3125, 3624, 0), Tile(3143, 3639, 0))
-    val FEROX_POOL_AREA = Area(Tile(3144, 3623, 0), Tile(3156, 3646, 0))
-    val BOSS_TRIGGER_TILE = Tile(3683, 3706, 0)
-
-    // --- Prayer Constant ---
-    val REQUIRED_PRAYER = Prayer.ProtectFromMagic
-
-    // --- Teleport Configuration ---
     data class TeleportOption(
         val itemNameContains: String,
         val interaction: String,
         val successCondition: () -> Boolean
     )
 
-    val teleportOptions = mapOf(
-        "Ring of Dueling" to TeleportOption(
-            itemNameContains = IDs.RING_OF_DUELING_NAME,
-            interaction = "Rub",
-            successCondition = { FEROX_BANK_AREA.contains(Players.local()) }
-        ),
-        "Royal Seed Pod" to TeleportOption(
-            itemNameContains = "Royal seed pod",
-            interaction = "Commune",
-            successCondition = { FEROX_BANK_AREA.contains(Players.local()) }
-        )
-        // Add other teleports here if needed
-    )
-
+    private fun formatNumber(number: Long): String {
+        return when {
+            number >= 1_000_000 -> String.format("%.1fm", number / 1_000_000.0)
+            number >= 1_000 -> String.format("%.1fk", number / 1_000.0)
+            else -> number.toString()
+        }
+    }
     override fun onStart() {
-        val tasks = listOf(
-            WalkToBankAfterEmergencyTask(this),
-            EmergencyTeleportTask(this),
-            GoToBankTask(this),
-            DrinkFromPoolTask(this),
-            EquipItemsTask(this),
-            PreBankEquipTask(this), // Must run before TravelToBossTask to ensure correct items are equipped
-            TravelToBossTask(this),
-            RepositionTask(this),
-            FixPitchTask(this),
-            DeactivatePrayerTask(this),
-            DodgeSpecialTask(this),
-            FightTask(this),
-            EatTask(this),
-            if (!config.disableLooting) LootTask(this) else null
-        ).filterNotNull()
+        startTime = System.currentTimeMillis()
+        logger.info("Deranged Archaeologist script started.")
 
-        taskExecutors.addAll(tasks)
+        val alwaysLootString = getOption<String>("Always Loot") ?: ""
+        val alwaysLootList = alwaysLootString.split(",").map { it.trim() }.filter { it.isNotBlank() }
 
-        paint = PaintBuilder.builder()
-            .addString("Status", { lastTask.get()?.name ?: "Idle" })
-            .addString("Loot Value", { totalLootValue.toString() })
+        config = Config(
+            requiredEquipment = getOption("Required Equipment"),
+            requiredInventory = getOption("Required Inventory"),
+            foodName = getOption("Food Name"),
+            alwaysLootItems = alwaysLootList,
+            minLootValue = getOption<Int>("Minimum Loot Value"),
+            eatAtPercent = getOption<Int>("Eat At %"),
+            emergencyHpPercent = getOption<Int>("Emergency Teleport HP %"),
+            emergencyTeleportItem = getOption("Emergency Teleport Item")
+        )
+        logger.info("Configuration loaded: $config")
+
+        teleportOptions = mapOf(
+            "Teleport to house" to TeleportOption(
+                itemNameContains = "Teleport to house",
+                interaction = "Break",
+                successCondition = { Players.local().tile().distanceTo(BOSS_TRIGGER_TILE) > 15 }
+            ),
+            "Ectophial" to TeleportOption(
+                itemNameContains = "Ectophial",
+                interaction = "Empty",
+                successCondition = { Players.local().tile().distanceTo(BOSS_TRIGGER_TILE) > 15 }
+            ),
+            "Ardougne cloak" to TeleportOption(
+                itemNameContains = "Ardougne cloak",
+                interaction = "Monastery Teleport",
+                successCondition = { Players.local().tile().distanceTo(BOSS_TRIGGER_TILE) > 15 }
+            )
+        )
+
+        val paint = PaintBuilder.newBuilder()
+            .x(40).y(80)
+            .addString("Current Task:") { currentTask }
+            .trackSkill(Skill.Magic)
+            .addString("Loot GP:") { formatNumber(totalLootValue) }
+            .addString("GP/hr:") {
+                val runtime = System.currentTimeMillis() - startTime
+                val gpPerHour = if (runtime > 0) (totalLootValue * 3600000 / runtime) else 0
+                formatNumber(gpPerHour)
+            }
             .build()
-
-        logger.info("Script started with ${taskExecutors.size} tasks.")
-        logger.info("Looting is ${if (config.disableLooting) "DISABLED" else "ENABLED (Min value: ${config.minLootValue}gp)"}.")
+        addPaint(paint)
     }
 
-    override fun onStop() {
-        logger.info("Total profit: ${totalLootValue} gp")
+    override fun poll() {
+        val task = tasks.firstOrNull { it.validate() }
+        if (task != null) {
+            currentTask = task.javaClass.simpleName
+            task.execute()
+        } else {
+            currentTask = "Idle"
+            logger.debug("No valid task found, idling.")
+            Condition.sleep(150)
+        }
     }
 
-    /**
-     * Helper function to get the boss NPC.
-     */
-    fun getBoss(): Npc? {
-        // Use the centralized ID
-        return Npcs.stream().id(IDs.DERANGED_ARCHAEOLOGIST_ID).nearest().firstOrNull()
+    override fun canBreak(): Boolean {
+        val nearBank = Players.local().tile().distanceTo(FEROX_BANK_AREA.centralTile) < 10
+        val needsRestore = needsStatRestore()
+        val canBreak = nearBank && !needsRestore
+        logger.debug("canBreak check: nearBank=$nearBank, needsRestore=$needsRestore, result=$canBreak")
+        return canBreak
     }
 
-    /**
-     * Checks if all required items are equipped in the correct slots.
-     */
     fun equipmentIsCorrect(): Boolean {
+        if (config.requiredEquipment.isEmpty()) {
+            logger.debug("Equipment check: No required equipment defined, returning true.")
+            return true
+        }
         for ((requiredId, slotIndex) in config.requiredEquipment) {
-            val targetSlot = Equipment.Slot.values()[slotIndex]
-            val equippedItem = Equipment.itemAt(targetSlot)
-            if (equippedItem.id() != requiredId) {
-                logger.debug("Equipment check FAIL: Missing item with ID $requiredId in slot ${targetSlot.name}. Found ${equippedItem.name()} (ID: ${equippedItem.id()}).")
-                return false
+            val slot = Equipment.Slot.values()[slotIndex]
+            val wornItem = Equipment.itemAt(slot)
+
+            if (isDuelingRing(requiredId)) {
+                if (!wornItem.name().contains("Ring of dueling")) {
+                    logger.debug("Equipment check FAIL: Slot $slot should be a Dueling Ring, but found '${wornItem.name()}'")
+                    return false
+                }
+            } else if (isDigsitePendant(requiredId)) {
+                if (!wornItem.name().contains("Digsite pendant")) {
+                    logger.debug("Equipment check FAIL: Slot $slot should be a Digsite Pendant, but found '${wornItem.name()}'")
+                    return false
+                }
+            } else {
+                if (wornItem.id() != requiredId) {
+                    logger.debug("Equipment check FAIL: Slot $slot requires ID $requiredId, but found ID ${wornItem.id()}")
+                    return false
+                }
             }
         }
-        logger.debug("Equipment check PASS: All required items are equipped correctly.")
+        logger.debug("Equipment check PASS: All items correct.")
         return true
     }
 
-    /**
-     * Checks if the inventory contains the correct number of items.
-     * Note: This does not check for items that should NOT be in the inventory (e.g., extra junk).
-     */
-    fun inventoryIsCorrect(): Boolean {
-        for ((requiredItemName, requiredCountString) in config.requiredInventory) {
-            val requiredCount = requiredCountString.toIntOrNull() ?: 0
-            val actualCount = Inventory.stream().name(requiredItemName).count()
+    private fun isDuelingRing(id: Int): Boolean = id in 2552..2566
+    private fun isDigsitePendant(id: Int): Boolean = id in 11190..11194
 
-            if (actualCount < requiredCount) {
-                logger.debug("Inventory check FAIL: Missing $requiredItemName. Expected $requiredCount, found $actualCount.")
+    fun inventoryIsCorrect(): Boolean {
+        if (config.requiredInventory.isEmpty()) {
+            logger.debug("Inventory check: No required inventory defined, returning true.")
+            return true
+        }
+        for ((id, amount) in config.requiredInventory) {
+            val currentCount = if (isDuelingRing(id)) {
+                Inventory.stream().nameContains("Ring of dueling").count(true)
+            } else if (isDigsitePendant(id)) {
+                Inventory.stream().nameContains("Digsite pendant").count(true)
+            } else {
+                Inventory.stream().id(id).count(true)
+            }
+
+            if (currentCount < amount) {
+                logger.debug("Inventory check FAIL: Need $amount of ID $id, but have $currentCount")
                 return false
             }
         }
@@ -191,7 +259,7 @@ class DerangedArchaeologistMagicKiller : AbstractScript() {
 
     fun needsTripResupply(): Boolean {
         val noFood = Inventory.stream().name(config.foodName).isEmpty()
-        val noPrayerPotions = Inventory.stream().nameContains(IDs.PRAYER_POTION_NAME_CONTAINS).isEmpty()
+        val noPrayerPotions = Inventory.stream().nameContains("Prayer potion").isEmpty()
         val result = noFood || noPrayerPotions
         logger.debug("needsTripResupply check: noFood=$noFood, noPrayerPotions=$noPrayerPotions, result=$result")
         return result
@@ -207,4 +275,6 @@ class DerangedArchaeologistMagicKiller : AbstractScript() {
         logger.debug("needsStatRestore check: prayerNotFull=$prayerNotFull, healthNotFull=$healthNotFull, result=$result")
         return result
     }
+
+    fun getBoss(): Npc? = Npcs.stream().id(ARCHAEOLOGIST_ID).nearest().firstOrNull()
 }

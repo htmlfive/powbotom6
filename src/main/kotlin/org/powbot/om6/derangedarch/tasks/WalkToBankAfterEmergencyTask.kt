@@ -5,9 +5,13 @@ import org.powbot.api.Tile
 import org.powbot.api.rt4.*
 import org.powbot.mobile.script.ScriptManager
 import org.powbot.om6.derangedarch.DerangedArchaeologistMagicKiller
-import org.powbot.om6.derangedarch.IDs
 
 class WalkToBankAfterEmergencyTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
+
+    // Constants for the Ring of Dueling widget interaction
+    private val DUELING_RING_WIDGET_ID = 219
+    private val OPTIONS_CONTAINER_COMPONENT = 1
+    private val FEROX_ENCLAVE_OPTION_INDEX = 3
 
     // Constants for the two-step travel
     private val FEROX_ENTRANCE_TILE = Tile(3151, 3635, 0) // The arrival point after teleporting
@@ -25,21 +29,19 @@ class WalkToBankAfterEmergencyTask(script: DerangedArchaeologistMagicKiller) : T
 
     override fun execute() {
         script.logger.debug("Executing WalkToBankAfterEmergencyTask...")
-        script.logger.info("Successfully escaped boss. Returning to bank.")
+        script.logger.info("Emergency recovery: Using Ring of Dueling to return to bank...")
 
-        // 1. Teleport to Ferox Enclave
-        val ring = Inventory.stream().nameContains(IDs.RING_OF_DUELING_NAME).firstOrNull()
+        val duelRing = Inventory.stream().nameContains("Ring of dueling").firstOrNull()
 
-        if (ring != null) {
-            script.logger.debug("Found Ring of Dueling, attempting to 'Rub'.")
-            if (ring.interact("Rub")) {
-                Condition.sleep(600) // Wait for item delay
-
-                if (Condition.wait({ Widgets.widget(IDs.DUELING_RING_WIDGET_ID).valid() }, 200, 15)) {
-                    script.logger.debug("Dueling Ring widget open.")
-                    val enclaveOption = Widgets.widget(IDs.DUELING_RING_WIDGET_ID)
-                        .component(IDs.WIDGET_OPTIONS_CONTAINER)
-                        .component(IDs.FEROX_ENCLAVE_OPTION_INDEX)
+        if (duelRing != null && duelRing.valid()) {
+            script.logger.debug("Found valid Ring of Dueling, interacting 'Rub'...")
+            if (duelRing.interact("Rub")) {
+                script.logger.debug("Waiting for Dueling Ring widget ($DUELING_RING_WIDGET_ID)...")
+                if (Condition.wait({ Widgets.widget(DUELING_RING_WIDGET_ID).valid() }, 200, 15)) {
+                    script.logger.debug("Widget found. Clicking Ferox Enclave option.")
+                    val enclaveOption = Widgets.widget(DUELING_RING_WIDGET_ID)
+                        .component(OPTIONS_CONTAINER_COMPONENT)
+                        .component(FEROX_ENCLAVE_OPTION_INDEX)
 
                     if (enclaveOption.valid() && enclaveOption.click()) {
                         script.logger.debug("Clicked, waiting to arrive at $FEROX_ENTRANCE_TILE...")
@@ -50,36 +52,27 @@ class WalkToBankAfterEmergencyTask(script: DerangedArchaeologistMagicKiller) : T
                             script.logger.debug("Walking to $FEROX_BANK_TILE.")
                             Movement.walkTo(FEROX_BANK_TILE)
 
-                            // --- ADDED LOGIC: Drink from pool if we need stat restore
-                            if (Condition.wait({ script.FEROX_BANK_AREA.contains(Players.local()) }, 150, 10)) {
-                                script.logger.debug("Arrived at bank area. Checking for stat restore need.")
-                                if (script.needsStatRestore()) {
-                                    script.logger.info("Stats need restoration after emergency teleport, heading to pool.")
-                                    val pool = Objects.stream().id(IDs.POOL_OF_REFRESHMENT_ID).nearest().firstOrNull()
-
-                                    if (pool != null) {
-                                        if (pool.inViewport()) {
-                                            script.logger.debug("Pool is in viewport, interacting 'Drink'...")
-                                            if (pool.interact("Drink")) {
-                                                // Wait for the stats to actually restore.
-                                                Condition.wait({ !script.needsStatRestore() }, 150, 20)
+                            // --- ADDED: Drink from pool after walking to bank ---
+                            if (Condition.wait({ script.FEROX_BANK_AREA.contains(Players.local()) }, 200, 30)) {
+                                script.logger.info("Arrived at bank, now restoring stats at the Pool of Refreshment.")
+                                val pool = Objects.stream().id(script.POOL_OF_REFRESHMENT_ID).nearest().firstOrNull()
+                                if (pool != null) {
+                                    if (pool.inViewport()) {
+                                        if (pool.interact("Drink")) {
+                                            if (Condition.wait({ !script.needsStatRestore() }, 150, 20)) {
+                                                script.logger.info("Stats restored after emergency teleport.")
                                                 Condition.sleep(1200)
                                             }
-                                        } else {
-                                            script.logger.debug("Pool not in viewport, walking to it.")
-                                            Movement.walkTo(script.FEROX_POOL_AREA.randomTile)
                                         }
                                     } else {
-                                        script.logger.warn("Could not find Pool of Refreshment after arriving at bank.")
+                                        script.logger.debug("Pool not in viewport, walking to it.")
+                                        Movement.walkTo(script.FEROX_POOL_AREA.randomTile)
                                     }
+                                } else {
+                                    script.logger.warn("Could not find Pool of Refreshment after arriving at bank.")
                                 }
                             }
                             // --- END ADDED LOGIC ---
-
-                            // Clear the flag after safely arriving at the bank area
-                            script.logger.info("Successfully returned to bank area. Clearing emergency flag.")
-                            script.emergencyTeleportJustHappened = false
-
 
                         } else {
                             script.logger.warn("Teleport click succeeded but did not arrive at Ferox Enclave.")

@@ -5,7 +5,6 @@ import org.powbot.api.Condition
 import org.powbot.api.Tile
 import org.powbot.api.rt4.*
 import org.powbot.om6.derangedarch.DerangedArchaeologistMagicKiller
-import org.powbot.om6.derangedarch.IDs
 import kotlin.math.abs
 import kotlin.math.atan2
 
@@ -25,104 +24,157 @@ class DodgeSpecialTask(script: DerangedArchaeologistMagicKiller) : Task(script) 
     )
 
     private fun isSpecialAttackActive(): Boolean {
-        val projectileExists = Projectiles.stream().id(IDs.SPECIAL_ATTACK_PROJECTILE).isNotEmpty()
-        val overheadText = Npcs.stream().name(IDs.DERANGED_ARCHAEOLOGIST_NAME).firstOrNull()?.overheadText()
-        val textExists = overheadText != null && overheadText.contains("Rain")
+        val projectileExists = Projectiles.stream().id(script.SPECIAL_ATTACK_PROJECTILE).isNotEmpty()
+        val overheadText = Npcs.stream().name("Deranged archaeologist").any { it.overheadMessage() == script.SPECIAL_ATTACK_TEXT }
 
-        if (projectileExists || textExists) {
-            script.logger.debug("Special attack detected: Projectile: $projectileExists, Text: $textExists")
-            return true
-        }
-        return false
+        if (projectileExists) script.logger.debug("Active special attack projectile detected.")
+        if (overheadText) script.logger.debug("Special attack overhead text detected.")
+
+        return projectileExists || overheadText
     }
 
     override fun validate(): Boolean {
-        // Do not dodge if we are trying to escape
-        if (script.emergencyTeleportJustHappened) return false
+        if (Players.local().inMotion()) return false
 
-        val player = Players.local()
-        val inFightArea = player.tile().distanceTo(script.BOSS_TRIGGER_TILE) <= 8
+        val inFightArea = Players.local().tile().distanceTo(script.BOSS_TRIGGER_TILE) <= 8
+        val specialActive = isSpecialAttackActive()
 
-        // Only run if we are in the fight area AND the special is active
-        val shouldRun = inFightArea && isSpecialAttackActive()
-
+        val shouldRun = specialActive && inFightArea
         if (shouldRun) {
-            script.logger.debug("Validate OK: In fight area and special attack is active.")
+            script.logger.debug("Validate OK: Special attack is active, player is idle and in the fight area.")
         }
-
         return shouldRun
     }
 
-    override fun execute() {
-        script.logger.info("Special attack detected, initiating dodge sequence.")
-        script.logger.debug("Executing DodgeSpecialTask...")
+    private fun angleBetween(from: Tile, to: Tile): Double {
+        return Math.toDegrees(atan2((to.y() - from.y()).toDouble(), (to.x() - from.x()).toDouble()))
+    }
 
-        val boss = script.getBoss()
-        if (boss == null) {
-            script.logger.warn("Boss is null, cannot determine best dodge tile. Aborting dodge.")
+    /**
+     * Filters the fixed DODGE_TILES list based on safety and reachability.
+     * Returns a list of safe tiles in a randomized order.
+     */
+    private fun findPotentialSafeTiles(playerTile: Tile, boss: Npc?, allProjectiles: List<Projectile>): List<Tile> {
+        val projectileTiles = allProjectiles.map { it.tile() }
+
+        // Get angle to boss for filtering
+        val angleToBoss = if (boss != null && boss.valid()) angleBetween(playerTile, boss.tile()) else null
+
+        return DODGE_TILES.filter { tile ->
+            // 1. Don't try to dodge to the tile we are already on
+            if (tile == playerTile) return@filter false
+
+            // --- MODIFIED ---
+            // 2. Check distance from player (must be at least MIN_DODGE_DISTANCE)
+            val distanceToPlayer = tile.distanceTo(playerTile)
+            if (distanceToPlayer < MIN_DODGE_DISTANCE) {
+                script.logger.debug("Tile $tile is too close (Dist: $distanceToPlayer). Needs to be >= $MIN_DODGE_DISTANCE.")
+                return@filter false
+            }
+            // --- END MODIFIED ---
+
+            // 3. Check distance to projectiles
+            val isAwayFromProjectiles = projectileTiles.all { projTile -> tile.distanceTo(projTile) > PROJECTILE_DANGER_DISTANCE }
+            if (!isAwayFromProjectiles) {
+                script.logger.debug("Tile $tile is on or too close to a projectile.")
+                return@filter false
+            }
+
+            // 4. Check "avoidsBossPath" (don't walk through the boss)
+            val avoidsBossPath = if (angleToBoss != null) {
+                val angleToTile = angleBetween(playerTile, tile)
+                var angleDiff = abs(angleToBoss - angleToTile)
+                if (angleDiff > 180) {
+                    angleDiff = 360 - angleDiff
+                }
+                angleDiff > MIN_DODGE_ANGLE_DIFFERENCE
+            } else {
+                true // If boss isn't valid, any tile is fine
+            }
+            if (!avoidsBossPath) {
+                script.logger.debug("Tile $tile is in the same direction as the boss.")
+                return@filter false
+            }
+
+            // 5. Check reachability (most expensive check, do it last)
+            val isReachable = Movement.reachable(playerTile, tile)
+            if (!isReachable) {
+                script.logger.debug("Tile $tile is not reachable.")
+                return@filter false
+            }
+
+            true // Tile passed all checks
+
+        }.shuffled() // Randomize the order of valid safe tiles
+    }
+
+
+    override fun execute() {
+        script.logger.debug("Executing DodgeSpecialTask...")
+        val player = Players.local()
+
+        if (player.inMotion() || !isSpecialAttackActive()) {
+            script.logger.debug("Execute exit: Player in motion or special attack ended.")
             return
         }
 
-        val player = Players.local()
+        script.logger.info("Special attack active and player is idle. Initiating dodge sequence.")
 
         var dodgeSuccess = false
         var dodgeAttempts = 0
 
-        while (!dodgeSuccess && dodgeAttempts < MAX_DODGE_ATTEMPTS) {
+        while (dodgeAttempts < MAX_DODGE_ATTEMPTS && !dodgeSuccess) {
             dodgeAttempts++
-            script.logger.debug("Dodge attempt #$dodgeAttempts...")
+            script.logger.debug("Dodge attempt $dodgeAttempts / $MAX_DODGE_ATTEMPTS")
 
-            // 1. Find the current projectile (if it exists)
-            val currentProjectile = Projectiles.stream().id(IDs.SPECIAL_ATTACK_PROJECTILE).nearest().firstOrNull()
-            if (currentProjectile == null) {
-                script.logger.debug("Projectile vanished or not found in time (after $dodgeAttempts attempts). Marking success.")
-                dodgeSuccess = true
-                break
-            }
+            val currentBoss = script.getBoss()
+            val allCurrentProjectiles = Projectiles.stream().toList()
+            script.logger.debug("Checking against ${allCurrentProjectiles.size} total projectiles.")
+            val playerTile = player.tile()
 
-            // 2. Find the best tile to step to (furthest from projectile and not walking through the boss)
-            val projectileTile = currentProjectile.targetTile() ?: currentProjectile.tile()
-            val bestDodgeTile = DODGE_TILES
-                .filter { Movement.reachable(player.tile(), it) }
-                .maxByOrNull { it.distanceTo(projectileTile) }
+            // This function now returns your 4 tiles, filtered (by 5+ dist), and SHUFFLED.
+            val potentialSafeTiles = findPotentialSafeTiles(playerTile, currentBoss, allCurrentProjectiles)
+            script.logger.debug("Found ${potentialSafeTiles.size} potential safe tiles for attempt $dodgeAttempts.")
 
-            if (bestDodgeTile != null) {
-                script.logger.debug("Projectiles at $projectileTile. Best dodge tile: $bestDodgeTile (Distance: ${bestDodgeTile.distanceTo(projectileTile)})")
+            // Try the first (now random) safe tile from the list
+            val bestSafeTile = potentialSafeTiles.firstOrNull()
 
-                if (bestDodgeTile.distanceTo(player) < MIN_DODGE_DISTANCE) {
-                    script.logger.debug("Best dodge tile is too close to current position, waiting for next tick movement.")
-                    Condition.sleep(150)
-                    continue
-                }
+            if (bestSafeTile != null) {
+                script.logger.debug("Attempting step to best (random) safe tile: $bestSafeTile")
+                if (Movement.step(bestSafeTile)) {
+                    script.logger.debug("Step initiated towards $bestSafeTile. Monitoring movement...")
 
-                if (Movement.step(bestDodgeTile)) {
-                    script.logger.debug("Stepped to $bestDodgeTile. Waiting for movement to complete/next projectile tick.")
+                    val waitResult = Condition.wait({
+                        val currentProjsDuringWait = Projectiles.stream().toList()
+                        val tooClose = currentProjsDuringWait.any { player.tile().distanceTo(it.tile()) <= PROJECTILE_DANGER_DISTANCE }
 
-                    // Wait for the character to start moving OR the projectile to land
-                    Condition.wait({ player.inMotion() || Projectiles.stream().id(IDs.SPECIAL_ATTACK_PROJECTILE).isEmpty() }, 150, 10)
-
-                    // If we stopped moving OR the projectile is gone, check if we're safe.
-                    if (!player.inMotion() || Projectiles.stream().id(IDs.SPECIAL_ATTACK_PROJECTILE).isEmpty()) {
-                        // If the projectile is gone, we successfully dodged this wave
-                        if (Projectiles.stream().id(IDs.SPECIAL_ATTACK_PROJECTILE).isEmpty()) {
-                            script.logger.debug("Projectile is gone. Dodge successful.")
-                            dodgeSuccess = true
-                            break
+                        if (tooClose) {
+                            script.logger.warn("Dodge interrupted! Too close to a projectile (any type) during movement.")
+                            return@wait false
                         }
-                        // If we stopped moving and projectile is still there, re-evaluate next loop.
-                        script.logger.debug("Stopped moving but projectile is still active. Re-evaluating position.")
+                        !player.inMotion()
+                    }, 200, 60)
+
+                    if (waitResult) {
+                        dodgeSuccess = true
+                        script.logger.info("Dodge move complete to $bestSafeTile.")
+                    } else {
+                        script.logger.warn("Wait failed for step to $bestSafeTile (Interrupted or Timeout).")
                     }
+
                 } else {
-                    script.logger.warn("Failed to execute movement step to $bestDodgeTile.")
-                    Condition.sleep(150) // Short pause before re-trying
+                    script.logger.warn("Movement.step() to $bestSafeTile failed immediately.")
                 }
             } else {
-                script.logger.warn("Could not find a reachable dodge tile! Aborting dodge.")
-                // Set success to true to exit the loop and continue with the fight
-                dodgeSuccess = true
+                script.logger.warn("Could not find any valid safe tile from the list for attempt $dodgeAttempts.")
+                // No point in retrying if the list is empty, so break the loop
                 break
             }
-            Condition.sleep(150) // Don't spam immediately, loop will retry (e.g., if projectiles moved)
+
+            // If dodge succeeded, the outer loop will break
+            if (dodgeSuccess) break
+
+            // If step failed immediately, loop will retry (e.g., if projectiles moved)
         }
 
 
