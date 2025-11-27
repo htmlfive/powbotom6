@@ -135,7 +135,6 @@ fun executeWithdrawCargo(script: SalvageSorter): Long {
     Condition.sleep(Random.nextInt(1800, 2400))
 
     val hasSalvage = Inventory.stream().name(script.SALVAGE_NAME).isNotEmpty()
-
     if (!hasSalvage) {
         script.logger.warn("STOP: Withdrawal failed to provide salvage item (${script.SALVAGE_NAME}). Stopping script.")
         //ScriptManager.stop()
@@ -143,18 +142,15 @@ fun executeWithdrawCargo(script: SalvageSorter): Long {
     }
 
     val baseCooldownMs = script.randomWithdrawCooldownMs
-
     val occupiedSlots = Inventory.stream().count()
     val emptySlots = 28 - occupiedSlots
-
     val penaltyPerSlotMs = 20000L
     val penaltyMs = emptySlots * penaltyPerSlotMs
-
     val finalCooldownMs = baseCooldownMs + penaltyMs
 
     script.logger.info("COOLDOWN ADJUST: Base: ${baseCooldownMs / 1000}s. Empty Slots: $emptySlots. Penalty: ${penaltyMs / 1000}s. Final Cooldown: ${finalCooldownMs / 1000}s.")
 
-    return finalCooldownMs
+    return finalCooldownMs // This value ( > 0L) will now be applied by the calling task.
 }
 
 fun executeTapSortSalvage(script: SalvageSorter, salvageItemName: String): Boolean {
