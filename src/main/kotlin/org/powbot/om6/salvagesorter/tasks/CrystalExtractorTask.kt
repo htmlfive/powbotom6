@@ -65,9 +65,9 @@ class CrystalExtractorTask(script: SalvageSorter) : Task(script) {
                 CameraSnapper.snapCameraToDirection(script.requiredTapDirection, script)
             } else {
                 // Currently hooking: Use interrupt tap coordinates and camera
-                x = 599
-                y = 188
-                CameraSnapper.snapCameraToDirection(script.requiredTapDirection, script)
+                x = 612
+                y = 201
+                CameraSnapper.snapCameraToDirection(CardinalDirection.South, script)
             }
 
             val randomOffsetX = Random.nextInt(-6, 7)
