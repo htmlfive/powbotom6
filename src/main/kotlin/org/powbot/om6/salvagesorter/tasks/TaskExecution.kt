@@ -66,8 +66,8 @@ private const val SORT_POST_INTERRUPT_WAIT = 600
 // Cleanup Sleeps
 private const val CLEANUP_ALCH_MIN = 3000
 private const val CLEANUP_ALCH_MAX = 3600
-private const val CLEANUP_DROP_MIN = 800
-private const val CLEANUP_DROP_MAX = 1500
+private const val CLEANUP_DROP_MIN = 500
+private const val CLEANUP_DROP_MAX = 800
 
 // WalkToSort Sleeps
 private const val WALKTOSORT_CAMERA_MIN = 600
@@ -108,8 +108,8 @@ private const val SORT_BUTTON_TOLERANCEX = 10
 private const val SORT_BUTTON_TOLERANCEY = 10
 
 // hookSalvage and depositSalvage
-private const val HOOK_SALVAGE_1_X = 524
-private const val HOOK_SALVAGE_1_Y = 340
+private const val HOOK_SALVAGE_1_X = 596
+private const val HOOK_SALVAGE_1_Y = 355
 private const val HOOK_SALVAGE_2_X = 337
 private const val HOOK_SALVAGE_2_Y = 350
 private const val HOOK_SALVAGE_3_X = 551
@@ -436,7 +436,6 @@ fun hookSalvage(script: SalvageSorter): Boolean {
     Condition.sleep(mainWait)
 
     script.hookCastMessageFound = false
-    closeTabWithSleep(HOOK_TAB_CLOSE_MIN, HOOK_TAB_CLOSE_MAX)
 
     script.logger.info("HOOK: Tapping hook.")
     tapWithOffset(HOOK_SALVAGE_1_X, HOOK_SALVAGE_1_Y, 3)
@@ -444,7 +443,6 @@ fun hookSalvage(script: SalvageSorter): Boolean {
     val messageFound = Condition.wait({ script.hookCastMessageFound }, 30, 120)
 
     if (messageFound) {
-        ensureInventoryOpen(HOOK_TAB_OPEN_MIN, HOOK_TAB_OPEN_MAX)
 
         script.logger.info("HOOK: Success. Waiting for inventory to fill...")
         script.hookingSalvageBool = true

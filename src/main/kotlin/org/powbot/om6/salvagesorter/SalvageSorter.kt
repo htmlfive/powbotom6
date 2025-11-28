@@ -42,7 +42,8 @@ private const val SALVAGE_SUCCESS_MESSAGE = "You cast out" // Assumed definition
             "Min Withdraw Cooldown (s)",
             "The minimum random time (in seconds) the script waits after cleanup/withdraw before trying again.",
             optionType = OptionType.STRING,
-            defaultValue = "1"
+            defaultValue = "1",
+            visible = false
         ),
         ScriptConfiguration(
             "Start Sorting",
@@ -53,7 +54,9 @@ private const val SALVAGE_SUCCESS_MESSAGE = "You cast out" // Assumed definition
             "Max Withdraw Cooldown (s)",
             "The maximum random time (in seconds) the script waits after cleanup/withdraw before trying again.",
             optionType = OptionType.STRING,
-            defaultValue = "1"
+            defaultValue = "1",
+            visible = false
+
         ),
         ScriptConfiguration(
             "Enable Extractor",
