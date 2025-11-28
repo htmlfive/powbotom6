@@ -58,7 +58,7 @@ class CrystalExtractorTask(script: SalvageSorter) : Task(script) {
             val x: Int
             val y: Int
 
-            if (!script.hookingSalvageBool) {
+            if (!script.hookingSalvageBool || !script.atHookLocation) {
                 // Not hooking: Use regular tap coordinates and camera
                 x = 307
                 y = 231

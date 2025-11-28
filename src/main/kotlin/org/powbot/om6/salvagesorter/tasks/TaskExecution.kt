@@ -66,8 +66,8 @@ private const val SORT_POST_INTERRUPT_WAIT = 600
 // Cleanup Sleeps
 private const val CLEANUP_ALCH_MIN = 3000
 private const val CLEANUP_ALCH_MAX = 3600
-private const val CLEANUP_DROP_MIN = 500
-private const val CLEANUP_DROP_MAX = 800
+private const val CLEANUP_DROP_MIN = 300
+private const val CLEANUP_DROP_MAX = 500
 
 // WalkToSort Sleeps
 private const val WALKTOSORT_CAMERA_MIN = 600
@@ -90,16 +90,20 @@ private const val CARGO_TAP_4_X = 432
 private const val CARGO_TAP_4_Y = 490
 
 // executeAssign
-private const val ASSIGN_BOTH_1_X = 818
+private const val ASSIGN_BOTH_1_X = 818 //OPEN TAB
 private const val ASSIGN_BOTH_1_Y = 394
-private const val ASSIGN_BOTH_2_X = 747
+private const val ASSIGN_BOTH_2_X = 747 //FIRST SLOT
 private const val ASSIGN_BOTH_2_Y = 435
-private const val ASSIGN_BOTH_3_X = 690
+private const val ASSIGN_BOTH_3_X = 690 //SIAD
 private const val ASSIGN_BOTH_3_Y = 403
-private const val ASSIGN_BOTH_4_X = 747
+private const val ASSIGN_BOTH_4_X = 747 //SECOND SLOT
 private const val ASSIGN_BOTH_4_Y = 469
-private const val ASSIGN_BOTH_5_X = 684
+private const val ASSIGN_BOTH_5_X = 684 //GHOST
 private const val ASSIGN_BOTH_5_Y = 370
+private const val ASSIGN_CANNON_X = 748 //CANNON SELECT
+private const val ASSIGN_CANNON_Y = 401
+private const val ASSIGN_BOTH_SCROLL_X = 773 //SCROLL (CLICK X3)
+private const val ASSIGN_BOTH_SCROLL_Y = 477
 
 // executeTapSortSalvage (Sort Button)
 private const val SORT_BUTTON_X = 574
@@ -108,8 +112,8 @@ private const val SORT_BUTTON_TOLERANCEX = 10
 private const val SORT_BUTTON_TOLERANCEY = 10
 
 // hookSalvage and depositSalvage
-private const val HOOK_SALVAGE_1_X = 596
-private const val HOOK_SALVAGE_1_Y = 355
+private const val HOOK_SALVAGE_1_X = 525
+private const val HOOK_SALVAGE_1_Y = 406
 private const val HOOK_SALVAGE_2_X = 337
 private const val HOOK_SALVAGE_2_Y = 350
 private const val HOOK_SALVAGE_3_X = 551
@@ -165,7 +169,7 @@ fun executeCleanupLoot(script: SalvageSorter): Boolean {
     shuffledDroppableItems.forEach { itemToDrop ->
         if (itemToDrop.valid()) {
             itemToDrop.click()
-            Condition.wait({ !itemToDrop.valid() }, 300, 5)
+            Condition.sleep(Random.nextInt(CLEANUP_DROP_MIN, CLEANUP_DROP_MAX))
         }
     }
 
@@ -348,6 +352,9 @@ fun assignBoth(script: SalvageSorter): Boolean {
 
     val taps = listOf(
         ASSIGN_BOTH_1_X to ASSIGN_BOTH_1_Y,
+//        ASSIGN_BOTH_SCROLL_X to ASSIGN_BOTH_SCROLL_Y,
+//        ASSIGN_BOTH_SCROLL_X to ASSIGN_BOTH_SCROLL_Y,
+//        ASSIGN_BOTH_SCROLL_X to ASSIGN_BOTH_SCROLL_Y,
         ASSIGN_BOTH_2_X to ASSIGN_BOTH_2_Y,
         ASSIGN_BOTH_3_X to ASSIGN_BOTH_3_Y,
         ASSIGN_BOTH_4_X to ASSIGN_BOTH_4_Y,
@@ -369,8 +376,14 @@ fun assignGhost(script: SalvageSorter): Boolean {
 
     val taps = listOf(
         ASSIGN_BOTH_1_X to ASSIGN_BOTH_1_Y,
+//        ASSIGN_BOTH_SCROLL_X to ASSIGN_BOTH_SCROLL_Y,
+//        ASSIGN_BOTH_SCROLL_X to ASSIGN_BOTH_SCROLL_Y,
+//        ASSIGN_BOTH_SCROLL_X to ASSIGN_BOTH_SCROLL_Y,
         ASSIGN_BOTH_2_X to ASSIGN_BOTH_2_Y,
-        ASSIGN_BOTH_5_X to ASSIGN_BOTH_5_Y
+        ASSIGN_BOTH_5_X to ASSIGN_BOTH_5_Y,
+        ASSIGN_CANNON_X to ASSIGN_CANNON_Y,
+        ASSIGN_BOTH_3_X to ASSIGN_BOTH_3_Y
+
     )
 
     if (!executeTapSequence(script, taps, 3, mainWait, mainWait, "GHOST")) {

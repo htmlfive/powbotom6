@@ -231,11 +231,6 @@ class SalvageSorter : AbstractScript() {
             .build()
         addPaint(paint)
 
-//        if (assignBoth(this)) {
-//            logger.info("Initial assignments successful.")
-//        } else {
-//            logger.error("Initial assignments FAILED. Check log for tap errors.")
-//        }
     }
 
     override fun poll() {
@@ -268,7 +263,7 @@ class SalvageSorter : AbstractScript() {
             val nextTask: Task? = when {
                 // Replace your poll() STATE A (SORTING PHASE) section with this:
 
-// STATE A: SORTING PHASE (Cargo Hold is Full OR in process of emptying)
+                // STATE A: SORTING PHASE (Cargo Hold is Full OR in process of emptying)
                 cargoHoldFull -> {
                     logger.debug("STATE: SORTING PHASE (cargoHoldFull=true)")
 
