@@ -66,13 +66,7 @@ object Constants {
     const val PENDANT_FOSSIL_ISLAND_OPTION_INDEX = 4
     const val MUSHTREE_INTERFACE_ID = 608
     const val MUSHTREE_SWAMP_OPTION_COMPONENT = 4
-    const val DUELING_RING_WIDGET_ID = 219
-    const val OPTIONS_CONTAINER_COMPONENT = 1
-    const val FEROX_ENCLAVE_OPTION_INDEX = 3
 
-    // Bank teleport tiles
-    val FEROX_ENTRANCE_TILE = Tile(3151, 3635, 0)
-    val FEROX_BANK_TILE = Tile(3135, 3631, 0)
 
     // Item preservation
     const val PRAYER_POTION_4_ID = 2434
@@ -88,5 +82,53 @@ object Constants {
         "Superantipoison(4)", "Superantipoison(3)", "Superantipoison(2)", "Superantipoison(1)",
         "Antidote++(4)", "Antidote++(3)", "Antidote++(2)", "Antidote++(1)",
         "Antidote+(4)", "Antidote+(3)", "Antidote+(2)", "Antidote+(1)"
+    )
+    // Boss loot item IDs for GE price caching
+    val BOSS_LOOT_IDS = listOf(
+        11978, // Steel ring
+        2503,  // Black d'hide body
+        1319,  // Rune 2h sword
+        1333,  // Rune sword
+        555,   // Water rune
+        4698,  // Mud rune
+        868,   // Rune knife
+        11212, // Dragon arrow
+        2,     // Cannonball
+        5295,  // Ranarr seed
+        5300,  // Snapdragon seed
+        5304,  // Torstol seed
+        5321,  // Watermelon seed
+        5313,  // Willow seed
+        21488, // Mahogany seed
+        5316,  // Maple seed
+        21486, // Teak seed
+        5315,  // Yew seed
+        5288,  // Papaya tree seed
+        5319,  // Magic seed
+        5289,  // Palm tree seed
+        5317,  // Spirit seed
+        22877, // Dragonfruit tree seed
+        22869, // Celastrus seed
+        22871, // Redwood tree seed
+        217,   // Grimy dwarf weed
+        239,   // White berries
+        9431,  // Runite limbs
+        1747,  // Black dragonhide
+        444,   // Gold ore
+        1617,  // Uncut diamond
+        6573,  // Onyx bolt tips
+        2297,  // Anchovy pizza
+        143,   // Prayer potion(3)
+        6705,  // Potato with cheese
+        385,   // Shark
+        989,   // Crystal key
+        3123,  // Long bone
+        11818, // Numulite
+        22124, // Unidentified small fossil
+        22126, // Unidentified medium fossil
+        22128, // Unidentified large fossil
+        22130, // Unidentified rare fossil
+        23490, // Brimstone key
+        19043  // Clue scroll (elite)
     )
 }

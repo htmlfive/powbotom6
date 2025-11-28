@@ -10,7 +10,7 @@ import org.powbot.om6.derangedarch.tasks.*
 @ScriptManifest(
     name = "0m6 Deranged Archaeologist (BETA)",
     description = "Must have ring of dueling in inventory to start.",
-    version = "2.5.0",
+    version = "2.5.1",
     author = "0m6",
     category = ScriptCategory.Combat
 )
@@ -81,6 +81,9 @@ class DerangedArchaeologistMagicKiller : AbstractScript() {
     var hasAttemptedPoolDrink: Boolean = true
     var emergencyTeleportJustHappened: Boolean = false
 
+    // Cached GE prices for boss loot
+    val lootPriceCache = mutableMapOf<Int, Int>()
+
     private var currentTask: String = "Starting..."
     private val tasks: List<Task> = listOf(
         EmergencyTeleportTask(this),
@@ -143,6 +146,14 @@ class DerangedArchaeologistMagicKiller : AbstractScript() {
             )
         )
 
+        // Cache GE prices for common boss loot
+        logger.info("Caching GE prices for boss loot...")
+        Constants.BOSS_LOOT_IDS.forEach { itemId ->
+            val price = GrandExchange.getItemPrice(itemId) ?: 0
+            lootPriceCache[itemId] = price
+        }
+        logger.info("Cached ${lootPriceCache.size} item prices")
+
         val paint = PaintBuilder.newBuilder()
             .x(40).y(80)
             .addString("Current Task:") { currentTask }
@@ -164,7 +175,6 @@ class DerangedArchaeologistMagicKiller : AbstractScript() {
             task.execute()
         } else {
             currentTask = "Idle"
-            logger.debug("No valid task found, idling.")
             Condition.sleep(150)
         }
     }
@@ -172,46 +182,30 @@ class DerangedArchaeologistMagicKiller : AbstractScript() {
     override fun canBreak(): Boolean {
         val nearBank = Players.local().tile().distanceTo(Constants.FEROX_BANK_AREA.centralTile) < 10
         val needsRestore = needsStatRestore()
-        val canBreak = nearBank && !needsRestore
-        logger.debug("canBreak check: nearBank=$nearBank, needsRestore=$needsRestore, result=$canBreak")
-        return canBreak
+        return nearBank && !needsRestore
     }
 
     fun equipmentIsCorrect(): Boolean {
-        if (config.requiredEquipment.isEmpty()) {
-            logger.debug("Equipment check: No required equipment defined, returning true.")
-            return true
-        }
+        if (config.requiredEquipment.isEmpty()) return true
+
         for ((requiredId, slotIndex) in config.requiredEquipment) {
             val slot = Equipment.Slot.values()[slotIndex]
             val wornItem = Equipment.itemAt(slot)
 
             if (Helpers.isDuelingRing(requiredId)) {
-                if (!wornItem.name().contains("Ring of dueling")) {
-                    logger.debug("Equipment check FAIL: Slot $slot should be a Dueling Ring, but found '${wornItem.name()}'")
-                    return false
-                }
+                if (!wornItem.name().contains("Ring of dueling")) return false
             } else if (Helpers.isDigsitePendant(requiredId)) {
-                if (!wornItem.name().contains("Digsite pendant")) {
-                    logger.debug("Equipment check FAIL: Slot $slot should be a Digsite Pendant, but found '${wornItem.name()}'")
-                    return false
-                }
+                if (!wornItem.name().contains("Digsite pendant")) return false
             } else {
-                if (wornItem.id() != requiredId) {
-                    logger.debug("Equipment check FAIL: Slot $slot requires ID $requiredId, but found ID ${wornItem.id()}")
-                    return false
-                }
+                if (wornItem.id() != requiredId) return false
             }
         }
-        logger.debug("Equipment check PASS: All items correct.")
         return true
     }
 
     fun inventoryIsCorrect(): Boolean {
-        if (config.requiredInventory.isEmpty()) {
-            logger.debug("Inventory check: No required inventory defined, returning true.")
-            return true
-        }
+        if (config.requiredInventory.isEmpty()) return true
+
         for ((id, amount) in config.requiredInventory) {
             val currentCount = if (Helpers.isDuelingRing(id)) {
                 Inventory.stream().nameContains("Ring of dueling").count(true)
@@ -221,41 +215,30 @@ class DerangedArchaeologistMagicKiller : AbstractScript() {
                 Inventory.stream().id(id).count(true)
             }
 
-            if (currentCount < amount) {
-                logger.debug("Inventory check FAIL: Need $amount of ID $id, but have $currentCount")
-                return false
-            }
+            if (currentCount < amount) return false
         }
-        logger.debug("Inventory check PASS: All items and counts correct.")
         return true
     }
 
-    fun needsFullRestock(): Boolean {
-        val equipCorrect = equipmentIsCorrect()
-        val invCorrect = inventoryIsCorrect()
-        val result = !equipCorrect || !invCorrect
-        logger.debug("needsFullRestock check: equipCorrect=$equipCorrect, invCorrect=$invCorrect, result=$result")
-        return result
-    }
+    fun needsFullRestock(): Boolean = !equipmentIsCorrect() || !inventoryIsCorrect()
 
     fun needsTripResupply(): Boolean {
         val noFood = Inventory.stream().name(config.foodName).isEmpty()
         val noPrayerPotions = Inventory.stream().nameContains("Prayer potion").isEmpty()
-        val result = noFood || noPrayerPotions
-        logger.debug("needsTripResupply check: noFood=$noFood, noPrayerPotions=$noPrayerPotions, result=$result")
-        return result
+        return noFood || noPrayerPotions
     }
 
     fun needsStatRestore(): Boolean {
-        if (!Constants.FEROX_BANK_AREA.contains(Players.local())) {
-            return false
-        }
+        if (!Constants.FEROX_BANK_AREA.contains(Players.local())) return false
+
         val prayerNotFull = Prayer.prayerPoints() < Skills.realLevel(Skill.Prayer)
         val healthNotFull = Combat.healthPercent() < 100
-        val result = prayerNotFull || healthNotFull
-        logger.debug("needsStatRestore check: prayerNotFull=$prayerNotFull, healthNotFull=$healthNotFull, result=$result")
-        return result
+        return prayerNotFull || healthNotFull
     }
 
     fun getBoss(): Npc? = Npcs.stream().id(Constants.ARCHAEOLOGIST_ID).nearest().firstOrNull()
+
+    fun getCachedPrice(itemId: Int): Int = lootPriceCache.getOrPut(itemId) {
+        GrandExchange.getItemPrice(itemId) ?: 0
+    }
 }
