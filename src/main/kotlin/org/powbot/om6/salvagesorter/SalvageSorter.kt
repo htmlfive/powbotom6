@@ -45,6 +45,11 @@ private const val SALVAGE_SUCCESS_MESSAGE = "You cast out" // Assumed definition
             defaultValue = "1"
         ),
         ScriptConfiguration(
+            "Start Sorting",
+            "If true, starts sorting instead of salvaging.",
+            optionType = OptionType.BOOLEAN, defaultValue = "false"
+        ),
+        ScriptConfiguration(
             "Max Withdraw Cooldown (s)",
             "The maximum random time (in seconds) the script waits after cleanup/withdraw before trying again.",
             optionType = OptionType.STRING,
@@ -74,10 +79,13 @@ class SalvageSorter : AbstractScript() {
     var atHookLocation = false // ADDED: New flag to track if the player is at the salvaging spot
     var atSortLocation = false // NEW FLAG: Track if at sorting spot
     val extractorTask = CrystalExtractorTask(this)
+
     val requiredDropDirectionStr: String get() = getOption<String>("Drop Salvage Direction")
     val SALVAGE_NAME: String get() = getOption<String>("Salvage Item Name")
     val requiredDropDirection: CardinalDirection get() = CardinalDirection.valueOf(requiredDropDirectionStr)
     var hookingSalvageBool = false
+    val startSorting: Boolean get() = getOption<Boolean>("Start Sorting")
+
     val enableExtractor: Boolean get() = getOption<Boolean>("Enable Extractor")
     val extractorInterval: Long = 64000L
     val requiredTapDirectionStr: String get() = getOption<String>("Extractor Tap Direction")
@@ -178,7 +186,7 @@ class SalvageSorter : AbstractScript() {
         currentPhase = SalvagePhase.IDLE
 
 // Check if the user wants to start in SORTING mode (or if inventory is full)
-        val startInSortingMode = true // <-- You can make this a configuration option later
+        val startInSortingMode = startSorting
 
         if (startInSortingMode) {
             this.logger.info("INIT: Forcing initial phase to SETUP_SORTING (User request).")
