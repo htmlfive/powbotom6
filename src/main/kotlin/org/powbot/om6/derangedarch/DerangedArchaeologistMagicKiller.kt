@@ -1,8 +1,6 @@
 package org.powbot.om6.derangedarch
 
-import org.powbot.api.Area
 import org.powbot.api.Condition
-import org.powbot.api.Tile
 import org.powbot.api.rt4.*
 import org.powbot.api.rt4.walking.model.Skill
 import org.powbot.api.script.*
@@ -12,7 +10,7 @@ import org.powbot.om6.derangedarch.tasks.*
 @ScriptManifest(
     name = "0m6 Deranged Archaeologist (BETA)",
     description = "Must have ring of dueling in inventory to start.",
-    version = "2.4.2",
+    version = "2.5.0",
     author = "0m6",
     category = ScriptCategory.Combat
 )
@@ -75,17 +73,10 @@ class DerangedArchaeologistMagicKiller : AbstractScript() {
     lateinit var teleportOptions: Map<String, TeleportOption>
     private var startTime: Long = 0
 
-    // --- Constants ---
-    val ARCHAEOLOGIST_ID = 7806
-    val BOSS_TRIGGER_TILE = Tile(3683, 3707, 0)
-    val FEROX_BANK_AREA = Area(Tile(3123, 3623, 0), Tile(3143, 3643, 0))
-    val FEROX_POOL_AREA = Area(Tile(3128, 3637), Tile(3130, 3634))
-    val POOL_OF_REFRESHMENT_ID = 39651
     val REQUIRED_PRAYER = Prayer.Effect.PROTECT_FROM_MISSILES
-    val SPECIAL_ATTACK_PROJECTILE = 1260
-    val SPECIAL_ATTACK_TEXT = "Learn to Read!"
+    val SPECIAL_ATTACK_PROJECTILE = Constants.SPECIAL_ATTACK_PROJECTILE
+    val SPECIAL_ATTACK_TEXT = Constants.SPECIAL_ATTACK_TEXT
 
-    // --- Script State ---
     var totalLootValue: Long = 0
     var hasAttemptedPoolDrink: Boolean = true
     var emergencyTeleportJustHappened: Boolean = false
@@ -94,14 +85,14 @@ class DerangedArchaeologistMagicKiller : AbstractScript() {
     private val tasks: List<Task> = listOf(
         EmergencyTeleportTask(this),
         DeactivatePrayerTask(this),
-        WalkToBankAfterEmergencyTask(this),
-        GoToBankTask(this),
+        WalkToBankTask(this),
         EquipItemsTask(this),
         BankTask(this),
-        PreBankEquipTask(this),
         DrinkFromPoolTask(this),
         TravelToBossTask(this),
         DodgeSpecialTask(this),
+        PrayerTask(this),
+        CurePoisonTask(this),
         EatTask(this),
         FightTask(this),
         FixPitchTask(this),
@@ -115,13 +106,6 @@ class DerangedArchaeologistMagicKiller : AbstractScript() {
         val successCondition: () -> Boolean
     )
 
-    private fun formatNumber(number: Long): String {
-        return when {
-            number >= 1_000_000 -> String.format("%.1fm", number / 1_000_000.0)
-            number >= 1_000 -> String.format("%.1fk", number / 1_000.0)
-            else -> number.toString()
-        }
-    }
     override fun onStart() {
         startTime = System.currentTimeMillis()
         logger.info("Deranged Archaeologist script started.")
@@ -145,17 +129,17 @@ class DerangedArchaeologistMagicKiller : AbstractScript() {
             "Teleport to house" to TeleportOption(
                 itemNameContains = "Teleport to house",
                 interaction = "Break",
-                successCondition = { Players.local().tile().distanceTo(BOSS_TRIGGER_TILE) > 15 }
+                successCondition = { Players.local().tile().distanceTo(Constants.BOSS_TRIGGER_TILE) > 15 }
             ),
             "Ectophial" to TeleportOption(
                 itemNameContains = "Ectophial",
                 interaction = "Empty",
-                successCondition = { Players.local().tile().distanceTo(BOSS_TRIGGER_TILE) > 15 }
+                successCondition = { Players.local().tile().distanceTo(Constants.BOSS_TRIGGER_TILE) > 15 }
             ),
             "Ardougne cloak" to TeleportOption(
                 itemNameContains = "Ardougne cloak",
                 interaction = "Monastery Teleport",
-                successCondition = { Players.local().tile().distanceTo(BOSS_TRIGGER_TILE) > 15 }
+                successCondition = { Players.local().tile().distanceTo(Constants.BOSS_TRIGGER_TILE) > 15 }
             )
         )
 
@@ -163,11 +147,11 @@ class DerangedArchaeologistMagicKiller : AbstractScript() {
             .x(40).y(80)
             .addString("Current Task:") { currentTask }
             .trackSkill(Skill.Magic)
-            .addString("Loot GP:") { formatNumber(totalLootValue) }
+            .addString("Loot GP:") { Helpers.formatNumber(totalLootValue) }
             .addString("GP/hr:") {
                 val runtime = System.currentTimeMillis() - startTime
                 val gpPerHour = if (runtime > 0) (totalLootValue * 3600000 / runtime) else 0
-                formatNumber(gpPerHour)
+                Helpers.formatNumber(gpPerHour)
             }
             .build()
         addPaint(paint)
@@ -186,7 +170,7 @@ class DerangedArchaeologistMagicKiller : AbstractScript() {
     }
 
     override fun canBreak(): Boolean {
-        val nearBank = Players.local().tile().distanceTo(FEROX_BANK_AREA.centralTile) < 10
+        val nearBank = Players.local().tile().distanceTo(Constants.FEROX_BANK_AREA.centralTile) < 10
         val needsRestore = needsStatRestore()
         val canBreak = nearBank && !needsRestore
         logger.debug("canBreak check: nearBank=$nearBank, needsRestore=$needsRestore, result=$canBreak")
@@ -202,12 +186,12 @@ class DerangedArchaeologistMagicKiller : AbstractScript() {
             val slot = Equipment.Slot.values()[slotIndex]
             val wornItem = Equipment.itemAt(slot)
 
-            if (isDuelingRing(requiredId)) {
+            if (Helpers.isDuelingRing(requiredId)) {
                 if (!wornItem.name().contains("Ring of dueling")) {
                     logger.debug("Equipment check FAIL: Slot $slot should be a Dueling Ring, but found '${wornItem.name()}'")
                     return false
                 }
-            } else if (isDigsitePendant(requiredId)) {
+            } else if (Helpers.isDigsitePendant(requiredId)) {
                 if (!wornItem.name().contains("Digsite pendant")) {
                     logger.debug("Equipment check FAIL: Slot $slot should be a Digsite Pendant, but found '${wornItem.name()}'")
                     return false
@@ -223,18 +207,15 @@ class DerangedArchaeologistMagicKiller : AbstractScript() {
         return true
     }
 
-    private fun isDuelingRing(id: Int): Boolean = id in 2552..2566
-    private fun isDigsitePendant(id: Int): Boolean = id in 11190..11194
-
     fun inventoryIsCorrect(): Boolean {
         if (config.requiredInventory.isEmpty()) {
             logger.debug("Inventory check: No required inventory defined, returning true.")
             return true
         }
         for ((id, amount) in config.requiredInventory) {
-            val currentCount = if (isDuelingRing(id)) {
+            val currentCount = if (Helpers.isDuelingRing(id)) {
                 Inventory.stream().nameContains("Ring of dueling").count(true)
-            } else if (isDigsitePendant(id)) {
+            } else if (Helpers.isDigsitePendant(id)) {
                 Inventory.stream().nameContains("Digsite pendant").count(true)
             } else {
                 Inventory.stream().id(id).count(true)
@@ -266,8 +247,8 @@ class DerangedArchaeologistMagicKiller : AbstractScript() {
     }
 
     fun needsStatRestore(): Boolean {
-        if (!FEROX_BANK_AREA.contains(Players.local())) {
-            return false // Only need to restore stats when at the bank.
+        if (!Constants.FEROX_BANK_AREA.contains(Players.local())) {
+            return false
         }
         val prayerNotFull = Prayer.prayerPoints() < Skills.realLevel(Skill.Prayer)
         val healthNotFull = Combat.healthPercent() < 100
@@ -276,5 +257,5 @@ class DerangedArchaeologistMagicKiller : AbstractScript() {
         return result
     }
 
-    fun getBoss(): Npc? = Npcs.stream().id(ARCHAEOLOGIST_ID).nearest().firstOrNull()
+    fun getBoss(): Npc? = Npcs.stream().id(Constants.ARCHAEOLOGIST_ID).nearest().firstOrNull()
 }

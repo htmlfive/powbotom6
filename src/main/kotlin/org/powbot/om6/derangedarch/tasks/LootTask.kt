@@ -5,21 +5,22 @@ import org.powbot.api.rt4.GrandExchange
 import org.powbot.api.rt4.GroundItems
 import org.powbot.api.rt4.Inventory
 import org.powbot.api.rt4.Players
+import org.powbot.om6.derangedarch.Constants
 import org.powbot.om6.derangedarch.DerangedArchaeologistMagicKiller
+import org.powbot.om6.derangedarch.Helpers
 
 class LootTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
 
     override fun validate(): Boolean {
         val boss = script.getBoss()
         val bossIsDead = boss == null || boss.healthPercent() == 0
-        val inFightArea = Players.local().tile().distanceTo(script.BOSS_TRIGGER_TILE) <= 8
+        val inFightArea = Players.local().tile().distanceTo(Constants.BOSS_TRIGGER_TILE) <= 8
 
         if (!bossIsDead || !inFightArea) {
             script.logger.debug("LootTask Validate FAIL: Boss not dead ($bossIsDead) or not in fight area ($inFightArea).")
             return false
         }
 
-        // Check for valuable items
         val valuableItemExists = GroundItems.stream().within(Players.local(), 15).any { item ->
             val itemName = item.name()
             val gePrice = GrandExchange.getItemPrice(item.id()) ?: 0
@@ -38,7 +39,6 @@ class LootTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
     override fun execute() {
         script.logger.debug("Executing LootTask...")
 
-        // Find the closest valuable item
         val itemToLoot = GroundItems.stream()
             .within(Players.local(), 15)
             .filter {
@@ -55,12 +55,8 @@ class LootTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
         }
 
         if (Inventory.isFull()) {
-            script.logger.debug("Inventory is full, attempting to eat food to make space.")
-            val food = Inventory.stream().name(script.config.foodName).firstOrNull()
-            if (food != null && food.interact("Eat")) {
-                Condition.wait({ !Inventory.isFull() }, 150, 10)
-            } else {
-                script.logger.warn("Inventory full, but no food found to eat. Skipping loot.")
+            if (!Helpers.makeInventorySpace(script)) {
+                script.logger.warn("Inventory full and could not make space. Skipping loot.")
                 return
             }
         }
@@ -75,7 +71,7 @@ class LootTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
                 if (Condition.wait({ Inventory.items().size > inventoryCount }, 150, 10)) {
                     script.logger.debug("Successfully looted item, new inventory count: ${Inventory.items().size}")
                     script.totalLootValue += itemValue
-                    Condition.sleep(600) // Small delay after looting to prevent mis-clicks
+                    Helpers.sleepRandom(600)
                 } else {
                     script.logger.warn("Interaction 'Take' sent, but inventory count did not change.")
                 }

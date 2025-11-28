@@ -1,27 +1,13 @@
 package org.powbot.om6.derangedarch.tasks
 
-import org.powbot.api.Area
 import org.powbot.api.Condition
-import org.powbot.api.Tile
 import org.powbot.api.rt4.*
+import org.powbot.om6.derangedarch.Constants
 import org.powbot.om6.derangedarch.DerangedArchaeologistMagicKiller
 import kotlin.math.abs
 import kotlin.math.atan2
 
 class DodgeSpecialTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
-
-    private val PROJECTILE_DANGER_DISTANCE = 1.0
-    private val MAX_DODGE_ATTEMPTS = 10
-    private val MIN_DODGE_ANGLE_DIFFERENCE = 25.0 // Min angle diff to "not walk through boss"
-    private val MIN_DODGE_DISTANCE = 5.0 // --- NEW: Minimum distance to dodge ---
-
-    // The 4 specific dodge tiles you requested
-    private val DODGE_TILES = listOf(
-        Tile(3683, 3703, 0),
-        Tile(3687, 3706, 0),
-        Tile(3683, 3710, 0),
-        Tile(3678, 3706, 0)
-    )
 
     private fun isSpecialAttackActive(): Boolean {
         val projectileExists = Projectiles.stream().id(script.SPECIAL_ATTACK_PROJECTILE).isNotEmpty()
@@ -36,7 +22,7 @@ class DodgeSpecialTask(script: DerangedArchaeologistMagicKiller) : Task(script) 
     override fun validate(): Boolean {
         if (Players.local().inMotion()) return false
 
-        val inFightArea = Players.local().tile().distanceTo(script.BOSS_TRIGGER_TILE) <= 8
+        val inFightArea = Players.local().tile().distanceTo(Constants.BOSS_TRIGGER_TILE) <= 8
         val specialActive = isSpecialAttackActive()
 
         val shouldRun = specialActive && inFightArea
@@ -46,68 +32,53 @@ class DodgeSpecialTask(script: DerangedArchaeologistMagicKiller) : Task(script) 
         return shouldRun
     }
 
-    private fun angleBetween(from: Tile, to: Tile): Double {
+    private fun angleBetween(from: org.powbot.api.Tile, to: org.powbot.api.Tile): Double {
         return Math.toDegrees(atan2((to.y() - from.y()).toDouble(), (to.x() - from.x()).toDouble()))
     }
 
-    /**
-     * Filters the fixed DODGE_TILES list based on safety and reachability.
-     * Returns a list of safe tiles in a randomized order.
-     */
-    private fun findPotentialSafeTiles(playerTile: Tile, boss: Npc?, allProjectiles: List<Projectile>): List<Tile> {
+    private fun findPotentialSafeTiles(playerTile: org.powbot.api.Tile, boss: Npc?, allProjectiles: List<Projectile>): List<org.powbot.api.Tile> {
         val projectileTiles = allProjectiles.map { it.tile() }
-
-        // Get angle to boss for filtering
         val angleToBoss = if (boss != null && boss.valid()) angleBetween(playerTile, boss.tile()) else null
 
-        return DODGE_TILES.filter { tile ->
-            // 1. Don't try to dodge to the tile we are already on
+        return Constants.DODGE_TILES.filter { tile ->
             if (tile == playerTile) return@filter false
 
-            // --- MODIFIED ---
-            // 2. Check distance from player (must be at least MIN_DODGE_DISTANCE)
             val distanceToPlayer = tile.distanceTo(playerTile)
-            if (distanceToPlayer < MIN_DODGE_DISTANCE) {
-                script.logger.debug("Tile $tile is too close (Dist: $distanceToPlayer). Needs to be >= $MIN_DODGE_DISTANCE.")
+            if (distanceToPlayer < Constants.MIN_DODGE_DISTANCE) {
+                script.logger.debug("Tile $tile is too close (Dist: $distanceToPlayer). Needs to be >= ${Constants.MIN_DODGE_DISTANCE}.")
                 return@filter false
             }
-            // --- END MODIFIED ---
 
-            // 3. Check distance to projectiles
-            val isAwayFromProjectiles = projectileTiles.all { projTile -> tile.distanceTo(projTile) > PROJECTILE_DANGER_DISTANCE }
+            val isAwayFromProjectiles = projectileTiles.all { projTile -> tile.distanceTo(projTile) > Constants.PROJECTILE_DANGER_DISTANCE }
             if (!isAwayFromProjectiles) {
                 script.logger.debug("Tile $tile is on or too close to a projectile.")
                 return@filter false
             }
 
-            // 4. Check "avoidsBossPath" (don't walk through the boss)
             val avoidsBossPath = if (angleToBoss != null) {
                 val angleToTile = angleBetween(playerTile, tile)
                 var angleDiff = abs(angleToBoss - angleToTile)
                 if (angleDiff > 180) {
                     angleDiff = 360 - angleDiff
                 }
-                angleDiff > MIN_DODGE_ANGLE_DIFFERENCE
+                angleDiff > Constants.MIN_DODGE_ANGLE_DIFFERENCE
             } else {
-                true // If boss isn't valid, any tile is fine
+                true
             }
             if (!avoidsBossPath) {
                 script.logger.debug("Tile $tile is in the same direction as the boss.")
                 return@filter false
             }
 
-            // 5. Check reachability (most expensive check, do it last)
             val isReachable = Movement.reachable(playerTile, tile)
             if (!isReachable) {
                 script.logger.debug("Tile $tile is not reachable.")
                 return@filter false
             }
 
-            true // Tile passed all checks
-
-        }.shuffled() // Randomize the order of valid safe tiles
+            true
+        }.shuffled()
     }
-
 
     override fun execute() {
         script.logger.debug("Executing DodgeSpecialTask...")
@@ -123,20 +94,18 @@ class DodgeSpecialTask(script: DerangedArchaeologistMagicKiller) : Task(script) 
         var dodgeSuccess = false
         var dodgeAttempts = 0
 
-        while (dodgeAttempts < MAX_DODGE_ATTEMPTS && !dodgeSuccess) {
+        while (dodgeAttempts < Constants.MAX_DODGE_ATTEMPTS && !dodgeSuccess) {
             dodgeAttempts++
-            script.logger.debug("Dodge attempt $dodgeAttempts / $MAX_DODGE_ATTEMPTS")
+            script.logger.debug("Dodge attempt $dodgeAttempts / ${Constants.MAX_DODGE_ATTEMPTS}")
 
             val currentBoss = script.getBoss()
             val allCurrentProjectiles = Projectiles.stream().toList()
             script.logger.debug("Checking against ${allCurrentProjectiles.size} total projectiles.")
             val playerTile = player.tile()
 
-            // This function now returns your 4 tiles, filtered (by 5+ dist), and SHUFFLED.
             val potentialSafeTiles = findPotentialSafeTiles(playerTile, currentBoss, allCurrentProjectiles)
             script.logger.debug("Found ${potentialSafeTiles.size} potential safe tiles for attempt $dodgeAttempts.")
 
-            // Try the first (now random) safe tile from the list
             val bestSafeTile = potentialSafeTiles.firstOrNull()
 
             if (bestSafeTile != null) {
@@ -146,7 +115,7 @@ class DodgeSpecialTask(script: DerangedArchaeologistMagicKiller) : Task(script) 
 
                     val waitResult = Condition.wait({
                         val currentProjsDuringWait = Projectiles.stream().toList()
-                        val tooClose = currentProjsDuringWait.any { player.tile().distanceTo(it.tile()) <= PROJECTILE_DANGER_DISTANCE }
+                        val tooClose = currentProjsDuringWait.any { player.tile().distanceTo(it.tile()) <= Constants.PROJECTILE_DANGER_DISTANCE }
 
                         if (tooClose) {
                             script.logger.warn("Dodge interrupted! Too close to a projectile (any type) during movement.")
@@ -167,22 +136,17 @@ class DodgeSpecialTask(script: DerangedArchaeologistMagicKiller) : Task(script) 
                 }
             } else {
                 script.logger.warn("Could not find any valid safe tile from the list for attempt $dodgeAttempts.")
-                // No point in retrying if the list is empty, so break the loop
                 break
             }
 
-            // If dodge succeeded, the outer loop will break
             if (dodgeSuccess) break
-
-            // If step failed immediately, loop will retry (e.g., if projectiles moved)
         }
-
 
         if (dodgeSuccess) {
             script.logger.info("Successfully dodged special attack. Checking safety before re-engaging boss...")
 
             val finalProjectiles = Projectiles.stream().toList()
-            val isSafeFromProjectiles = finalProjectiles.all { player.tile().distanceTo(it.tile()) > PROJECTILE_DANGER_DISTANCE }
+            val isSafeFromProjectiles = finalProjectiles.all { player.tile().distanceTo(it.tile()) > Constants.PROJECTILE_DANGER_DISTANCE }
 
             if (isSafeFromProjectiles) {
                 script.logger.debug("Player is in a safe position. Re-engaging boss...")

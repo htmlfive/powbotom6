@@ -25,7 +25,6 @@ class EatTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
 
         if (food != null) {
             if (food.interact("Eat")) {
-                // Wait until health is significantly recovered or at least back above the eating threshold
                 Condition.wait({ Combat.healthPercent() > script.config.eatAtPercent + 10 || Combat.healthPercent() > script.config.eatAtPercent }, 150, 10)
             } else {
                 script.logger.warn("Found food (${food.name()}) but failed to interact 'Eat'.")

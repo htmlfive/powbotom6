@@ -5,41 +5,14 @@ import org.powbot.api.Condition
 import org.powbot.api.Tile
 import org.powbot.api.rt4.*
 import org.powbot.mobile.script.ScriptManager
+import org.powbot.om6.derangedarch.Constants
 import org.powbot.om6.derangedarch.DerangedArchaeologistMagicKiller
 
 class FightTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
 
-    // --- Antipoison Logic ---
-    private val ANTIPOISON_NAMES = setOf(
-        // Regular Antipoison
-        "Antipoison(1)", "Antipoison(2)", "Antipoison(3)", "Antipoison(4)",
-        // Superantipoison
-        "Superantipoison(1)", "Superantipoison(2)", "Superantipoison(3)", "Superantipoison(4)",
-        // Antidote+
-        "Antidote+ (1)", "Antidote+ (2)", "Antidote+ (3)", "Antidote+ (4)",
-        // Antidote++
-        "Antidote++ (1)", "Antidote++ (2)", "Antidote++ (3)", "Antidote++ (4)",
-        // Sanfew serum
-        "Sanfew serum (1)", "Sanfew serum (2)", "Sanfew serum (3)", "Sanfew serum (4)"
-    )
-    /**
-     * Checks if the player is poisoned.
-     */
-    private fun isPoisoned(): Boolean {
-        return Combat.isPoisoned()
-    }
-
-    /**
-     * Finds the first available antipoison potion in the inventory.
-     */
-    private fun getAntipoison(): Item {
-        return Inventory.stream().name(*ANTIPOISON_NAMES.toTypedArray()).first()
-    }
-    // --- End Antipoison Logic ---
-
     override fun validate(): Boolean {
         val boss = script.getBoss()
-        val inFightArea = Players.local().tile().distanceTo(script.BOSS_TRIGGER_TILE) <= 9
+        val inFightArea = Players.local().tile().distanceTo(Constants.BOSS_TRIGGER_TILE) <= 9
         val needsResupply = script.needsTripResupply()
 
         if (boss != null && inFightArea) {
@@ -65,51 +38,6 @@ class FightTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
     }
 
     override fun execute() {
-        // --- MODIFIED: Prayer checks are now first priority ---
-
-        if (!Prayer.prayerActive(script.REQUIRED_PRAYER)) {
-            script.logger.info("Activating prayer: ${script.REQUIRED_PRAYER.name}")
-            Prayer.prayer(script.REQUIRED_PRAYER, true)
-            Condition.wait({ Prayer.prayerActive(script.REQUIRED_PRAYER) }, 100, 5)
-            return
-        }
-
-        if (Prayer.prayerPoints() < 30) {
-            script.logger.info("Prayer points low (${Prayer.prayerPoints()}), drinking potion.")
-            val prayerPotion = Inventory.stream().nameContains("Prayer potion").firstOrNull()
-            if (prayerPotion != null && prayerPotion.interact("Drink")) {
-                Condition.sleep(1200)
-                return
-            } else {
-                script.logger.warn("Prayer low but no prayer potions found!")
-            }
-        }
-
-        // --- POISON CHECK (Now runs after prayer) ---
-        if (isPoisoned()) {
-            script.logger.info("Player is poisoned. Looking for antipoison...")
-            val antipoison = getAntipoison()
-
-            if (antipoison.valid()) {
-                script.logger.info("Found ${antipoison.name()}. Drinking...")
-
-                if (antipoison.interact("Drink")) {
-                    val waitSuccess = Condition.wait({ !isPoisoned() }, 300, 10)
-                    if (waitSuccess) {
-                        script.logger.info("Successfully cured poison.")
-                    } else {
-                        script.logger.warn("Drank antipoison but still poisoned (or wait timed out).")
-                    }
-                } else {
-                    script.logger.warn("Failed to interact 'Drink' with ${antipoison.name()}.")
-                }
-                return // Return after attempting to drink
-            } else {
-                script.logger.warn("Player is poisoned but no antipoison found!")
-            }
-        }
-        // --- END POISON CHECK ---
-
         val boss = script.getBoss() ?: return
         val bossTarget = boss.interacting()
         if (bossTarget is Player && bossTarget != Players.local()) {
