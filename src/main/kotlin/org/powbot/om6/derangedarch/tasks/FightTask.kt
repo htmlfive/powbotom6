@@ -12,7 +12,7 @@ class FightTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
 
     override fun validate(): Boolean {
         val boss = script.getBoss()
-        val inFightArea = Players.local().tile().distanceTo(Constants.BOSS_TRIGGER_TILE) <= 9
+        val inFightArea = Players.local().tile().distanceTo(Constants.BOSS_TRIGGER_TILE) <= Constants.DISTANCETOBOSS
         val needsResupply = script.needsTripResupply()
 
         if (boss != null && inFightArea) {

@@ -9,22 +9,17 @@ import org.powbot.om6.derangedarch.DerangedArchaeologistMagicKiller
 class DeactivatePrayerTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
 
     override fun validate(): Boolean {
-        val inFightArea = Players.local().tile().distanceTo(Constants.BOSS_TRIGGER_TILE) <= 9
-        val bossIsGone = script.getBoss() == null
         val prayerActive = Prayer.prayerActive(script.REQUIRED_PRAYER)
+        if (!prayerActive) return false
 
-        val shouldDeactivate = prayerActive && (!inFightArea || bossIsGone)
+        val inFightArea = Players.local().tile().distanceTo(Constants.BOSS_TRIGGER_TILE) <= Constants.DISTANCETOBOSS
+        val bossIsGone = script.getBoss() == null
 
-        if (shouldDeactivate) {
-            script.logger.debug("Validate OK: Prayer active ($prayerActive), not in fight area ($inFightArea) or boss is gone ($bossIsGone).")
-        }
-
-        return shouldDeactivate
+        return !inFightArea || bossIsGone
     }
 
     override fun execute() {
-        script.logger.info("No longer fighting, deactivating prayer.")
-        script.logger.debug("Executing DeactivatePrayerTask...")
+        script.logger.info("Deactivating prayer - no longer fighting")
         if (Prayer.prayer(script.REQUIRED_PRAYER, false)) {
             Condition.wait({ !Prayer.prayerActive(script.REQUIRED_PRAYER) }, 100, 10)
         }

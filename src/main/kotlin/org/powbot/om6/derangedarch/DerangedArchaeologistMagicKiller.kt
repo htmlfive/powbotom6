@@ -19,13 +19,13 @@ import org.powbot.om6.derangedarch.tasks.*
         ScriptConfiguration(
             "Required Equipment", "Define the gear to wear.",
             optionType = OptionType.EQUIPMENT,
-            defaultValue = "{\"4089\":0,\"21795\":1,\"12002\":2,\"12658\":3,\"4091\":4,\"25818\":5,\"4093\":7,\"7462\":9,\"4097\":10,\"30895\":12,\"20232\":13}"
+            defaultValue = "{\"4089\":0,\"21795\":1,\"32399\":2,\"3054\":3,\"4091\":4,\"25818\":5,\"4093\":7,\"7462\":9,\"4097\":10,\"11982\":12}"
         ),
         ScriptConfiguration(
             "Required Inventory",
             "Define your full inventory. Must include an axe, some food, prayer pots, ring of dueling, emergency teleport, digsite pendant",
             optionType = OptionType.INVENTORY,
-            defaultValue = "{\"1351\":1,\"13123\":1,\"2552\":1,\"11194\":1,\"2434\":5,\"385\":10,\"2446\":1,\"560\":1000,\"554\":5000}"
+            defaultValue = "{\"556\":9095,\"562\":35071,\"2446\":2,\"2434\":7,\"13123\":1,\"1351\":1,\"11194\":1,\"2552\":1,\"385\":10}"
         ),
         ScriptConfiguration(
             "Food Name", "The name of the food in your inventory setup to eat.",
@@ -215,7 +215,12 @@ class DerangedArchaeologistMagicKiller : AbstractScript() {
                 Inventory.stream().id(id).count(true)
             }
 
-            if (currentCount < amount) return false
+            // For runes, only fail if under 100 (not the required amount)
+            if (Helpers.isRune(org.powbot.mobile.rscache.loader.ItemLoader.lookup(id)?.name() ?: "")) {
+                if (currentCount < 100) return false
+            } else {
+                if (currentCount < amount) return false
+            }
         }
         return true
     }

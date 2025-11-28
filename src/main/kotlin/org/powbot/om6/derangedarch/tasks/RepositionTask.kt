@@ -11,29 +11,20 @@ class RepositionTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
 
     override fun validate(): Boolean {
         val player = Players.local()
-        val inFightArea = player.tile().distanceTo(Constants.BOSS_TRIGGER_TILE) <= 8
+        val inFightArea = player.tile().distanceTo(Constants.BOSS_TRIGGER_TILE) <= Constants.DISTANCETOBOSS
         val bossIsGone = script.getBoss() == null
         val prayerIsOff = !Prayer.prayerActive(script.REQUIRED_PRAYER)
-        val notAtTargetTile = player.tile() != Constants.REPOSITION_TILE
+        val notAtTargetTile = player.trueTile() != Constants.REPOSITION_TILE
         val notInMotion = !player.inMotion()
 
-        val shouldRun = inFightArea && bossIsGone && prayerIsOff && notAtTargetTile && notInMotion
-
-        if (shouldRun) {
-            script.logger.debug("Validate OK: In fight area, boss gone, prayer off, not at reposition tile, and not moving.")
-        }
-
-        return shouldRun
+        return inFightArea && bossIsGone && prayerIsOff && notAtTargetTile && notInMotion
     }
 
     override fun execute() {
-        script.logger.debug("Executing RepositionTask...")
-        script.logger.info("Repositioning for next kill...")
+        script.logger.info("Repositioning for next kill")
 
-        if (Movement.step(Constants.REPOSITION_TILE)) {
-            Condition.wait({ Players.local().tile() == Constants.REPOSITION_TILE }, 150, 10)
-        } else {
-            script.logger.warn("Movement.step() to reposition tile failed.")
+        if (Movement.step(Constants.REPOSITION_TILE, 5)) {
+            Condition.wait({ Players.local().trueTile() == Constants.REPOSITION_TILE }, 100, 20)
         }
     }
 }

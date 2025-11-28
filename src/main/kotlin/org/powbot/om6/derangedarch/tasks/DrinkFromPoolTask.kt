@@ -41,7 +41,7 @@ class DrinkFromPoolTask(script: DerangedArchaeologistMagicKiller) : Task(script)
 
                     if (restoredSuccessfully) {
                         script.logger.info("Stats restored successfully.")
-                        Helpers.sleepRandom(1200)
+                        Helpers.sleepRandom(2400)
                     } else {
                         script.logger.warn("Interacted with pool, but stats did not restore.")
                     }
