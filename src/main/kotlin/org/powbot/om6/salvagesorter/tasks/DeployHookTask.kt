@@ -33,24 +33,13 @@ class DeployHookTask(script: SalvageSorter) : Task(script) {
     override fun execute() {
         script.logger.info("DEPLOY: Starting hook deployment sequence.")
 
-        // First ensure we're at the hook location (this checks the flag internally)
-        if (!script.atHookLocation) {
-            script.logger.info("DEPLOY: Not at hook location. Walking first.")
-            val walkSuccess = walkToHook(script)
-            if (!walkSuccess) {
-                script.logger.warn("DEPLOY: Failed to walk to hook. Will retry next poll.")
-                Condition.sleep(1000)
-                return
-            }
-        }
-
         // Check for extractor interrupt before action
         if (extractorTask.checkAndExecuteInterrupt(script)) {
             script.logger.info("DEPLOY: Extractor interrupted before hook action. Task will retry next poll.")
             return
         }
 
-        // Execute hook action
+        // Execute hook action (walkToHook should have been called by SetupSalvagingTask)
         val success = hookSalvage(script)
 
         // Check for extractor interrupt after action

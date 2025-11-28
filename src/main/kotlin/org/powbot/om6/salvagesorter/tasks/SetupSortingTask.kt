@@ -3,6 +3,7 @@ package org.powbot.om6.salvagesorter.tasks
 import org.powbot.om6.salvagesorter.SalvageSorter
 import org.powbot.om6.salvagesorter.config.SalvagePhase
 import org.powbot.api.Condition
+import org.powbot.om6.salvagesorter.tasks.*
 
 class SetupSortingTask(script: SalvageSorter) : Task(script) {
     override fun activate(): Boolean {

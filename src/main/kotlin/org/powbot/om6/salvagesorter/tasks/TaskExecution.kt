@@ -14,8 +14,8 @@ import kotlin.random.Random as KotlinRandom
 // --- X,Y Tap Coordinates and Constants ---
 
 // executeWithdrawCargo (4-Tap Sequence)
-private const val CARGO_TAP_1_X = 577 // Open/Interact
-private const val CARGO_TAP_1_Y = 161
+private const val CARGO_TAP_1_X = 294 // Open/Interact
+private const val CARGO_TAP_1_Y = 375
 private const val CARGO_TAP_2_X = 143 // Withdraw
 private const val CARGO_TAP_2_Y = 237
 private const val CARGO_TAP_3_X = 571 // Close
@@ -53,6 +53,8 @@ private const val HOOK_SALVAGE_4_Y = 165
 private const val HOOK_SALVAGE_6_X = 791 // walk to hook
 private const val HOOK_SALVAGE_6_Y = 63
 
+
+
 // ----------------------------------------
 
 // Helper function to add slight randomness to the tap location
@@ -80,6 +82,7 @@ fun executeCleanupLoot(script: SalvageSorter): Boolean {
                     Condition.wait({ Game.tab() == Game.Tab.MAGIC }, 125, 12 )
                     script.logger.info("CLEANUP: Alch successful. Sleeping for animation/cooldown: 3000-3600ms.")
                     Condition.sleep(Random.nextInt(3000, 3600))
+                    Condition.wait({ Inventory.stream().name(itemName).isEmpty() }, 300, 5)
                 } else {
                     script.logger.warn("CLEANUP: Failed to click item $itemName.")
                 }
@@ -133,10 +136,15 @@ fun executeCleanupLoot(script: SalvageSorter): Boolean {
 // CARGO WITHDRAW FUNCTIONS
 // ========================================
 
+// Replace executeWithdrawCargo in YOUR TaskExecution.kt with this:
+
 fun executeWithdrawCargo(script: SalvageSorter): Long {
     val mainWait = Random.nextInt(600, 900)
     CameraSnapper.snapCameraToDirection(script.requiredTapDirection, script)
     script.logger.info("CARGO: Starting 4-tap cargo withdrawal sequence.")
+
+    // Track inventory before withdrawal
+    val invCountBefore = Inventory.stream().count()
 
     if (!Input.tap(CARGO_TAP_1_X + getRandomOffsetLarge(), CARGO_TAP_1_Y + getRandomOffsetLarge())) return 0L
     script.logger.info("CARGO TAP 1 (Open): Tapped. Waiting for interaction.")
@@ -154,6 +162,7 @@ fun executeWithdrawCargo(script: SalvageSorter): Long {
     script.logger.info("CARGO TAP 4 (Walk back): Tapped. Waiting for walk back.")
     Condition.sleep(Random.nextInt(1800, 2400))
 
+    // Check if we got any salvage
     val hasSalvage = Inventory.stream().name(script.SALVAGE_NAME).isNotEmpty()
     if (!hasSalvage) {
         script.logger.warn("CARGO: Withdrawal failed - no salvage item (${script.SALVAGE_NAME}) in inventory after withdrawal.")
@@ -162,59 +171,26 @@ fun executeWithdrawCargo(script: SalvageSorter): Long {
         return 0L
     }
 
+    // Check if inventory is full after withdrawal
+    val invCountAfter = Inventory.stream().count()
+    val inventoryFull = Inventory.isFull()
+
+    if (!inventoryFull) {
+        // Inventory not full = cargo must be empty (couldn't fill our inventory)
+        script.logger.warn("CARGO: Inventory not full after withdrawal (${invCountAfter}/28). Cargo must be depleted.")
+        script.logger.info("CARGO: Signaling to finish sorting and return to salvaging.")
+
+        // Return -1 as a special flag meaning "cargo is empty, finish sorting then salvage"
+        return -1L
+    }
+
+    // Inventory is full - normal withdrawal, apply cooldown
     val baseCooldownMs = script.randomWithdrawCooldownMs
-    val occupiedSlots = Inventory.stream().count()
-    val emptySlots = 28 - occupiedSlots
-    val penaltyPerSlotMs = 20000L
-    val penaltyMs = emptySlots * penaltyPerSlotMs
-    val finalCooldownMs = baseCooldownMs + penaltyMs
+    script.logger.info("CARGO: Inventory full after withdrawal. Normal cooldown: ${baseCooldownMs / 1000}s.")
 
-    script.logger.info("COOLDOWN ADJUST: Base: ${baseCooldownMs / 1000}s. Empty Slots: $emptySlots. Penalty: ${penaltyMs / 1000}s. Final Cooldown: ${finalCooldownMs / 1000}s.")
-
-    return finalCooldownMs
+    return baseCooldownMs
 }
-//Walk to sort
-// Add this to TaskExecution.kt
 
-fun walkToSort(script: SalvageSorter): Boolean {
-    // Check if we're already at the sort location
-    if (script.atSortLocation) {
-        script.logger.info("WALK_SORT: Already at sort location. Skipping movement and assignment.")
-        return true
-    }
-
-    script.logger.info("WALK_SORT: Not at sort location yet. Starting walk and assignment sequence.")
-
-    // 1. Setup camera
-    CameraSnapper.snapCameraToDirection(script.requiredTapDirection, script)
-    Condition.sleep(Random.nextInt(600, 1200))
-
-    // 2. Walk back to sorting area
-    val x = 580 + getRandomOffsetLarge()
-    val y = 482 + getRandomOffsetLarge()
-
-    script.logger.info("WALK_SORT: Tapping walk-to-sort point at ($x, $y).")
-
-    if (!Input.tap(x, y)) {
-        script.logger.warn("WALK_SORT: Failed to tap walk-to-sort point.")
-        return false
-    }
-
-    script.logger.info("WALK_SORT: Tapped. Waiting for walk back.")
-    Condition.sleep(Random.nextInt(1800, 2400))
-
-    // 3. Assign both crew members
-    if (!assignBoth(script)) {
-        script.logger.warn("WALK_SORT: Failed to assign crew.")
-        return false
-    }
-
-    // 4. Set the flag to indicate we're now at the sort location
-    script.atSortLocation = true
-    script.logger.info("WALK_SORT: Arrived at sort location. Flag set to true.")
-
-    return true
-}
 // ========================================
 // SORTING FUNCTIONS
 // ========================================
@@ -470,17 +446,9 @@ fun assignGhost(script: SalvageSorter): Boolean {
 // ========================================
 
 fun walkToHook(script: SalvageSorter): Boolean {
-    // Check if we're already at the hook location
-    if (script.atHookLocation) {
-        script.logger.info("WALK: Already at hook location. Skipping movement and assignment.")
-        return true
-    }
-
-    script.logger.info("WALK: Not at hook location yet. Starting walk and assignment sequence.")
-
-    // 1. Assign Ghost ONCE before walking
+    // 1. Assign Ghost before walking to hook spot
     if (!assignGhost(script)) {
-        script.logger.warn("WALK: Failed to assign Ghost.")
+        script.logger.warn("WALK: Failed to assign Ghost before walking.")
         return false
     }
 
@@ -503,10 +471,6 @@ fun walkToHook(script: SalvageSorter): Boolean {
 
     // Wait for the walking action to complete
     Condition.sleep(waitTime)
-
-    // 4. Set the flag to indicate we're now at the hook location
-    script.atHookLocation = true
-    script.logger.info("WALK: Arrived at hook location. Flag set to true.")
 
     return true
 }
@@ -541,14 +505,17 @@ fun hookSalvage(script: SalvageSorter): Boolean {
     script.logger.info("HOOK: Tapping Hook Salvage at ($x, $y).")
     Input.tap(x, y)
 
-    // 6. Wait for confirmation message (up to 1.8 seconds)
+    // 6. Wait for confirmation message (up to 3.6 seconds)
     val messageFound = Condition.wait({ script.hookCastMessageFound }, 30, 120)
 
     // 7. Handle result
     if (messageFound) {
         script.logger.info("HOOK: Success - action start message received.")
 
-        // NEW LOGIC: Set flag - we are now in the active 'hooking' state
+        // CRITICAL: Don't return yet! We need to wait for the action to complete
+        script.logger.info("HOOK: Waiting for inventory to fill or action to complete...")
+
+        // Set flag - we are now in the active 'hooking' state
         script.hookingSalvageBool = true
 
         // Instantiate the extractor task for interrupt checking during the wait
@@ -557,9 +524,8 @@ fun hookSalvage(script: SalvageSorter): Boolean {
         // Reset the completion flag before waiting
         script.salvageMessageFound = false
 
-        // Wait until salvage message is found, inventory is full, OR extractor interrupts
-        script.logger.info("HOOK: Waiting for salvage complete message, inventory to fill, or dialogue.")
-        while (!script.salvageMessageFound && !Inventory.isFull()) {
+        // Wait until inventory is full OR extractor interrupts OR dialogue appears
+        while (!Inventory.isFull()) {
 
             // CRITICAL: Check for canContinue FIRST (shipwreck depleted dialogue)
             if (Chat.canContinue()) {
@@ -602,8 +568,9 @@ fun hookSalvage(script: SalvageSorter): Boolean {
         // Reset flag after wait is complete
         script.hookingSalvageBool = false
 
-        script.logger.info("HOOK: Wait condition met (Salvage complete or Inventory full). Returning success.")
+        script.logger.info("HOOK: Inventory is now full. Returning success.")
         return true
+
     } else {
         // Ensure flag is reset in the failure path too (though it shouldn't be set yet)
         script.hookingSalvageBool = false
@@ -639,43 +606,39 @@ fun hookSalvage(script: SalvageSorter): Boolean {
 fun depositSalvage(script: SalvageSorter): Boolean {
     val waitTime = Random.nextInt(400, 600)
     CameraSnapper.snapCameraToDirection(CardinalDirection.South, script)
-    Condition.sleep(Random.nextInt(700, 1100))
+
     // 1. Get initial inventory count before deposit attempt
     val initialSalvageCount = Inventory.stream()
         .name(script.SALVAGE_NAME)
         .count()
     script.logger.info("DEPOSIT: Initial salvage count: $initialSalvageCount")
 
-    Condition.sleep(Random.nextInt(1200, 1800))
     // 2. Tap DEPOSIT STEP 1
     val x1 = HOOK_SALVAGE_2_X + getRandomOffsetSmall()
     val y1 = HOOK_SALVAGE_2_Y + getRandomOffsetSmall()
     script.logger.info("DEPOSIT: Tapping Deposit Step 1 at ($x1, $y1).")
     Input.tap(x1, y1)
-    Condition.sleep(Random.nextInt(1200, 1800))
+    Condition.sleep(waitTime)
 
     // 3. Tap DEPOSIT STEP 2
     val x2 = HOOK_SALVAGE_3_X + getRandomOffsetSmall()
     val y2 = HOOK_SALVAGE_3_Y + getRandomOffsetSmall()
     script.logger.info("DEPOSIT: Tapping Deposit Step 2 at ($x2, $y2).")
     Input.tap(x2, y2)
-    Condition.sleep(Random.nextInt(1200, 1800))
+    Condition.sleep(Random.nextInt(700, 1100))
 
-
-    // 3. Tap DEPOSIT STEP 3
+    // 3. Tap DEPOSIT STEP 2
     val x3 = HOOK_SALVAGE_4_X + getRandomOffsetSmall()
     val y3 = HOOK_SALVAGE_4_Y + getRandomOffsetSmall()
-    script.logger.info("DEPOSIT: Tapping Deposit Step 2 at ($x3, $y3).")
+    script.logger.info("DEPOSIT: Tapping Deposit Step 2 at ($x2, $y2).")
     Input.tap(x3, y3)
-    Condition.sleep(Random.nextInt(1200, 1800))
-
+    Condition.sleep(Random.nextInt(700, 1100))
 
     // 4. Get final inventory count after deposit attempt
     val finalSalvageCount = Inventory.stream()
         .name(script.SALVAGE_NAME)
         .count()
     script.logger.info("DEPOSIT: Final salvage count: $finalSalvageCount")
-
 
     // 5. Determine if deposit was successful and update state
     if (finalSalvageCount < initialSalvageCount) {
@@ -689,4 +652,43 @@ fun depositSalvage(script: SalvageSorter): Boolean {
         script.logger.warn("DEPOSIT: FAILED - Inventory unchanged. Cargo hold is FULL.")
         return false
     }
+}
+fun walkToSort(script: SalvageSorter): Boolean {
+    // Check if we're already at the sort location
+    if (script.atSortLocation) {
+        script.logger.info("WALK_SORT: Already at sort location. Skipping movement and assignment.")
+        return true
+    }
+
+    script.logger.info("WALK_SORT: Not at sort location yet. Starting walk and assignment sequence.")
+
+    // 1. Setup camera
+    CameraSnapper.snapCameraToDirection(script.requiredTapDirection, script)
+    Condition.sleep(Random.nextInt(600, 1200))
+
+    // 2. Walk back to sorting area
+    val x = 580 + getRandomOffsetLarge()
+    val y = 482 + getRandomOffsetLarge()
+
+    script.logger.info("WALK_SORT: Tapping walk-to-sort point at ($x, $y).")
+
+    if (!Input.tap(x, y)) {
+        script.logger.warn("WALK_SORT: Failed to tap walk-to-sort point.")
+        return false
+    }
+
+    script.logger.info("WALK_SORT: Tapped. Waiting for walk back.")
+    Condition.sleep(Random.nextInt(1800, 2400))
+
+    // 3. Assign both crew members
+    if (!assignBoth(script)) {
+        script.logger.warn("WALK_SORT: Failed to assign crew.")
+        return false
+    }
+
+    // 4. Set the flag to indicate we're now at the sort location
+    script.atSortLocation = true
+    script.logger.info("WALK_SORT: Arrived at sort location. Flag set to true.")
+
+    return true
 }

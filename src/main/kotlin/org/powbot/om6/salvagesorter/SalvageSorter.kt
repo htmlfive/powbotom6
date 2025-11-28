@@ -260,22 +260,25 @@ class SalvageSorter : AbstractScript() {
                     logger.debug("STATE: SORTING PHASE (cargoHoldFull=true)")
 
                     when {
-                        // Priority 1: Sort any salvage currently in inventory
+                        // Priority 1: Setup sorting FIRST if not at sort location
+                        !atSortLocation -> {
+                            logger.debug("STATE: Not at sort location, need setup")
+                            currentPhase = SalvagePhase.SETUP_SORTING
+                            allTasks.firstOrNull { it is SetupSortingTask }
+                        }
+
+                        // Priority 2: Sort any salvage currently in inventory
                         hasSalvageInInventory -> {
+                            logger.debug("STATE: At sort location with salvage, sorting")
                             currentPhase = SalvagePhase.SORTING_LOOT
                             allTasks.firstOrNull { it is SortSalvageTask }
                         }
 
-                        // Priority 2: Setup camera/position if needed before withdrawing
+                        // Priority 3: Withdraw more salvage from cargo to continue sorting
                         else -> {
-                            val setupTask = allTasks.firstOrNull { it is SetupSortingTask && it.activate() }
-                            if (setupTask != null) {
-                                setupTask
-                            } else {
-                                // Priority 3: Withdraw more salvage from cargo to continue sorting
-                                currentPhase = SalvagePhase.WITHDRAWING
-                                allTasks.firstOrNull { it is WithdrawCargoTask }
-                            }
+                            logger.debug("STATE: At sort location, no salvage, withdrawing")
+                            currentPhase = SalvagePhase.WITHDRAWING
+                            allTasks.firstOrNull { it is WithdrawCargoTask }
                         }
                     }
                 }
