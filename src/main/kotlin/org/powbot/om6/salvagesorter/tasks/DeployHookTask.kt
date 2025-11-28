@@ -24,7 +24,7 @@ class DeployHookTask(script: SalvageSorter) : Task(script) {
 
         // ALWAYS log when in SALVAGING phase to debug activation issues
         if (script.currentPhase == SalvagePhase.SALVAGING || shouldActivate) {
-            script.logger.info("DEPLOY ACTIVATE CHECK: Phase=${script.currentPhase.name}, hasSalvage=$hasSalvage, cargoFull=${script.cargoHoldFull}, invFull=$inventoryFull, RESULT=$shouldActivate")
+            script.logger.info("DEPLOY ACTIVATE CHECK: Phase=${script.currentPhase.name}, hasSalvage=$hasSalvage, cargoFull=${script.cargoHoldFull}, invFull=$inventoryFull, salvageMessageFound=${script.salvageMessageFound}, RESULT=$shouldActivate")
         }
 
         return shouldActivate
@@ -37,6 +37,13 @@ class DeployHookTask(script: SalvageSorter) : Task(script) {
         if (extractorTask.checkAndExecuteInterrupt(script)) {
             script.logger.info("DEPLOY: Extractor interrupted before hook action. Task will retry next poll.")
             return
+        }
+
+        // NEW: Check if salvage completion message was detected - reset flag and re-hook
+        if (script.salvageMessageFound) {
+            script.logger.info("DEPLOY: Salvage completion message detected! Resetting flag and re-hooking immediately.")
+            script.salvageMessageFound = false
+            script.hookingSalvageBool = false // Ensure hook flag is reset
         }
 
         // Execute hook action (walkToHook should have been called by SetupSalvagingTask)

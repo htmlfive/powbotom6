@@ -165,7 +165,7 @@ class SalvageSorter : AbstractScript() {
         }
         if (change.messageType == MessageType.Game) {
             if (change.message.contains(SALVAGE_COMPLETE_MESSAGE) || change.message.contains(SALVAGE_SUCCESS_MESSAGE)) {
-                logger.info("EVENT: Salvage SUCCESS message detected via EventBus! Message: ${change.message}")
+                logger.info("EVENT: Salvage ending message detected via EventBus! Message: ${change.message}")
                 salvageMessageFound = true
             }
         }

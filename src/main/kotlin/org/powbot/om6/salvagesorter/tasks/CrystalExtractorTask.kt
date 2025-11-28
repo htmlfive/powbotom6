@@ -74,8 +74,6 @@ class CrystalExtractorTask(script: SalvageSorter) : Task(script) {
             val randomOffsetY = Random.nextInt(-5, 6)
             val finalX = x + randomOffsetX
             val finalY = y + randomOffsetY
-            Condition.sleep(Random.nextInt(600, 1200))
-
             script.harvesterMessageFound = false
 
             script.logger.info("ACTION: Executing extractor tap at X=$finalX, Y=$finalY (Offset: $randomOffsetX, $randomOffsetY).")

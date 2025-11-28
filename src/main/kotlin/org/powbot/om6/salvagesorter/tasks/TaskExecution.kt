@@ -1,14 +1,12 @@
 package org.powbot.om6.salvagesorter.tasks
 
 import org.powbot.api.Condition
-import org.powbot.api.Input
 import org.powbot.api.Random
 import org.powbot.api.rt4.*
 import org.powbot.mobile.script.ScriptManager
 import org.powbot.om6.salvagesorter.SalvageSorter
 import org.powbot.om6.salvagesorter.config.CardinalDirection
 import org.powbot.om6.salvagesorter.config.LootConfig
-import org.powbot.om6.salvagesorter.config.SalvagePhase
 import kotlin.random.Random as KotlinRandom
 
 // ========================================
@@ -122,13 +120,6 @@ private const val HOOK_SALVAGE_6_X = 791
 private const val HOOK_SALVAGE_6_Y = 63
 
 // ========================================
-// HELPER FUNCTIONS
-// ========================================
-
-fun getRandomOffsetSmall() = Random.nextInt(-3, 3)
-fun getRandomOffsetLarge() = Random.nextInt(-3, 3)
-
-// ========================================
 // CLEANUP FUNCTIONS
 // ========================================
 
@@ -160,13 +151,8 @@ fun executeCleanupLoot(script: SalvageSorter): Boolean {
         }
     }
 
-    if (!Inventory.opened()) {
-        if (Inventory.open()) {
-            script.logger.info("Inventory tab opened for dropping.")
-            Condition.sleep(Random.nextInt(ASSIGNMENT_INV_OPEN_MIN, ASSIGNMENT_INV_OPEN_MAX))
-        } else {
-            script.logger.warn("Failed to open inventory tab.")
-        }
+    if (!ensureInventoryOpen(ASSIGNMENT_INV_OPEN_MIN, ASSIGNMENT_INV_OPEN_MAX)) {
+        script.logger.warn("CLEANUP: Failed to open inventory tab.")
     }
 
     val shuffledDroppableItems = Inventory.stream()
@@ -201,21 +187,33 @@ fun executeWithdrawCargo(script: SalvageSorter): Long {
 
     val invCountBefore = Inventory.stream().count()
 
-    if (!Input.tap(CARGO_TAP_1_X + getRandomOffsetLarge(), CARGO_TAP_1_Y + getRandomOffsetLarge())) return 0L
-    script.logger.info("CARGO TAP 1 (Open): Tapped.")
-    Condition.sleep(Random.nextInt(CARGO_TAP1_WAIT_MIN, CARGO_TAP1_WAIT_MAX))
+    // Tap 1: Open cargo
+    if (!tapWithSleep(CARGO_TAP_1_X, CARGO_TAP_1_Y, 3, CARGO_TAP1_WAIT_MIN, CARGO_TAP1_WAIT_MAX)) {
+        script.logger.warn("CARGO: Failed at tap 1")
+        return 0L
+    }
+    script.logger.info("CARGO TAP 1 (Open): Complete")
 
-    if (!Input.tap(CARGO_TAP_2_X + getRandomOffsetLarge(), CARGO_TAP_2_Y + getRandomOffsetLarge())) return 0L
-    script.logger.info("CARGO TAP 2 (Withdraw): Tapped.")
-    Condition.sleep(mainWait)
+    // Tap 2: Withdraw
+    if (!tapWithSleep(CARGO_TAP_2_X, CARGO_TAP_2_Y, 3, mainWait, mainWait)) {
+        script.logger.warn("CARGO: Failed at tap 2")
+        return 0L
+    }
+    script.logger.info("CARGO TAP 2 (Withdraw): Complete")
 
-    if (!Input.tap(CARGO_TAP_3_X + getRandomOffsetLarge(), CARGO_TAP_3_Y + getRandomOffsetLarge())) return 0L
-    script.logger.info("CARGO TAP 3 (Close): Tapped.")
-    Condition.sleep(mainWait)
+    // Tap 3: Close
+    if (!tapWithSleep(CARGO_TAP_3_X, CARGO_TAP_3_Y, 3, mainWait, mainWait)) {
+        script.logger.warn("CARGO: Failed at tap 3")
+        return 0L
+    }
+    script.logger.info("CARGO TAP 3 (Close): Complete")
 
-    if (!Input.tap(CARGO_TAP_4_X + getRandomOffsetLarge(), CARGO_TAP_4_Y + getRandomOffsetLarge())) return 0L
-    script.logger.info("CARGO TAP 4 (Walk back): Tapped.")
-    Condition.sleep(Random.nextInt(CARGO_TAP4_WAIT_MIN, CARGO_TAP4_WAIT_MAX))
+    // Tap 4: Walk back
+    if (!tapWithSleep(CARGO_TAP_4_X, CARGO_TAP_4_Y, 3, CARGO_TAP4_WAIT_MIN, CARGO_TAP4_WAIT_MAX)) {
+        script.logger.warn("CARGO: Failed at tap 4")
+        return 0L
+    }
+    script.logger.info("CARGO TAP 4 (Walk back): Complete")
 
     val hasSalvage = Inventory.stream().name(script.SALVAGE_NAME).isNotEmpty()
     if (!hasSalvage) {
@@ -252,17 +250,13 @@ fun executeTapSortSalvage(script: SalvageSorter, salvageItemName: String): Boole
 
     val salvageCountBefore = Inventory.stream().name(salvageItemName).count()
 
-    if (!Inventory.opened()) {
-        Inventory.open()
-        Condition.sleep(Random.nextInt(SORT_TAB_OPEN_MIN, SORT_TAB_OPEN_MAX))
-    }
-
+    ensureInventoryOpen(SORT_TAB_OPEN_MIN, SORT_TAB_OPEN_MAX)
     Condition.sleep(Random.nextInt(SORT_TAB_CLOSE_MIN, SORT_TAB_CLOSE_MAX))
+
     script.logger.info("ACTION: Tapping Sort Salvage at X=$finalX, Y=$finalY. Count: $salvageCountBefore.")
-    Game.closeOpenTab()
-    Condition.sleep(Random.nextInt(SORT_TAB_CLOSE_MIN, SORT_TAB_CLOSE_MAX))
+    closeTabWithSleep(SORT_TAB_CLOSE_MIN, SORT_TAB_CLOSE_MAX)
 
-    if (Input.tap(finalX, finalY)) {
+    if (tapWithOffset(finalX, finalY, 0)) {
         var elapsed = 0L
         var currentSalvageCount = salvageCountBefore
         var lastSalvageCount = salvageCountBefore
@@ -282,10 +276,7 @@ fun executeTapSortSalvage(script: SalvageSorter, salvageItemName: String): Boole
                 break
             }
 
-            if (Chat.canContinue()) {
-                Chat.clickContinue()
-                Condition.sleep(Random.nextInt(SORT_RETAP_MIN, SORT_RETAP_MAX))
-            }
+            handleDialogue(SORT_RETAP_MIN, SORT_RETAP_MAX)
 
             if (currentSalvageCount >= lastSalvageCount) {
                 retapFailureCount++
@@ -297,7 +288,7 @@ fun executeTapSortSalvage(script: SalvageSorter, salvageItemName: String): Boole
                 }
 
                 script.logger.warn("RETAP: Count unchanged. Retapping (Attempt $retapFailureCount).")
-                if (Input.tap(finalX, finalY)) {
+                if (tapWithOffset(finalX, finalY, 0)) {
                     Condition.sleep(Random.nextInt(SORT_RETAP_MIN, SORT_RETAP_MAX))
                     lastSalvageCount = currentSalvageCount
                 }
@@ -317,7 +308,7 @@ fun executeTapSortSalvage(script: SalvageSorter, salvageItemName: String): Boole
             while (attempts < timeoutTicks) {
                 if (script.extractorTask.checkAndExecuteInterrupt(script)) {
                     script.logger.warn("INTERRUPT: Extractor ran. Re-tapping Sort.")
-                    if (Input.tap(finalX, finalY)) {
+                    if (tapWithOffset(finalX, finalY, 0)) {
                         Condition.sleep(SORT_POST_INTERRUPT_WAIT)
                         attempts = 0
                         continue
@@ -352,66 +343,44 @@ fun executeTapSortSalvage(script: SalvageSorter, salvageItemName: String): Boole
 // ========================================
 
 fun assignBoth(script: SalvageSorter): Boolean {
-    val mainWait = Random.nextInt(ASSIGNMENT_MAIN_WAIT_MIN, ASSIGNMENT_MAIN_WAIT_MAX)
-    CameraSnapper.snapCameraToDirection(script.requiredTapDirection, script)
     script.logger.info("ASSIGNMENTS: Starting 5-tap sequence.")
+    val mainWait = setupAssignment(script, ASSIGNMENT_MAIN_WAIT_MIN, ASSIGNMENT_MAIN_WAIT_MAX)
 
-    if (!Inventory.opened()) {
-        Inventory.open()
-        Condition.sleep(Random.nextInt(ASSIGNMENT_INV_OPEN_MIN, ASSIGNMENT_INV_OPEN_MAX))
+    val taps = listOf(
+        ASSIGN_BOTH_1_X to ASSIGN_BOTH_1_Y,
+        ASSIGN_BOTH_2_X to ASSIGN_BOTH_2_Y,
+        ASSIGN_BOTH_3_X to ASSIGN_BOTH_3_Y,
+        ASSIGN_BOTH_4_X to ASSIGN_BOTH_4_Y,
+        ASSIGN_BOTH_5_X to ASSIGN_BOTH_5_Y
+    )
+
+    val success = executeTapSequence(script, taps, 3, mainWait, mainWait, "ASSIGN")
+
+    if (success) {
+        script.logger.info("ASSIGNMENTS: Complete.")
     }
-    Condition.sleep(mainWait)
-    Game.closeOpenTab()
-    Condition.sleep(mainWait)
 
-    if (!Input.tap(ASSIGN_BOTH_1_X + getRandomOffsetLarge(), ASSIGN_BOTH_1_Y + getRandomOffsetLarge())) return false
-    Condition.sleep(mainWait)
-
-    if (!Input.tap(ASSIGN_BOTH_2_X + getRandomOffsetLarge(), ASSIGN_BOTH_2_Y + getRandomOffsetLarge())) return false
-    Condition.sleep(mainWait)
-
-    if (!Input.tap(ASSIGN_BOTH_3_X + getRandomOffsetLarge(), ASSIGN_BOTH_3_Y + getRandomOffsetLarge())) return false
-    Condition.sleep(mainWait)
-
-    if (!Input.tap(ASSIGN_BOTH_4_X + getRandomOffsetLarge(), ASSIGN_BOTH_4_Y + getRandomOffsetLarge())) return false
-    Condition.sleep(mainWait)
-
-    if (!Input.tap(ASSIGN_BOTH_5_X + getRandomOffsetLarge(), ASSIGN_BOTH_5_Y + getRandomOffsetLarge())) return false
-    Condition.sleep(mainWait)
-
-    script.logger.info("ASSIGNMENTS: Complete.")
-    return true
+    return success
 }
 
 fun assignGhost(script: SalvageSorter): Boolean {
-    val mainWait = Random.nextInt(ASSIGNMENT_MAIN_WAIT_MIN, ASSIGNMENT_MAIN_WAIT_MAX)
-    CameraSnapper.snapCameraToDirection(script.requiredTapDirection, script)
     script.logger.info("ASSIGNMENTS: Starting 3-tap ghost sequence.")
+    val mainWait = setupAssignment(script, ASSIGNMENT_MAIN_WAIT_MIN, ASSIGNMENT_MAIN_WAIT_MAX)
 
-    if (!Inventory.opened()) {
-        Inventory.open()
-        Condition.sleep(Random.nextInt(ASSIGNMENT_INV_OPEN_MIN, ASSIGNMENT_INV_OPEN_MAX))
+    val taps = listOf(
+        ASSIGN_BOTH_1_X to ASSIGN_BOTH_1_Y,
+        ASSIGN_BOTH_2_X to ASSIGN_BOTH_2_Y,
+        ASSIGN_BOTH_5_X to ASSIGN_BOTH_5_Y
+    )
+
+    if (!executeTapSequence(script, taps, 3, mainWait, mainWait, "GHOST")) {
+        return false
     }
-    Condition.sleep(mainWait)
-    Game.closeOpenTab()
-    Condition.sleep(mainWait)
 
-    if (!Input.tap(ASSIGN_BOTH_1_X + getRandomOffsetLarge(), ASSIGN_BOTH_1_Y + getRandomOffsetLarge())) return false
+    // Reopen and close inventory
+    ensureInventoryOpen(ASSIGNMENT_INV_OPEN_MIN, ASSIGNMENT_INV_OPEN_MAX)
     Condition.sleep(mainWait)
-
-    if (!Input.tap(ASSIGN_BOTH_2_X + getRandomOffsetLarge(), ASSIGN_BOTH_2_Y + getRandomOffsetLarge())) return false
-    Condition.sleep(mainWait)
-
-    if (!Input.tap(ASSIGN_BOTH_5_X + getRandomOffsetLarge(), ASSIGN_BOTH_5_Y + getRandomOffsetLarge())) return false
-    Condition.sleep(mainWait)
-
-    if (!Inventory.opened()) {
-        Inventory.open()
-        Condition.sleep(Random.nextInt(ASSIGNMENT_INV_OPEN_MIN, ASSIGNMENT_INV_OPEN_MAX))
-    }
-    Condition.sleep(mainWait)
-    Game.closeOpenTab()
-    Condition.sleep(mainWait)
+    closeTabWithSleep(mainWait, mainWait)
 
     script.logger.info("ASSIGNMENTS: Ghost complete.")
     return true
@@ -422,7 +391,6 @@ fun assignGhost(script: SalvageSorter): Boolean {
 // ========================================
 
 fun walkToHook(script: SalvageSorter): Boolean {
-    // Check if we're already at the hook location
     if (script.atHookLocation) {
         script.logger.info("WALK: Already at hook location. Skipping movement and assignment.")
         return true
@@ -430,7 +398,6 @@ fun walkToHook(script: SalvageSorter): Boolean {
 
     script.logger.info("WALK: Not at hook location yet. Starting walk and assignment sequence.")
 
-    // 1. Assign Ghost ONCE before walking
     if (!assignGhost(script)) {
         script.logger.warn("WALK: Failed to assign Ghost.")
         return false
@@ -440,22 +407,15 @@ fun walkToHook(script: SalvageSorter): Boolean {
     Condition.sleep(waitTime)
     CameraSnapper.snapCameraToDirection(script.requiredTapDirection, script)
 
-    val x1 = HOOK_SALVAGE_6_X + getRandomOffsetSmall()
-    val y1 = HOOK_SALVAGE_6_Y + getRandomOffsetSmall()
+    script.logger.info("WALK: Tapping walk-to-hook.")
 
-    script.logger.info("WALK: Tapping walk-to-hook at ($x1, $y1).")
-
-    if (!Input.tap(x1, y1)) {
+    if (!tapWithSleep(HOOK_SALVAGE_6_X, HOOK_SALVAGE_6_Y, 3, waitTime, waitTime)) {
         script.logger.warn("WALK: Failed to tap walk point.")
         return false
     }
 
-    Condition.sleep(waitTime)
-
-    // CRITICAL: Set the flag after successfully walking to hook location
     script.atHookLocation = true
     script.logger.info("WALK: Arrived at hook location. Flag set to true.")
-
     return true
 }
 
@@ -476,23 +436,15 @@ fun hookSalvage(script: SalvageSorter): Boolean {
     Condition.sleep(mainWait)
 
     script.hookCastMessageFound = false
+    closeTabWithSleep(HOOK_TAB_CLOSE_MIN, HOOK_TAB_CLOSE_MAX)
 
-    val x = HOOK_SALVAGE_1_X + getRandomOffsetSmall()
-    val y = HOOK_SALVAGE_1_Y + getRandomOffsetSmall()
-
-    Game.closeOpenTab()
-    Condition.sleep(Random.nextInt(HOOK_TAB_CLOSE_MIN, HOOK_TAB_CLOSE_MAX))
-
-    script.logger.info("HOOK: Tapping hook at ($x, $y).")
-    Input.tap(x, y)
+    script.logger.info("HOOK: Tapping hook.")
+    tapWithOffset(HOOK_SALVAGE_1_X, HOOK_SALVAGE_1_Y, 3)
 
     val messageFound = Condition.wait({ script.hookCastMessageFound }, 30, 120)
 
     if (messageFound) {
-        if (!Inventory.opened()) {
-            Inventory.open()
-            Condition.sleep(Random.nextInt(HOOK_TAB_OPEN_MIN, HOOK_TAB_OPEN_MAX))
-        }
+        ensureInventoryOpen(HOOK_TAB_OPEN_MIN, HOOK_TAB_OPEN_MAX)
 
         script.logger.info("HOOK: Success. Waiting for inventory to fill...")
         script.hookingSalvageBool = true
@@ -500,17 +452,20 @@ fun hookSalvage(script: SalvageSorter): Boolean {
         script.salvageMessageFound = false
 
         while (!Inventory.isFull()) {
+            // Check for salvage completion message - if found, break loop to re-hook
+            if (script.salvageMessageFound) {
+                script.logger.info("HOOK: Salvage completion message detected during wait! Breaking loop to re-hook.")
+                script.salvageMessageFound = false
+                script.hookingSalvageBool = false
+                return false
+            }
+
             if (Chat.canContinue()) {
                 script.logger.warn("HOOK: Dialogue detected. Shipwreck depleted.")
-                Chat.clickContinue()
-                Condition.sleep(Random.nextInt(SORT_RETAP_MIN, SORT_RETAP_MAX))
-                if (Chat.canContinue()) {
-                    Chat.clickContinue()
-                    Condition.sleep(Random.nextInt(SORT_RETAP_MIN, SORT_RETAP_MAX))
-                }
+                handleMultipleDialogues(2, SORT_RETAP_MIN, SORT_RETAP_MAX)
                 script.logger.info("HOOK: Transitioning to SORTING.")
                 script.cargoHoldFull = true
-                script.currentPhase = SalvagePhase.SETUP_SORTING
+                script.currentPhase = org.powbot.om6.salvagesorter.config.SalvagePhase.SETUP_SORTING
                 script.hookingSalvageBool = false
                 return true
             }
@@ -532,15 +487,10 @@ fun hookSalvage(script: SalvageSorter): Boolean {
 
         if (Chat.canContinue()) {
             script.logger.warn("HOOK: Dialogue before confirmation.")
-            Chat.clickContinue()
-            Condition.sleep(Random.nextInt(SORT_RETAP_MIN, SORT_RETAP_MAX))
-            if (Chat.canContinue()) {
-                Chat.clickContinue()
-                Condition.sleep(Random.nextInt(SORT_RETAP_MIN, SORT_RETAP_MAX))
-            }
+            handleMultipleDialogues(2, SORT_RETAP_MIN, SORT_RETAP_MAX)
             script.logger.info("HOOK: Transitioning to SORTING.")
             script.cargoHoldFull = true
-            script.currentPhase = SalvagePhase.SETUP_SORTING
+            script.currentPhase = org.powbot.om6.salvagesorter.config.SalvagePhase.SETUP_SORTING
             return true
         } else {
             script.logger.error("HOOK: No confirmation. Stopping.")
@@ -559,20 +509,13 @@ fun depositSalvage(script: SalvageSorter): Boolean {
 
     Condition.sleep(Random.nextInt(DEPOSIT_BETWEEN_TAPS_MIN, DEPOSIT_BETWEEN_TAPS_MAX))
 
-    val x1 = HOOK_SALVAGE_2_X + getRandomOffsetSmall()
-    val y1 = HOOK_SALVAGE_2_Y + getRandomOffsetSmall()
-    Input.tap(x1, y1)
-    Condition.sleep(Random.nextInt(DEPOSIT_BETWEEN_TAPS_MIN, DEPOSIT_BETWEEN_TAPS_MAX))
+    val depositTaps = listOf(
+        HOOK_SALVAGE_2_X to HOOK_SALVAGE_2_Y,
+        HOOK_SALVAGE_3_X to HOOK_SALVAGE_3_Y,
+        HOOK_SALVAGE_4_X to HOOK_SALVAGE_4_Y
+    )
 
-    val x2 = HOOK_SALVAGE_3_X + getRandomOffsetSmall()
-    val y2 = HOOK_SALVAGE_3_Y + getRandomOffsetSmall()
-    Input.tap(x2, y2)
-    Condition.sleep(Random.nextInt(DEPOSIT_BETWEEN_TAPS_MIN, DEPOSIT_BETWEEN_TAPS_MAX))
-
-    val x3 = HOOK_SALVAGE_4_X + getRandomOffsetSmall()
-    val y3 = HOOK_SALVAGE_4_Y + getRandomOffsetSmall()
-    Input.tap(x3, y3)
-    Condition.sleep(Random.nextInt(DEPOSIT_BETWEEN_TAPS_MIN, DEPOSIT_BETWEEN_TAPS_MAX))
+    executeTapSequence(script, depositTaps, 3, DEPOSIT_BETWEEN_TAPS_MIN, DEPOSIT_BETWEEN_TAPS_MAX, "DEPOSIT")
 
     val finalSalvageCount = Inventory.stream().name(script.SALVAGE_NAME).count()
     val depositedCount = (initialSalvageCount - finalSalvageCount).toInt()
@@ -606,17 +549,12 @@ fun walkToSort(script: SalvageSorter): Boolean {
     CameraSnapper.snapCameraToDirection(script.requiredTapDirection, script)
     Condition.sleep(Random.nextInt(WALKTOSORT_CAMERA_MIN, WALKTOSORT_CAMERA_MAX))
 
-    val x = 580 + getRandomOffsetLarge()
-    val y = 482 + getRandomOffsetLarge()
+    script.logger.info("WALK_SORT: Tapping walk point.")
 
-    script.logger.info("WALK_SORT: Tapping walk point at ($x, $y).")
-
-    if (!Input.tap(x, y)) {
+    if (!tapWithSleep(580, 482, 3, WALKTOSORT_WALK_MIN, WALKTOSORT_WALK_MAX)) {
         script.logger.warn("WALK_SORT: Failed to tap.")
         return false
     }
-
-    Condition.sleep(Random.nextInt(WALKTOSORT_WALK_MIN, WALKTOSORT_WALK_MAX))
 
     script.atSortLocation = true
     script.logger.info("WALK_SORT: Arrived at sort location.")
