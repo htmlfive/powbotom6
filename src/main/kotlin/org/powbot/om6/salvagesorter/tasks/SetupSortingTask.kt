@@ -1,6 +1,3 @@
-// ========================================
-// SetupSortingTask.kt
-// ========================================
 package org.powbot.om6.salvagesorter.tasks
 
 import org.powbot.om6.salvagesorter.SalvageSorter
@@ -14,7 +11,11 @@ class SetupSortingTask(script: SalvageSorter) : Task(script) {
 
     override fun execute() {
         script.logger.info("SETUP: Entering Sorting mode.")
+
+        // CRITICAL: Reset the hook location flag when entering sorting mode
         script.atHookLocation = false
+        script.logger.info("SETUP: Reset atHookLocation flag to false for next salvaging phase.")
+
         // Assign crew and move to sorting position
         val success = assignBoth(script)
 

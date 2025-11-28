@@ -249,6 +249,9 @@ class SalvageSorter : AbstractScript() {
             // --- 2. DETERMINE CURRENT STATE AND SELECT TASK ---
 
             val hasSalvageInInventory = Inventory.stream().name(SALVAGE_NAME).isNotEmpty()
+            val inventoryFull = Inventory.isFull()
+
+            logger.debug("POLL: State Check - cargoFull=$cargoHoldFull, hasSalvage=$hasSalvageInInventory, invFull=$inventoryFull, phase=$currentPhase")
 
             val nextTask: Task? = when {
                 // STATE A: SORTING PHASE (Cargo Hold is Full)
@@ -282,7 +285,8 @@ class SalvageSorter : AbstractScript() {
 
                     when {
                         // Priority 1: Deposit if inventory is full
-                        Inventory.isFull() -> {
+                        inventoryFull -> {
+                            logger.debug("STATE: Inventory full, selecting DepositCargoTask")
                             currentPhase = SalvagePhase.DEPOSITING
                             allTasks.firstOrNull { it is DepositCargoTask }
                         }
@@ -291,9 +295,11 @@ class SalvageSorter : AbstractScript() {
                         else -> {
                             val setupTask = allTasks.firstOrNull { it is SetupSalvagingTask && it.activate() }
                             if (setupTask != null) {
+                                logger.debug("STATE: Setup needed, selecting SetupSalvagingTask")
                                 setupTask
                             } else {
                                 // Priority 3: Deploy hook and salvage
+                                logger.debug("STATE: Ready to salvage, selecting DeployHookTask")
                                 currentPhase = SalvagePhase.SALVAGING
                                 allTasks.firstOrNull { it is DeployHookTask }
                             }
@@ -304,11 +310,20 @@ class SalvageSorter : AbstractScript() {
 
             // --- 3. EXECUTE SELECTED TASK ---
 
-            if (nextTask != null && nextTask.activate()) {
-                logger.info("POLL: Executing ${nextTask::class.simpleName}. Phase: ${currentPhase.name}, Mode: ${if (cargoHoldFull) "SORTING" else "SALVAGING"}")
-                nextTask.execute()
+            if (nextTask != null) {
+                val canActivate = nextTask.activate()
+                logger.debug("POLL: Selected ${nextTask::class.simpleName}, canActivate=$canActivate")
+
+                if (canActivate) {
+                    logger.info("POLL: Executing ${nextTask::class.simpleName}. Phase: ${currentPhase.name}, Mode: ${if (cargoHoldFull) "SORTING" else "SALVAGING"}")
+                    nextTask.execute()
+                } else {
+                    logger.warn("POLL: Task ${nextTask::class.simpleName} selected but activation failed. Phase=$currentPhase, Mode=${if (cargoHoldFull) "SORTING" else "SALVAGING"}")
+                    currentPhase = SalvagePhase.IDLE
+                    Condition.sleep(300)
+                }
             } else {
-                logger.debug("POLL: No task active or task activation failed. Sleeping.")
+                logger.warn("POLL: No task selected. Phase=$currentPhase, cargoFull=$cargoHoldFull, hasSalvage=$hasSalvageInInventory")
                 currentPhase = SalvagePhase.IDLE
                 Condition.sleep(300)
             }

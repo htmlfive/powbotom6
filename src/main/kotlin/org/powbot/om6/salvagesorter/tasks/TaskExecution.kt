@@ -47,8 +47,8 @@ private const val HOOK_SALVAGE_2_X = 337 // DEPOSIT STEP 1
 private const val HOOK_SALVAGE_2_Y = 374
 private const val HOOK_SALVAGE_3_X = 337 // DEPOSIT STEP 2
 private const val HOOK_SALVAGE_3_Y = 409
-private const val HOOK_SALVAGE_6_X = 505 // walk to hook
-private const val HOOK_SALVAGE_6_Y = 225
+private const val HOOK_SALVAGE_6_X = 791 // walk to hook
+private const val HOOK_SALVAGE_6_Y = 63
 
 // ----------------------------------------
 
@@ -426,10 +426,18 @@ fun assignGhost(script: SalvageSorter): Boolean {
 // ========================================
 
 fun walkToHook(script: SalvageSorter): Boolean {
-    // 1. Assign Ghost before walking to hook spot
+    // Check if we're already at the hook location
     if (script.atHookLocation) {
-        script.logger.info("WALK: Flag indicates already at Hook Location. Skipping movement.")
+        script.logger.info("WALK: Already at hook location. Skipping movement and assignment.")
         return true
+    }
+
+    script.logger.info("WALK: Not at hook location yet. Starting walk and assignment sequence.")
+
+    // 1. Assign Ghost ONCE before walking
+    if (!assignGhost(script)) {
+        script.logger.warn("WALK: Failed to assign Ghost.")
+        return false
     }
 
     val waitTime = Random.nextInt(1800, 2400)
@@ -448,13 +456,13 @@ fun walkToHook(script: SalvageSorter): Boolean {
         script.logger.warn("WALK: Failed to tap walk-to-hook point.")
         return false
     }
-    if (!assignGhost(script)) {
-        script.logger.warn("WALK: Failed to assign Ghost before walking.")
-        return false
-    }
 
     // Wait for the walking action to complete
     Condition.sleep(waitTime)
+
+    // 4. Set the flag to indicate we're now at the hook location
+    script.atHookLocation = true
+    script.logger.info("WALK: Arrived at hook location. Flag set to true.")
 
     return true
 }

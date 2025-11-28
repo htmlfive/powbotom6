@@ -6,7 +6,6 @@ import org.powbot.api.Random
 import org.powbot.om6.salvagesorter.SalvageSorter
 import org.powbot.om6.salvagesorter.config.CardinalDirection
 import org.powbot.om6.salvagesorter.config.SalvagePhase
-// Assuming CameraSnapper is in the same package or imported
 
 class CrystalExtractorTask(script: SalvageSorter) : Task(script) {
 
@@ -34,26 +33,19 @@ class CrystalExtractorTask(script: SalvageSorter) : Task(script) {
     override fun execute() {
         val isOverride = script.harvesterMessageFound
 
-        script.logger.info("ACTION: Starting Extractor Tap sequence (Override: $isOverride).")
+        // SAVE the phase BEFORE executing extractor tap
+        val phaseBeforeInterrupt = script.currentPhase
+
+        script.logger.info("ACTION: Starting Extractor Tap sequence (Override: $isOverride). Saving phase: $phaseBeforeInterrupt")
 
         if (executeExtractorTap()) {
             script.harvesterMessageFound = false
             script.extractorTimer = System.currentTimeMillis()
             script.logger.info("SUCCESS: Extractor tap complete. Timer reset.")
 
-            // FIX: If we interrupted a hook action, we MUST return to SALVAGING to re-hook.
-            if (script.hookingSalvageBool) {
-                // If we were hooking, the phase must be SALVAGING to trigger DeployHookTask next
-                script.currentPhase = SalvagePhase.SALVAGING
-                script.logger.info("PHASE: Hooking action was interrupted. Forcing transition back to SALVAGING for re-hook.")
-            } else if (script.cargoHoldFull) {
-                // Default logic if not hooking and cargo is full
-                script.currentPhase = SalvagePhase.SETUP_SORTING
-            } else {
-                // Default logic if not hooking and cargo is not full
-                script.currentPhase = SalvagePhase.SALVAGING
-            }
-            script.logger.info("PHASE: Extractor success. Transitioning to ${script.currentPhase.name}.")
+            // RESTORE the phase we were in before the interrupt
+            script.currentPhase = phaseBeforeInterrupt
+            script.logger.info("PHASE: Restored phase to $phaseBeforeInterrupt after extractor interrupt.")
 
         } else {
             script.logger.warn("FAIL: Extractor tap failed. Timer and message flag NOT reset. Will retry immediately if still active.")
@@ -98,9 +90,6 @@ class CrystalExtractorTask(script: SalvageSorter) : Task(script) {
                 Condition.sleep(waitTime)
                 return true
             }
-
-            // REMOVED BROKEN LOGIC: Do not call hookSalvage() or snap the camera again on tap failure.
-            // Let the main task loop retry the extractor tap or the hooking task.
 
             script.logger.warn("FAIL: Failed to execute Input.tap() at ($finalX, $finalY).")
             return false
