@@ -16,8 +16,8 @@ class SetupSortingTask(script: SalvageSorter) : Task(script) {
         script.atHookLocation = false
         script.logger.info("SETUP: Reset atHookLocation flag to false for next salvaging phase.")
 
-        // Assign crew and move to sorting position
-        val success = assignBoth(script)
+        // Walk to sorting position and assign crew
+        val success = walkToSort(script)
 
         if (success) {
             script.logger.info("SETUP: Setup complete. Transitioning to WITHDRAWING.")

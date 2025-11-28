@@ -8,6 +8,7 @@ import org.powbot.mobile.script.ScriptManager
 import org.powbot.om6.salvagesorter.SalvageSorter
 import org.powbot.om6.salvagesorter.config.CardinalDirection
 import org.powbot.om6.salvagesorter.config.LootConfig
+import org.powbot.om6.salvagesorter.config.SalvagePhase
 import kotlin.random.Random as KotlinRandom
 
 // --- X,Y Tap Coordinates and Constants ---
@@ -43,10 +44,12 @@ private const val SORT_BUTTON_TOLERANCEY = 10
 // hookSalvage and depositSalvage
 private const val HOOK_SALVAGE_1_X = 524 // HOOK
 private const val HOOK_SALVAGE_1_Y = 340
-private const val HOOK_SALVAGE_2_X = 337 // DEPOSIT STEP 1
-private const val HOOK_SALVAGE_2_Y = 374
-private const val HOOK_SALVAGE_3_X = 337 // DEPOSIT STEP 2
-private const val HOOK_SALVAGE_3_Y = 409
+private const val HOOK_SALVAGE_2_X = 385 // DEPOSIT STEP 1
+private const val HOOK_SALVAGE_2_Y = 365
+private const val HOOK_SALVAGE_3_X = 551 // DEPOSIT STEP 2
+private const val HOOK_SALVAGE_3_Y = 308
+private const val HOOK_SALVAGE_4_X = 570 // DEPOSIT STEP 3
+private const val HOOK_SALVAGE_4_Y = 165
 private const val HOOK_SALVAGE_6_X = 791 // walk to hook
 private const val HOOK_SALVAGE_6_Y = 63
 
@@ -170,7 +173,48 @@ fun executeWithdrawCargo(script: SalvageSorter): Long {
 
     return finalCooldownMs
 }
+//Walk to sort
+// Add this to TaskExecution.kt
 
+fun walkToSort(script: SalvageSorter): Boolean {
+    // Check if we're already at the sort location
+    if (script.atSortLocation) {
+        script.logger.info("WALK_SORT: Already at sort location. Skipping movement and assignment.")
+        return true
+    }
+
+    script.logger.info("WALK_SORT: Not at sort location yet. Starting walk and assignment sequence.")
+
+    // 1. Setup camera
+    CameraSnapper.snapCameraToDirection(script.requiredTapDirection, script)
+    Condition.sleep(Random.nextInt(600, 1200))
+
+    // 2. Walk back to sorting area
+    val x = 580 + getRandomOffsetLarge()
+    val y = 482 + getRandomOffsetLarge()
+
+    script.logger.info("WALK_SORT: Tapping walk-to-sort point at ($x, $y).")
+
+    if (!Input.tap(x, y)) {
+        script.logger.warn("WALK_SORT: Failed to tap walk-to-sort point.")
+        return false
+    }
+
+    script.logger.info("WALK_SORT: Tapped. Waiting for walk back.")
+    Condition.sleep(Random.nextInt(1800, 2400))
+
+    // 3. Assign both crew members
+    if (!assignBoth(script)) {
+        script.logger.warn("WALK_SORT: Failed to assign crew.")
+        return false
+    }
+
+    // 4. Set the flag to indicate we're now at the sort location
+    script.atSortLocation = true
+    script.logger.info("WALK_SORT: Arrived at sort location. Flag set to true.")
+
+    return true
+}
 // ========================================
 // SORTING FUNCTIONS
 // ========================================
@@ -514,14 +558,38 @@ fun hookSalvage(script: SalvageSorter): Boolean {
         script.salvageMessageFound = false
 
         // Wait until salvage message is found, inventory is full, OR extractor interrupts
-        script.logger.info("HOOK: Waiting for salvage complete message or inventory to fill.")
+        script.logger.info("HOOK: Waiting for salvage complete message, inventory to fill, or dialogue.")
         while (!script.salvageMessageFound && !Inventory.isFull()) {
+
+            // CRITICAL: Check for canContinue FIRST (shipwreck depleted dialogue)
+            if (Chat.canContinue()) {
+                script.logger.warn("HOOK: Dialogue detected (Chat.canContinue()). Shipwreck likely depleted.")
+
+                // Click through the dialogue
+                Chat.clickContinue()
+                Condition.sleep(Random.nextInt(500, 800))
+
+                // Check again in case there are multiple dialogue boxes
+                if (Chat.canContinue()) {
+                    Chat.clickContinue()
+                    Condition.sleep(Random.nextInt(500, 800))
+                }
+
+                // TRANSITION TO SORTING PHASE
+                script.logger.info("HOOK: Transitioning to SORTING phase (shipwreck depleted).")
+                script.cargoHoldFull = true // Signal that we need to sort now
+                script.currentPhase = SalvagePhase.SETUP_SORTING
+                script.hookingSalvageBool = false
+
+                // Return true since we handled the situation
+                return true
+            }
 
             // Crystal Harvester Interrupt Check (tap and reset timer if active)
             if (extractorTask.checkAndExecuteInterrupt(script)) {
                 script.logger.info("HOOK: Extractor interrupt executed during hook wait. Returning false to force a re-hook.")
 
-                // NEW LOGIC: Reset flag on interrupt
+                // Reset flag on interrupt
                 script.hookingSalvageBool = false
 
                 // Returning false breaks the hook action and the script will retry DeployHookTask
@@ -531,7 +599,7 @@ fun hookSalvage(script: SalvageSorter): Boolean {
             Condition.sleep(Random.nextInt(1000, 3000))
         }
 
-        // NEW LOGIC: Reset flag after wait is complete
+        // Reset flag after wait is complete
         script.hookingSalvageBool = false
 
         script.logger.info("HOOK: Wait condition met (Salvage complete or Inventory full). Returning success.")
@@ -541,15 +609,24 @@ fun hookSalvage(script: SalvageSorter): Boolean {
         script.hookingSalvageBool = false
 
         if (Chat.canContinue()) {
-            // Dialogue interrupted - sleep through it
-            script.logger.info("HOOK: Dialogue interrupted action. Sleeping through dialogue.")
-            val sleepBetween = 5
-            var count = 0
-            while (count < sleepBetween) {
-                Condition.sleep(Random.nextInt(1000, 2000))
-                count++
+            // Dialogue appeared before hook even started - could be shipwreck depleted
+            script.logger.warn("HOOK: Dialogue appeared before hook confirmation. Checking if shipwreck depleted.")
+
+            // Click through dialogue
+            Chat.clickContinue()
+            Condition.sleep(Random.nextInt(500, 800))
+
+            if (Chat.canContinue()) {
+                Chat.clickContinue()
+                Condition.sleep(Random.nextInt(500, 800))
             }
-            return false
+
+            // TRANSITION TO SORTING PHASE
+            script.logger.info("HOOK: Transitioning to SORTING phase (dialogue before hook start).")
+            script.cargoHoldFull = true
+            script.currentPhase = SalvagePhase.SETUP_SORTING
+
+            return true
         } else {
             // No message and no dialogue - critical failure
             script.logger.error("HOOK: No confirmation message received and no dialogue found. Stopping.")
@@ -568,27 +645,37 @@ fun depositSalvage(script: SalvageSorter): Boolean {
         .name(script.SALVAGE_NAME)
         .count()
     script.logger.info("DEPOSIT: Initial salvage count: $initialSalvageCount")
-    Game.setSingleTapToggle(enabled = true)
-    Condition.sleep(Random.nextInt(700, 1100))
+
+    Condition.sleep(Random.nextInt(1200, 1800))
     // 2. Tap DEPOSIT STEP 1
     val x1 = HOOK_SALVAGE_2_X + getRandomOffsetSmall()
     val y1 = HOOK_SALVAGE_2_Y + getRandomOffsetSmall()
     script.logger.info("DEPOSIT: Tapping Deposit Step 1 at ($x1, $y1).")
     Input.tap(x1, y1)
-    Condition.sleep(waitTime)
+    Condition.sleep(Random.nextInt(1200, 1800))
 
     // 3. Tap DEPOSIT STEP 2
     val x2 = HOOK_SALVAGE_3_X + getRandomOffsetSmall()
     val y2 = HOOK_SALVAGE_3_Y + getRandomOffsetSmall()
     script.logger.info("DEPOSIT: Tapping Deposit Step 2 at ($x2, $y2).")
     Input.tap(x2, y2)
-    Condition.sleep(Random.nextInt(700, 1100))
-    Game.setSingleTapToggle(enabled = false)
+    Condition.sleep(Random.nextInt(1200, 1800))
+
+
+    // 3. Tap DEPOSIT STEP 3
+    val x3 = HOOK_SALVAGE_4_X + getRandomOffsetSmall()
+    val y3 = HOOK_SALVAGE_4_Y + getRandomOffsetSmall()
+    script.logger.info("DEPOSIT: Tapping Deposit Step 2 at ($x3, $y3).")
+    Input.tap(x3, y3)
+    Condition.sleep(Random.nextInt(1200, 1800))
+
+
     // 4. Get final inventory count after deposit attempt
     val finalSalvageCount = Inventory.stream()
         .name(script.SALVAGE_NAME)
         .count()
     script.logger.info("DEPOSIT: Final salvage count: $finalSalvageCount")
+
 
     // 5. Determine if deposit was successful and update state
     if (finalSalvageCount < initialSalvageCount) {

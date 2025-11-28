@@ -1,6 +1,3 @@
-// ========================================
-// WithdrawCargoTask.kt
-// ========================================
 package org.powbot.om6.salvagesorter.tasks
 
 import org.powbot.api.rt4.Inventory
@@ -62,10 +59,14 @@ class WithdrawCargoTask(script: SalvageSorter) : Task(script) {
                 script.logger.warn("WITHDRAW: No items withdrawn. Cargo may be empty.")
             }
         } else {
-            // Withdrawal failed - cargo must be empty
-            script.logger.warn("WITHDRAW: Withdrawal failed. Cargo hold is empty.")
+            // Withdrawal failed - cargo must be empty, transition back to salvaging
+            script.logger.warn("WITHDRAW: Withdrawal failed. Cargo hold is empty. Transitioning to SALVAGING mode.")
             script.cargoHoldFull = false // Cargo is now empty, switch to salvaging
             script.currentWithdrawCooldownMs = 0L
+
+            // Transition to SETUP_SALVAGING to walk back to hook and start salvaging again
+            script.currentPhase = SalvagePhase.SETUP_SALVAGING
+            script.logger.info("WITHDRAW: Set phase to SETUP_SALVAGING to return to salvaging.")
         }
     }
 }
