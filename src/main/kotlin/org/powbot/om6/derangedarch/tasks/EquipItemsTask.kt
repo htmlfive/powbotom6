@@ -5,6 +5,7 @@ import org.powbot.api.rt4.Equipment
 import org.powbot.api.rt4.Inventory
 import org.powbot.om6.derangedarch.DerangedArchaeologistMagicKiller
 import org.powbot.om6.derangedarch.Helpers
+import java.util.logging.Logger
 
 class EquipItemsTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
     
@@ -64,7 +65,7 @@ class EquipItemsTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
                 // Use helper function to equip
                 Helpers.equipItem(
                     item = itemToEquip,
-                    logger = script.logger,
+                    logger = script.logger as Logger,
                     verifyCondition = { Equipment.itemAt(targetSlot).id() == itemToEquip.id() }
                 )
             }
