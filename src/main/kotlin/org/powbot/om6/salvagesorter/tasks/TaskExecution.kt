@@ -449,13 +449,29 @@ fun hookSalvage(script: SalvageSorter): Boolean {
     Condition.sleep(mainWait)
 
     script.hookCastMessageFound = false
+    closeTabWithSleep(HOOK_TAB_CLOSE_MIN, HOOK_TAB_CLOSE_MAX)
 
-    script.logger.info("HOOK: Tapping hook.")
-    tapWithOffset(HOOK_SALVAGE_1_X, HOOK_SALVAGE_1_Y, 3)
+    // Try tapping hook up to 3 times before giving up
+    var messageFound = false
+    for (attempt in 1..3) {
+        script.logger.info("HOOK: Tapping hook (Attempt $attempt/3).")
+        tapWithOffset(HOOK_SALVAGE_1_X, HOOK_SALVAGE_1_Y, 3)
 
-    val messageFound = Condition.wait({ script.hookCastMessageFound }, 30, 120)
+        messageFound = Condition.wait({ script.hookCastMessageFound }, 30, 120)
+
+        if (messageFound) {
+            script.logger.info("HOOK: Cast message confirmed on attempt $attempt.")
+            break
+        }
+
+        if (attempt < 3) {
+            script.logger.warn("HOOK: No confirmation on attempt $attempt. Retrying...")
+            Condition.sleep(Random.nextInt(1200, 1800))
+        }
+    }
 
     if (messageFound) {
+        ensureInventoryOpen(HOOK_TAB_OPEN_MIN, HOOK_TAB_OPEN_MAX)
 
         script.logger.info("HOOK: Success. Waiting for inventory to fill...")
         script.hookingSalvageBool = true
