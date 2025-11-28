@@ -178,7 +178,7 @@ class SalvageSorter : AbstractScript() {
         currentPhase = SalvagePhase.IDLE
 
 // Check if the user wants to start in SORTING mode (or if inventory is full)
-        val startInSortingMode = false // <-- You can make this a configuration option later
+        val startInSortingMode = true // <-- You can make this a configuration option later
 
         if (startInSortingMode) {
             this.logger.info("INIT: Forcing initial phase to SETUP_SORTING (User request).")
@@ -255,7 +255,9 @@ class SalvageSorter : AbstractScript() {
             logger.debug("POLL: State Check - cargoFull=$cargoHoldFull, hasSalvage=$hasSalvageInInventory, invFull=$inventoryFull, phase=$currentPhase")
 
             val nextTask: Task? = when {
-                // STATE A: SORTING PHASE (Cargo Hold is Full)
+                // Replace your poll() STATE A (SORTING PHASE) section with this:
+
+// STATE A: SORTING PHASE (Cargo Hold is Full OR in process of emptying)
                 cargoHoldFull -> {
                     logger.debug("STATE: SORTING PHASE (cargoHoldFull=true)")
 
@@ -283,32 +285,40 @@ class SalvageSorter : AbstractScript() {
                     }
                 }
 
-                // STATE B: SALVAGING PHASE (Cargo Hold is Not Full)
+// STATE B: SALVAGING PHASE (Cargo Hold is Not Full - ready to salvage)
                 else -> {
                     logger.debug("STATE: SALVAGING PHASE (cargoHoldFull=false)")
 
                     when {
-                        // Priority 1: Deposit if inventory is full
+                        // Priority 1: If we're at sort location but cargo is empty, need to transition to salvaging
+                        atSortLocation -> {
+                            logger.debug("STATE: At sort location but cargo empty, transitioning to SETUP_SALVAGING")
+                            currentPhase = SalvagePhase.SETUP_SALVAGING
+                            allTasks.firstOrNull { it is SetupSalvagingTask }
+                        }
+
+                        // Priority 2: Deposit if inventory is full
                         inventoryFull -> {
                             logger.debug("STATE: Inventory full, selecting DepositCargoTask")
                             currentPhase = SalvagePhase.DEPOSITING
                             allTasks.firstOrNull { it is DepositCargoTask }
                         }
 
-                        // Priority 2: Setup camera/position if needed before deploying hook
+                        // Priority 3: Setup camera/position if needed before deploying hook
                         else -> {
                             val setupTask = allTasks.firstOrNull { it is SetupSalvagingTask && it.activate() }
                             if (setupTask != null) {
                                 logger.debug("STATE: Setup needed, selecting SetupSalvagingTask")
                                 setupTask
                             } else {
-                                // Priority 3: Deploy hook and salvage
+                                // Priority 4: Deploy hook and salvage
                                 logger.debug("STATE: Ready to salvage, selecting DeployHookTask")
                                 currentPhase = SalvagePhase.SALVAGING
                                 allTasks.firstOrNull { it is DeployHookTask }
                             }
                         }
                     }
+
                 }
             }
 

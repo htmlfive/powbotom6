@@ -56,7 +56,8 @@ class WithdrawCargoTask(script: SalvageSorter) : Task(script) {
                     // Still have salvage to sort - go back to sorting what we have
                     script.logger.info("WITHDRAW: Still have salvage. Going to SORTING_LOOT to finish.")
                     script.currentPhase = SalvagePhase.SORTING_LOOT
-                    // Keep cargoHoldFull = true so we stay in sorting loop until inventory is clear
+                    // CRITICAL: Set cargoHoldFull = false so after sorting we transition to salvaging
+                    script.cargoHoldFull = false
                 } else {
                     // No salvage left - transition back to salvaging immediately
                     script.logger.info("WITHDRAW: No salvage left. Transitioning to SETUP_SALVAGING.")
