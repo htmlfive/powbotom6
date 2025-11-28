@@ -2,6 +2,7 @@ package org.powbot.om6.derangedarch.tasks
 
 import org.powbot.api.Condition
 import org.powbot.api.rt4.*
+import org.powbot.dax.teleports.Teleport
 import org.powbot.mobile.script.ScriptManager
 import org.powbot.om6.derangedarch.Constants
 import org.powbot.om6.derangedarch.DerangedArchaeologistMagicKiller
@@ -24,40 +25,13 @@ class WalkToBankTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
         val isEmergency = script.emergencyTeleportJustHappened
         script.logger.info(if (isEmergency) "Emergency recovery: teleporting to bank" else "Teleporting to bank")
 
-        val duelRing = Inventory.stream().nameContains(Constants.DUELING_RING_NAME_CONTAINS).firstOrNull()
-
-        if (duelRing == null || !duelRing.valid()) {
-            script.logger.warn("FATAL: No Ring of Dueling found. Stopping.")
+        if (!Teleport.RING_OF_DUELING_FEROX_ENCLAVE.trigger()) {
+            script.logger.warn("FATAL: Failed to teleport to Ferox Enclave. Stopping.")
             ScriptManager.stop()
             return
         }
 
-        if (!duelRing.interact("Rub")) {
-            script.logger.warn("Failed to rub Ring of Dueling")
-            return
-        }
-
-        if (!Condition.wait({ Widgets.widget(Constants.DUELING_RING_WIDGET_ID).valid() }, 200, 15)) {
-            script.logger.warn("Dueling Ring widget did not appear")
-            return
-        }
-
-        val enclaveOption = Widgets.widget(Constants.DUELING_RING_WIDGET_ID)
-            .component(Constants.OPTIONS_CONTAINER_COMPONENT)
-            .component(Constants.FEROX_ENCLAVE_OPTION_INDEX)
-
-        if (!enclaveOption.valid() || !enclaveOption.click()) {
-            script.logger.warn("Could not click Ferox Enclave option")
-            return
-        }
-
-        if (!Condition.wait({ Players.local().tile().distanceTo(Constants.FEROX_ENTRANCE_TILE) < 6 }, 300, 15)) {
-            script.logger.warn("Did not arrive at Ferox Enclave")
-            return
-        }
-
-        script.logger.info("Arrived at Ferox, walking to bank")
-        Movement.walkTo(Constants.FEROX_BANK_TILE)
+        Condition.wait({ Constants.FEROX_BANK_AREA.contains(Players.local()) }, 200, 30)
 
         if (isEmergency) {
             if (Condition.wait({ Constants.FEROX_BANK_AREA.contains(Players.local()) }, 200, 30)) {
