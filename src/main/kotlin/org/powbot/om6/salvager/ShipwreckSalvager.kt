@@ -150,10 +150,8 @@ class ShipwreckSalvager : AbstractScript() {
         if (change.messageType == MessageType.Game) {
             logger.info("EVENT: Game Message received: ${change.message}")
             if (change.message.contains(SALVAGE_COMPLETE_MESSAGE) || change.message.contains(SALVAGE_SUCCESS_MESSAGE)) {
-                logger.info("EVENT: Salvage SUCCESS message detected via EventBus! Message: ${change.message}")
-                salvageMessageFound = true
-                startTile = Players.local().tile()
-                logger.info("LOGIC: Updated startTile after dialogue to: $startTile")
+                    logger.info("EVENT: Salvage SUCCESS message detected via EventBus! Message: ${change.message}")
+                    salvageMessageFound = true
 
                 currentPhase = SalvagePhase.DROPPING_SALVAGE
                 phaseStartTime = System.currentTimeMillis()
