@@ -2,9 +2,9 @@ package org.powbot.om6.derangedarch.tasks
 
 import org.powbot.api.Condition
 import org.powbot.api.rt4.*
-import org.powbot.mobile.script.ScriptManager
 import org.powbot.om6.derangedarch.Constants
 import org.powbot.om6.derangedarch.DerangedArchaeologistMagicKiller
+import org.powbot.om6.derangedarch.utils.ScriptUtils
 
 class EmergencyTeleportTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
     private var reason = ""
@@ -20,7 +20,7 @@ class EmergencyTeleportTask(script: DerangedArchaeologistMagicKiller) : Task(scr
             return false
         }
 
-        val inFightArea = Players.local().tile().distanceTo(Constants.BOSS_TRIGGER_TILE) <= 8
+        val inFightArea = Players.local().tile().distanceTo(Constants.BOSS_TRIGGER_TILE) <= Constants.FIGHT_AREA_DISTANCE
         if (!inFightArea) {
             script.logger.debug("Validate FAIL: Not in fight area.")
             return false
@@ -28,7 +28,8 @@ class EmergencyTeleportTask(script: DerangedArchaeologistMagicKiller) : Task(scr
 
         val needsResupply = script.needsTripResupply()
         val lowHp = Combat.healthPercent() < script.config.emergencyHpPercent
-        val lowPrayerNoPots = Prayer.prayerPoints() < 10 && Inventory.stream().nameContains("Prayer potion").isEmpty()
+        val lowPrayerNoPots = Prayer.prayerPoints() < Constants.CRITICAL_PRAYER_THRESHOLD &&
+                Inventory.stream().nameContains(Constants.PRAYER_POTION_NAME_CONTAINS).isEmpty()
 
         script.logger.debug("EmergencyCheck: lowHp=$lowHp (${Combat.healthPercent()}% < ${script.config.emergencyHpPercent}%), lowPrayerNoPots=$lowPrayerNoPots, needsResupply=$needsResupply")
 
@@ -36,7 +37,7 @@ class EmergencyTeleportTask(script: DerangedArchaeologistMagicKiller) : Task(scr
         if (lowHp) reason = "HP is critical (${Combat.healthPercent()}%)"
         else if (lowPrayerNoPots) reason = "Prayer is critical and out of potions"
         else if (needsResupply) {
-            if (Inventory.stream().nameContains("Prayer potion").isEmpty()) reason = "Out of prayer potions"
+            if (Inventory.stream().nameContains(Constants.PRAYER_POTION_NAME_CONTAINS).isEmpty()) reason = "Out of prayer potions"
             else if (Inventory.stream().name(script.config.foodName).isEmpty()) reason = "Out of food"
             else reason = "Needs resupply (unknown)"
         }
@@ -55,8 +56,7 @@ class EmergencyTeleportTask(script: DerangedArchaeologistMagicKiller) : Task(scr
 
         val teleport = script.teleportOptions[script.config.emergencyTeleportItem]
         if (teleport == null) {
-            script.logger.warn("FATAL: Invalid emergency teleport option configured: ${script.config.emergencyTeleportItem}. Stopping.")
-            ScriptManager.stop()
+            ScriptUtils.stopScript("Invalid emergency teleport option configured: ${script.config.emergencyTeleportItem}.", script)
             return
         }
 
@@ -67,15 +67,13 @@ class EmergencyTeleportTask(script: DerangedArchaeologistMagicKiller) : Task(scr
             if (teleItem.interact(teleport.interaction)) {
                 script.logger.debug("Teleport interaction sent. Setting emergency flag to TRUE.")
                 script.emergencyTeleportJustHappened = true
-
                 script.logger.debug("Waiting for teleport success condition...")
                 Condition.wait(teleport.successCondition, 300, 20)
             } else {
                 script.logger.warn("Failed to interact with teleport item: ${teleport.itemNameContains}")
             }
         } else {
-            script.logger.warn("FATAL: No '${teleport.itemNameContains}' found in inventory to escape! Stopping script.")
-            ScriptManager.stop()
+            ScriptUtils.stopScript("No '${teleport.itemNameContains}' found in inventory to escape!", script)
         }
     }
 }

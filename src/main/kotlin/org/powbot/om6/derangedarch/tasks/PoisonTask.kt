@@ -1,38 +1,35 @@
 package org.powbot.om6.derangedarch.tasks
 
 import org.powbot.api.Condition
-import org.powbot.api.rt4.Combat
-import org.powbot.api.rt4.Inventory
-import org.powbot.api.rt4.Players
+import org.powbot.api.rt4.*
 import org.powbot.om6.derangedarch.Constants
 import org.powbot.om6.derangedarch.DerangedArchaeologistMagicKiller
+import org.powbot.om6.derangedarch.utils.ScriptUtils
 
-class CurePoisonTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
+class PoisonTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
 
     override fun validate(): Boolean {
-        val inFightArea = Players.local().tile().distanceTo(Constants.BOSS_TRIGGER_TILE) <= 9
-        val isPoisoned = Combat.isPoisoned()
-        
-        val shouldRun = inFightArea && isPoisoned
-        
-        if (shouldRun) {
-            script.logger.debug("Validate OK: Player is poisoned in fight area")
+        val inFightArea = Players.local().tile().distanceTo(Constants.BOSS_TRIGGER_TILE) <= Constants.FIGHT_AREA_EXTENDED
+        val boss = script.getBoss()
+        val needsResupply = script.needsTripResupply()
+
+        if (boss == null || !inFightArea || needsResupply) {
+            return false
         }
-        
-        return shouldRun
+
+        return ScriptUtils.isPoisoned()
     }
 
     override fun execute() {
-        script.logger.debug("Executing CurePoisonTask...")
+        script.logger.debug("Executing PoisonTask...")
         script.logger.info("Player is poisoned. Looking for antipoison...")
-        
-        val antipoison = Inventory.stream().name(*Constants.ANTIPOISON_NAMES.toTypedArray()).first()
-        
+
+        val antipoison = ScriptUtils.getAntipoison()
+
         if (antipoison.valid()) {
             script.logger.info("Found ${antipoison.name()}. Drinking...")
-            
-            if (antipoison.interact("Drink")) {
-                val waitSuccess = Condition.wait({ !Combat.isPoisoned() }, 300, 10)
+            if (antipoison.interact(Constants.DRINK_ACTION)) {
+                val waitSuccess = Condition.wait({ !ScriptUtils.isPoisoned() }, 300, 10)
                 if (waitSuccess) {
                     script.logger.info("Successfully cured poison.")
                 } else {

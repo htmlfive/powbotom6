@@ -7,12 +7,13 @@ import org.powbot.api.rt4.*
 import org.powbot.mobile.script.ScriptManager
 import org.powbot.om6.derangedarch.Constants
 import org.powbot.om6.derangedarch.DerangedArchaeologistMagicKiller
+import org.powbot.om6.derangedarch.utils.ScriptUtils
 
 class FightTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
 
     override fun validate(): Boolean {
         val boss = script.getBoss()
-        val inFightArea = Players.local().tile().distanceTo(Constants.BOSS_TRIGGER_TILE) <= Constants.DISTANCETOBOSS
+        val inFightArea = Players.local().tile().distanceTo(Constants.BOSS_TRIGGER_TILE) <= Constants.FIGHT_AREA_EXTENDED
         val needsResupply = script.needsTripResupply()
 
         if (boss != null && inFightArea) {
@@ -38,6 +39,8 @@ class FightTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
     }
 
     override fun execute() {
+        script.logger.debug("Executing FightTask...")
+
         val boss = script.getBoss() ?: return
         val bossTarget = boss.interacting()
         if (bossTarget is Player && bossTarget != Players.local()) {
@@ -46,9 +49,7 @@ class FightTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
             return
         }
 
-        script.logger.debug("Executing FightTask...")
-
-        if (boss.distance() < 2) {
+        if (boss.distance() < Constants.BOSS_CLOSE_DISTANCE) {
             script.logger.debug("Too close to boss, finding a safe spot to step back.")
             val playerTile = Players.local().tile()
             val searchRadius = 5
@@ -56,27 +57,20 @@ class FightTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
             val northEastTile = Tile(playerTile.x() + searchRadius, playerTile.y() + searchRadius, playerTile.floor())
             val searchArea = Area(southWestTile, northEastTile)
 
-            val safeSpot = searchArea.tiles.filter { Movement.reachable(playerTile, it) && it.distanceTo(boss) >= 2 }.randomOrNull()
+            val safeSpot = searchArea.tiles.filter {
+                Movement.reachable(playerTile, it) && it.distanceTo(boss) >= Constants.BOSS_CLOSE_DISTANCE
+            }.randomOrNull()
 
             if (safeSpot != null) {
                 script.logger.debug("Stepping to safe spot: $safeSpot")
                 Movement.step(safeSpot)
-                Condition.wait({ boss.valid() && boss.distance() >= 2 }, 100, 10)
+                Condition.wait({ boss.valid() && boss.distance() >= Constants.BOSS_CLOSE_DISTANCE }, 100, 10)
                 return
             } else {
                 script.logger.warn("Could not find a safe spot to step back to.")
             }
         }
 
-        if (Players.local().interacting() != boss) {
-            script.logger.info("Not interacting with boss, attempting to attack.")
-            if (!boss.inViewport()) {
-                script.logger.debug("Boss not in viewport, turning camera.")
-                Camera.turnTo(boss)
-            }
-            if (boss.interact("Attack")) {
-                Condition.wait({ Players.local().interacting() == boss }, 150, 10)
-            }
-        }
+        ScriptUtils.attackBoss(boss, script)
     }
 }

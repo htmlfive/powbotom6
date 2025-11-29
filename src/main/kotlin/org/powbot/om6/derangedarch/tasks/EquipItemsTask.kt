@@ -3,18 +3,15 @@ package org.powbot.om6.derangedarch.tasks
 import org.powbot.api.rt4.Bank
 import org.powbot.api.rt4.Equipment
 import org.powbot.api.rt4.Inventory
+import org.powbot.om6.derangedarch.Constants
 import org.powbot.om6.derangedarch.DerangedArchaeologistMagicKiller
-import org.powbot.om6.derangedarch.Helpers
-import java.util.logging.Logger
+import org.powbot.om6.derangedarch.utils.ScriptUtils
 
 class EquipItemsTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
-    
     override fun validate(): Boolean {
         if (Bank.opened()) return false
-        
         val requiredEquipmentIds = script.config.requiredEquipment.keys
-        
-        // Check if any required item is in the inventory and not currently equipped correctly
+
         val needsToEquip = Inventory.stream().any { invItem ->
             val requiredId = invItem.id()
             if (requiredId in requiredEquipmentIds) {
@@ -41,7 +38,6 @@ class EquipItemsTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
     override fun execute() {
         script.logger.info("Equipping required gear from inventory...")
         script.logger.debug("Executing EquipItemsTask...")
-        
         val requiredEquipmentMap = script.config.requiredEquipment
 
         Inventory.stream()
@@ -52,22 +48,15 @@ class EquipItemsTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
                     script.logger.warn("Skipping ${itemToEquip.name()}: Could not find target slot in configuration.")
                     return@forEach
                 }
-                
                 val targetSlot = Equipment.Slot.values()[targetSlotIndex]
                 val currentlyEquippedItem = Equipment.itemAt(targetSlot)
 
-                // Skip if already equipped
                 if (currentlyEquippedItem.id() == itemToEquip.id()) {
                     script.logger.debug("Skipping ${itemToEquip.name()}: Correct item already equipped in slot $targetSlot.")
                     return@forEach
                 }
 
-                // Use helper function to equip
-                Helpers.equipItem(
-                    item = itemToEquip,
-                    logger = script.logger as Logger,
-                    verifyCondition = { Equipment.itemAt(targetSlot).id() == itemToEquip.id() }
-                )
+                ScriptUtils.equipItem(itemToEquip, targetSlot, script)
             }
     }
 }

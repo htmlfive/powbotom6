@@ -2,25 +2,56 @@ package org.powbot.om6.derangedarch
 
 import org.powbot.api.Area
 import org.powbot.api.Tile
+import org.powbot.api.rt4.Prayer
 
 object Constants {
-    // Boss
+    // --- NPC & Boss ---
     const val ARCHAEOLOGIST_ID = 7806
-    val BOSS_TRIGGER_TILE = Tile(3683, 3705, 0)
-    val DISTANCETOBOSS = 10
+    const val BOSS_NAME = "Deranged archaeologist"
 
-    // Areas
-    val FEROX_BANK_AREA = Area(Tile(3125, 3625, 0), Tile(3145, 3635, 0))
-    val FEROX_POOL_AREA = Area(Tile(3136, 3634, 0), Tile(3138, 3636, 0))
-    val FEROX_TELEPORT_TILE = Tile(3150, 3637, 0)
-    // Pool
+    // --- Locations ---
+    val BOSS_TRIGGER_TILE = Tile(3683, 3707, 0)
+    val FEROX_BANK_AREA = Area(Tile(3123, 3623, 0), Tile(3143, 3643, 0))
+    val FEROX_POOL_AREA = Area(Tile(3128, 3637), Tile(3130, 3634))
+    val FEROX_ENTRANCE_TILE = Tile(3151, 3635, 0)
+    val FEROX_BANK_TILE = Tile(3135, 3631, 0)
+
+    // --- Objects ---
     const val POOL_OF_REFRESHMENT_ID = 39651
+    const val MAGIC_MUSHTREE_ID = 30920
+    const val SECOND_MUSHTREE_ID = 30924
+    const val TRUNK_NAME = "Decaying trunk"
+    const val THICK_VINE_NAME = "Thick vine"
 
-    // Special Attack
-    const val SPECIAL_ATTACK_PROJECTILE = 1440
+    // --- Prayer ---
+    val REQUIRED_PRAYER = Prayer.Effect.PROTECT_FROM_MISSILES
+    const val LOW_PRAYER_THRESHOLD = 30
+    const val CRITICAL_PRAYER_THRESHOLD = 10
+
+    // --- Special Attack ---
+    const val SPECIAL_ATTACK_PROJECTILE = 1260
     const val SPECIAL_ATTACK_TEXT = "Learn to Read!"
 
-    // Dodge Configuration
+    // --- Widgets ---
+    const val DUELING_RING_WIDGET_ID = 219
+    const val DUELING_RING_OPTIONS_COMPONENT = 1
+    const val DUELING_RING_FEROX_OPTION = 3
+
+    const val PENDANT_WIDGET_ID = 219
+    const val PENDANT_FOSSIL_ISLAND_COMPONENT = 1
+    const val PENDANT_FOSSIL_ISLAND_OPTION = 2
+
+    const val MUSHTREE_INTERFACE_ID = 608
+    const val MUSHTREE_SWAMP_OPTION_COMPONENT = 12
+
+    // --- Travel Tiles ---
+    val FIRST_MUSHTREE_TILE = Tile(3764, 3879, 1)
+    val VINE_OBJECT_TILE = Tile(3680, 3743, 0)
+    val POST_VINE_STEP_TILE = Tile(3680, 3725, 0)
+    val TRUNK_SAFE_TILE = Tile(3683, 3717, 0)
+    val REPOSITION_TILE = Tile(3688, 3705, 0)
+
+    // --- Dodge Tiles ---
     val DODGE_TILES = listOf(
         Tile(3683, 3703, 0),
         Tile(3687, 3706, 0),
@@ -28,48 +59,40 @@ object Constants {
         Tile(3678, 3706, 0)
     )
 
-
+    // --- Distances ---
+    const val FIGHT_AREA_DISTANCE = 8
+    const val FIGHT_AREA_EXTENDED = 9
+    const val BOSS_CLOSE_DISTANCE = 2
     const val PROJECTILE_DANGER_DISTANCE = 1.0
+    const val MIN_DODGE_DISTANCE = 5.0
+    const val MIN_DODGE_ANGLE_DIFFERENCE = 25.0
     const val MAX_DODGE_ATTEMPTS = 10
-    const val MIN_DODGE_ANGLE_DIFFERENCE = 25.0 // Min angle diff to "not walk through boss"
-    const val MIN_DODGE_DISTANCE = 5.0 // --- NEW: Minimum distance to dodge ---
 
-    // Repositioning
-    val REPOSITION_TILE = Tile(3711, 3357, 0)
+    // --- Camera ---
+    const val MIN_PITCH = 85
+    const val MAX_PITCH = 99
+    const val TARGET_PITCH = 92
 
-    // Camera
-    const val MIN_PITCH = 50
-    const val MAX_PITCH = 90
-    const val TARGET_PITCH = 75
+    // --- Item Ranges ---
+    val DUELING_RING_ID_RANGE = 2552..2566
+    val KEEP_DUELING_RING_IDS = (2552..2564 step 2).toList()
+    val DIGSITE_PENDANT_ID_RANGE = 11190..11194
+    val KEEP_DIGSITE_PENDANT_IDS = (11191..11194).toList()
 
-    // Travel - Fossil Island
-    const val MAGIC_MUSHTREE_ID = 30920
-    const val SECOND_MUSHTREE_ID = 30924
-    const val ROCK_FALL_ID = 31085
-    val FIRST_MUSHTREE_TILE = Tile(3764, 3879, 1)
-    val VINE_OBJECT_TILE = Tile(3680, 3743, 0)
-    val POST_VINE_STEP_TILE = Tile(3680, 3725, 0)
-    val TRUNK_SAFE_TILE = Tile(3683, 3717, 0)
-    const val TRUNK_NAME = "Decaying trunk"
-    const val CLIMB_ACTION = "Climb"
-
-    // Widgets
-    const val PENDANT_WIDGET_ID = 219
-    const val PENDANT_FOSSIL_ISLAND_COMPONENT = 1
-    const val PENDANT_FOSSIL_ISLAND_OPTION_INDEX = 2
-    const val MUSHTREE_INTERFACE_ID = 608
-    const val MUSHTREE_SWAMP_OPTION_COMPONENT = 12
-
-    // Item preservation
-    const val PRAYER_POTION_4_ID = 2434
-    val KEEP_DUELING_RING_IDS = (2552..2566).toList()
-    val KEEP_DIGSITE_PENDANT_IDS = (11190..11194).toList()
+    // --- Item Names ---
     const val DUELING_RING_NAME_CONTAINS = "Ring of dueling"
     const val DIGSITE_PENDANT_NAME_CONTAINS = "Digsite pendant"
     const val PRAYER_POTION_NAME_CONTAINS = "Prayer potion"
+    const val AXE_NAME_SUFFIX = "axe"
+    const val RUNE_NAME_SUFFIX = " rune"
+    const val BONES_NAME = "Bones"
 
-    // Antipoison
-    val ANTIPOISON_NAMES = listOf(
+    // --- Specific Item IDs ---
+    const val PRAYER_POTION_4_ID = 2434
+    const val EMPTY_VIAL_ID = 229
+
+    // --- Antipoison Names ---
+    val ANTIPOISON_NAMES = setOf(
         "Antipoison(1)", "Antipoison(2)", "Antipoison(3)", "Antipoison(4)",
         "Superantipoison(1)", "Superantipoison(2)", "Superantipoison(3)", "Superantipoison(4)",
         "Antidote+ (1)", "Antidote+ (2)", "Antidote+ (3)", "Antidote+ (4)",
@@ -77,52 +100,19 @@ object Constants {
         "Sanfew serum (1)", "Sanfew serum (2)", "Sanfew serum (3)", "Sanfew serum (4)"
     )
 
-    // Boss loot item IDs for GE price caching
-    val BOSS_LOOT_IDS = listOf(
-        11978, // Steel ring
-        2503,  // Black d'hide body
-        1319,  // Rune 2h sword
-        1333,  // Rune sword
-        555,   // Water rune
-        4698,  // Mud rune
-        868,   // Rune knife
-        11212, // Dragon arrow
-        2,     // Cannonball
-        5295,  // Ranarr seed
-        5300,  // Snapdragon seed
-        5304,  // Torstol seed
-        5321,  // Watermelon seed
-        5313,  // Willow seed
-        21488, // Mahogany seed
-        5316,  // Maple seed
-        21486, // Teak seed
-        5315,  // Yew seed
-        5288,  // Papaya tree seed
-        5319,  // Magic seed
-        5289,  // Palm tree seed
-        5317,  // Spirit seed
-        22877, // Dragonfruit tree seed
-        22869, // Celastrus seed
-        22871, // Redwood tree seed
-        217,   // Grimy dwarf weed
-        239,   // White berries
-        9431,  // Runite limbs
-        1747,  // Black dragonhide
-        444,   // Gold ore
-        1617,  // Uncut diamond
-        6573,  // Onyx bolt tips
-        2297,  // Anchovy pizza
-        143,   // Prayer potion(3)
-        6705,  // Potato with cheese
-        385,   // Shark
-        989,   // Crystal key
-        3123,  // Long bone
-        11818, // Numulite
-        22124, // Unidentified small fossil
-        22126, // Unidentified medium fossil
-        22128, // Unidentified large fossil
-        22130, // Unidentified rare fossil
-        23490, // Brimstone key
-        19043  // Clue scroll (elite)
-    )
+    // --- Actions ---
+    const val CLIMB_ACTION = "Climb"
+    const val CHOP_ACTION = "Chop"
+    const val USE_ACTION = "Use"
+    const val DRINK_ACTION = "Drink"
+    const val RUB_ACTION = "Rub"
+    const val ATTACK_ACTION = "Attack"
+    const val WIELD_ACTION = "Wield"
+    const val WEAR_ACTION = "Wear"
+    const val EQUIP_ACTION = "Equip"
+    const val EAT_ACTION = "Eat"
+    const val TAKE_ACTION = "Take"
+
+    // --- Timing ---
+    const val MIN_RUN_ENERGY = 40
 }

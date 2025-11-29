@@ -3,10 +3,9 @@ package org.powbot.om6.derangedarch.tasks
 import org.powbot.api.Condition
 import org.powbot.api.rt4.*
 import org.powbot.mobile.rscache.loader.ItemLoader
-import org.powbot.mobile.script.ScriptManager
 import org.powbot.om6.derangedarch.Constants
 import org.powbot.om6.derangedarch.DerangedArchaeologistMagicKiller
-import org.powbot.om6.derangedarch.Helpers
+import org.powbot.om6.derangedarch.utils.ScriptUtils
 
 class BankTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
 
@@ -30,33 +29,21 @@ class BankTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
         return false
     }
 
-    private fun withdrawWithRetries(id: Int, amount: Int, itemName: String = "Item ID $id"): Boolean {
-        for (attempt in 1..3) {
-            if (Bank.withdraw(id, amount)) {
-                script.logger.debug("Bank.withdraw() successful for $itemName (Attempt $attempt/3)")
-                return true
-            }
-            script.logger.warn("Attempt $attempt/3 failed to withdraw $amount of $itemName (ID: $id). Retrying...")
-            Helpers.sleepRandom(300)
-        }
-        return false
-    }
-
     private fun shouldSkipWithdrawal(
         id: Int,
         itemName: String,
         emergencyTeleName: String?,
         script: DerangedArchaeologistMagicKiller
     ): Boolean {
-        if (Helpers.isDuelingRing(id) && Inventory.stream().nameContains(Constants.DUELING_RING_NAME_CONTAINS).isNotEmpty()) {
+        if (ScriptUtils.isDuelingRing(id) && Inventory.stream().nameContains(Constants.DUELING_RING_NAME_CONTAINS).isNotEmpty()) {
             script.logger.info("Skipping Ring of Dueling withdrawal, one already in inventory.")
             return true
         }
-        if (Helpers.isDigsitePendant(id) && Inventory.stream().nameContains(Constants.DIGSITE_PENDANT_NAME_CONTAINS).isNotEmpty()) {
+        if (ScriptUtils.isDigsitePendant(id) && Inventory.stream().nameContains(Constants.DIGSITE_PENDANT_NAME_CONTAINS).isNotEmpty()) {
             script.logger.info("Skipping Digsite Pendant withdrawal, one already in inventory.")
             return true
         }
-        if (Helpers.isAxe(itemName) && Inventory.stream().any { Helpers.isAxe(it.name()) }) {
+        if (ScriptUtils.isAxe(itemName) && Inventory.stream().any { ScriptUtils.isAxe(it.name()) }) {
             script.logger.info("Skipping Axe ($itemName) withdrawal, one already in inventory.")
             return true
         }
@@ -79,17 +66,17 @@ class BankTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
             val itemName = ItemLoader.lookup(id)?.name() ?: "Item $id"
             var itemFound = false
 
-            if (Helpers.isDuelingRing(id)) {
+            if (ScriptUtils.isDuelingRing(id)) {
                 if (Inventory.stream().nameContains(Constants.DUELING_RING_NAME_CONTAINS).isNotEmpty()) itemFound = true
-            } else if (Helpers.isDigsitePendant(id)) {
+            } else if (ScriptUtils.isDigsitePendant(id)) {
                 if (Inventory.stream().nameContains(Constants.DIGSITE_PENDANT_NAME_CONTAINS).isNotEmpty()) itemFound = true
-            } else if (Helpers.isAxe(itemName)) {
-                if (Inventory.stream().any { Helpers.isAxe(it.name()) }) itemFound = true
+            } else if (ScriptUtils.isAxe(itemName)) {
+                if (Inventory.stream().any { ScriptUtils.isAxe(it.name()) }) itemFound = true
             } else if (emergencyTeleportName != null && itemName.contains(emergencyTeleportName, ignoreCase = true)) {
-                if (!Helpers.isDuelingRing(id) && !Helpers.isDigsitePendant(id) &&
+                if (!ScriptUtils.isDuelingRing(id) && !ScriptUtils.isDigsitePendant(id) &&
                     Inventory.stream().nameContains(emergencyTeleportName).isNotEmpty()) {
                     itemFound = true
-                } else if (Helpers.isDuelingRing(id) || Helpers.isDigsitePendant(id)) {
+                } else if (ScriptUtils.isDuelingRing(id) || ScriptUtils.isDigsitePendant(id)) {
                     if (Inventory.stream().nameContains(Constants.DUELING_RING_NAME_CONTAINS).isNotEmpty() ||
                         Inventory.stream().nameContains(Constants.DIGSITE_PENDANT_NAME_CONTAINS).isNotEmpty()) {
                         itemFound = true
@@ -121,8 +108,8 @@ class BankTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
         val requiredIds = script.config.requiredEquipment.keys
         val missingEquipmentIds = requiredIds.filter {
             val item = Equipment.itemAt(Equipment.Slot.forIndex(script.config.requiredEquipment[it] ?: -1) ?: return@filter true)
-            if (Helpers.isDuelingRing(it)) !item.name().contains(Constants.DUELING_RING_NAME_CONTAINS)
-            else if (Helpers.isDigsitePendant(it)) !item.name().contains(Constants.DIGSITE_PENDANT_NAME_CONTAINS)
+            if (ScriptUtils.isDuelingRing(it)) !item.name().contains(Constants.DUELING_RING_NAME_CONTAINS)
+            else if (ScriptUtils.isDigsitePendant(it)) !item.name().contains(Constants.DIGSITE_PENDANT_NAME_CONTAINS)
             else item.id != it
         }
 
@@ -136,14 +123,13 @@ class BankTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
 
             missingEquipmentIds.forEach { id ->
                 script.logger.info("Withdrawing item ID: $id")
-                if (!withdrawWithRetries(id, 1, "Equip ID $id")) {
-                    script.logger.warn("FATAL: Could not withdraw required equipment ID: $id after 3 attempts. Stopping script.")
-                    ScriptManager.stop()
+                if (!ScriptUtils.withdrawWithRetries(id, 1, "Equip ID $id", script)) {
+                    ScriptUtils.stopScript("Could not withdraw required equipment ID: $id after 3 attempts.", script)
                     return
                 }
-                val waitCondition: () -> Boolean = if (Helpers.isDuelingRing(id)) {
+                val waitCondition: () -> Boolean = if (ScriptUtils.isDuelingRing(id)) {
                     { Inventory.stream().nameContains(Constants.DUELING_RING_NAME_CONTAINS).isNotEmpty() }
-                } else if (Helpers.isDigsitePendant(id)) {
+                } else if (ScriptUtils.isDigsitePendant(id)) {
                     { Inventory.stream().nameContains(Constants.DIGSITE_PENDANT_NAME_CONTAINS).isNotEmpty() }
                 } else {
                     { Inventory.stream().id(id).isNotEmpty() }
@@ -160,13 +146,13 @@ class BankTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
         if (Inventory.isNotEmpty()) {
             script.logger.debug("Depositing inventory, keeping essential items...")
             val foodIdsToKeep = Inventory.stream().name(script.config.foodName).map { it.id() }.distinct().toList()
-            val axeIdsToKeep = Inventory.stream().filter { Helpers.isAxe(it.name()) }.map { it.id() }.distinct().toList()
+            val axeIdsToKeep = Inventory.stream().filter { ScriptUtils.isAxe(it.name()) }.map { it.id() }.distinct().toList()
             val emergencyTeleportName = script.teleportOptions[script.config.emergencyTeleportItem]?.itemNameContains
             var emergencyTeleIdsToKeep = emptyList<Int>()
             if (emergencyTeleportName != null) {
                 emergencyTeleIdsToKeep = Inventory.stream().nameContains(emergencyTeleportName).map { it.id() }.distinct().toList()
             }
-            val runeIdsToKeep = script.config.requiredInventory.keys.filter { Helpers.isRune(ItemLoader.lookup(it)?.name() ?: "") }
+            val runeIdsToKeep = script.config.requiredInventory.keys.filter { ScriptUtils.isRune(ItemLoader.lookup(it)?.name() ?: "") }
 
             val finalIdsToKeep = (BASE_ITEMS_TO_KEEP + foodIdsToKeep + axeIdsToKeep + emergencyTeleIdsToKeep + runeIdsToKeep).distinct()
             script.logger.debug("Final list of IDs to keep: $finalIdsToKeep")
@@ -191,7 +177,7 @@ class BankTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
 
             if (id == Constants.PRAYER_POTION_4_ID ||
                 itemName.equals(script.config.foodName, ignoreCase = true) ||
-                (Helpers.isRune(itemName) && script.config.requiredInventory.containsKey(id)))
+                (ScriptUtils.isRune(itemName) && script.config.requiredInventory.containsKey(id)))
             {
                 isTopUpItem = true
                 val currentAmount = Inventory.stream().id(id).count(true).toInt()
@@ -215,9 +201,8 @@ class BankTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
             }
 
             script.logger.debug("Withdrawing $amountToWithdraw of $itemName (ID: $id)")
-            if (!withdrawWithRetries(id, amountToWithdraw, itemName)) {
-                script.logger.warn("FATAL: Could not withdraw $amountToWithdraw of $itemName (ID: $id) after 3 attempts. Stopping script.")
-                ScriptManager.stop()
+            if (!ScriptUtils.withdrawWithRetries(id, amountToWithdraw, itemName, script)) {
+                ScriptUtils.stopScript("Could not withdraw $amountToWithdraw of $itemName (ID: $id) after 3 attempts.", script)
                 return@forEach
             }
 
@@ -228,18 +213,16 @@ class BankTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
         script.logger.debug("Inventory withdrawal loop finished. Closing bank.")
         if (Bank.close()) {
             script.emergencyTeleportJustHappened = false
-            Helpers.sleepRandom(300)
+            Condition.sleep(300)
             script.logger.debug("Bank closed. Running final verification...")
 
             if (!script.equipmentIsCorrect()) {
-                script.logger.warn("FATAL: Equipment is still incorrect after banking. Stopping script.")
-                ScriptManager.stop()
+                ScriptUtils.stopScript("Equipment is still incorrect after banking.", script)
                 return
             }
 
             if (!isInventorySetupCorrect()) {
-                script.logger.warn("FATAL: Inventory is incorrect after banking (Smart Check). Stopping script.")
-                ScriptManager.stop()
+                ScriptUtils.stopScript("Inventory is incorrect after banking (Smart Check).", script)
                 return
             }
 
