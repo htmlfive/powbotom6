@@ -33,10 +33,6 @@ object Constants {
     const val SPECIAL_ATTACK_TEXT = "Learn to Read!"
 
     // --- Widgets ---
-    const val DUELING_RING_WIDGET_ID = 219
-    const val DUELING_RING_OPTIONS_COMPONENT = 1
-    const val DUELING_RING_FEROX_OPTION = 3
-
     const val PENDANT_WIDGET_ID = 219
     const val PENDANT_FOSSIL_ISLAND_COMPONENT = 1
     const val PENDANT_FOSSIL_ISLAND_OPTION = 2
@@ -107,9 +103,6 @@ object Constants {
     const val DRINK_ACTION = "Drink"
     const val RUB_ACTION = "Rub"
     const val ATTACK_ACTION = "Attack"
-    const val WIELD_ACTION = "Wield"
-    const val WEAR_ACTION = "Wear"
-    const val EQUIP_ACTION = "Equip"
     const val EAT_ACTION = "Eat"
     const val TAKE_ACTION = "Take"
 

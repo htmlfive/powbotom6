@@ -25,9 +25,6 @@ object ScriptUtils {
         return Inventory.stream().name(*Constants.ANTIPOISON_NAMES.toTypedArray()).first()
     }
 
-    fun getDuelingRing(): Item? {
-        return Inventory.stream().nameContains(Constants.DUELING_RING_NAME_CONTAINS).firstOrNull()
-    }
 
     fun getDigsitePendant(): Item {
         var pendant: Item = Equipment.itemAt(Equipment.Slot.NECK)

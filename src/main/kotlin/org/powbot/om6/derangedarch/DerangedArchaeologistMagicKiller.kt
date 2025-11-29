@@ -1,7 +1,6 @@
 package org.powbot.om6.derangedarch
 
 import org.powbot.api.Condition
-import org.powbot.api.Tile
 import org.powbot.api.rt4.*
 import org.powbot.api.rt4.walking.model.Skill
 import org.powbot.api.script.*
