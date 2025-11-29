@@ -51,6 +51,13 @@ private const val SALVAGE_SUCCESS_MESSAGE = "You cast out" // Assumed definition
             optionType = OptionType.BOOLEAN, defaultValue = "false"
         ),
         ScriptConfiguration(
+            "Max Cargo Space",
+            "The maximum cargo space you can hold.",
+            optionType = OptionType.STRING,
+            defaultValue = "160"
+
+        ),
+        ScriptConfiguration(
             "Max Withdraw Cooldown (s)",
             "The maximum random time (in seconds) the script waits after cleanup/withdraw before trying again.",
             optionType = OptionType.STRING,
@@ -78,6 +85,7 @@ private const val SALVAGE_SUCCESS_MESSAGE = "You cast out" // Assumed definition
     ]
 )
 class SalvageSorter : AbstractScript() {
+    val maxCargoSpace: String get() = getOption<String>("Max Cargo Space")
     var salvageMessageFound = false
     var atHookLocation = false // ADDED: New flag to track if the player is at the salvaging spot
     var atSortLocation = false // NEW FLAG: Track if at sorting spot
