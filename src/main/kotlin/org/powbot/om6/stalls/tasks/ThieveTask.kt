@@ -3,43 +3,45 @@ package org.powbot.om6.stalls.tasks
 import org.powbot.api.Condition
 import org.powbot.api.rt4.*
 import org.powbot.api.rt4.walking.model.Skill
+import org.powbot.om6.stalls.Constants
+import org.powbot.om6.stalls.ScriptUtils
 import org.powbot.om6.stalls.StallThiever
-import kotlin.random.Random
 
-class ThieveTask(script: StallThiever) : Task(script, "Thieving") {
-    private val STEAL_ACTION = "Steal-from"
+class ThieveTask(script: StallThiever) : Task(script, Constants.TaskNames.THIEVING) {
     private var stall: GameObject = GameObject.Nil
 
-    override fun validate(): Boolean = !Inventory.isFull() &&
-            Players.local().tile() == script.config.thievingTile &&
-            Players.local().animation() == -1
+    override fun validate(): Boolean =
+        !Inventory.isFull() &&
+                ScriptUtils.isAtTile(script.config.thievingTile) &&
+                ScriptUtils.isPlayerIdle()
 
     override fun execute() {
         if (!stall.valid()) {
             script.logger.info("Searching for stall object...")
-            stall = Objects.stream()
-                .id(script.config.stallId)
-                .within(script.config.thievingTile, 3.0)
-                .nearest()
-                .firstOrNull() ?: GameObject.Nil
+            stall = ScriptUtils.findGameObject(
+                script.config.stallId,
+                script.config.thievingTile,
+                Constants.Distance.STALL_SEARCH_RANGE
+            )
         }
+
         if (!stall.valid()) {
             script.logger.warn("Stall not found within range of thieving tile, waiting...")
-            Condition.sleep(600)
+            Condition.sleep(Constants.Timing.STALL_NOT_FOUND_WAIT)
             return
         }
 
-        if (!stall.inViewport()) {
-            script.logger.info("Stall not in view, turning camera.")
-            Camera.turnTo(stall)
+        if (!ScriptUtils.ensureObjectInView(stall)) {
+            script.logger.info("Failed to get stall in viewport.")
+            return
         }
 
-        val initialXp = Skills.experience(Skill.Thieving)
-        if (stall.interact(STEAL_ACTION)) {
-            if (Condition.wait({ Skills.experience(Skill.Thieving) > initialXp }, 150, 20)) {
-                script.justStole = true
-                Condition.sleep(Random.nextInt(150, 250))
-            }
+        if (ScriptUtils.interactAndWaitForXp(stall, Constants.Actions.STEAL_FROM, Skill.Thieving)) {
+            script.justStole = true
+            ScriptUtils.randomDelay(
+                Constants.Timing.POST_STEAL_MIN_DELAY,
+                Constants.Timing.POST_STEAL_MAX_DELAY
+            )
         }
     }
 }

@@ -1,29 +1,25 @@
 package org.powbot.om6.stalls.tasks
 
 import org.powbot.api.Condition
-import org.powbot.api.rt4.Players
-import org.powbot.api.rt4.World
-import org.powbot.api.rt4.Worlds
+import org.powbot.om6.stalls.Constants
+import org.powbot.om6.stalls.ScriptUtils
 import org.powbot.om6.stalls.StallThiever
 
-class HandleHoppingTask(script: StallThiever) : Task(script, "Hopping") {
-    override fun validate(): Boolean = script.config.enableHopping &&
-            Players.local().tile() == script.config.thievingTile &&
-            Players.stream().at(Players.local().tile()).any { it != Players.local() }
+class HandleHoppingTask(script: StallThiever) : Task(script, Constants.TaskNames.HOPPING) {
+    override fun validate(): Boolean =
+        script.config.enableHopping &&
+                ScriptUtils.isAtTile(script.config.thievingTile) &&
+                ScriptUtils.isPlayerOnMyTile()
 
     override fun execute() {
-        val randomWorld = Worlds.stream()
-            .filtered { it.type() == World.Type.MEMBERS && it.population in 15..350 && it.specialty() == World.Specialty.NONE }
-            .toList().randomOrNull()
+        val randomWorld = ScriptUtils.findRandomWorld()
 
         if (randomWorld != null) {
             script.logger.info("Player detected on tile. Hopping to world ${randomWorld.number}.")
-            if (randomWorld.hop()) {
-                Condition.wait({ !Players.local().inMotion() }, 300, 20)
-            }
+            ScriptUtils.hopToWorld(randomWorld)
         } else {
             script.logger.warn("Player detected, but no suitable world found for hopping.")
-            Condition.sleep(3000)
+            Condition.sleep(Constants.Timing.HOPPING_FAILED_WAIT)
         }
     }
 }
