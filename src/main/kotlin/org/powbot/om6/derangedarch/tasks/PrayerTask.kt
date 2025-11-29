@@ -4,6 +4,7 @@ import org.powbot.api.Condition
 import org.powbot.api.rt4.*
 import org.powbot.om6.derangedarch.Constants
 import org.powbot.om6.derangedarch.DerangedArchaeologistMagicKiller
+import org.powbot.om6.derangedarch.utils.ScriptUtils
 
 class PrayerTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
 
@@ -36,7 +37,7 @@ class PrayerTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
             script.logger.info("Prayer points low (${Prayer.prayerPoints()}), drinking potion.")
             val prayerPotion = Inventory.stream().nameContains(Constants.PRAYER_POTION_NAME_CONTAINS).firstOrNull()
             if (prayerPotion != null && prayerPotion.interact(Constants.DRINK_ACTION)) {
-                Condition.sleep(1200)
+                ScriptUtils.randomSleep(600)
             } else {
                 script.logger.warn("Prayer low but no prayer potions found!")
             }

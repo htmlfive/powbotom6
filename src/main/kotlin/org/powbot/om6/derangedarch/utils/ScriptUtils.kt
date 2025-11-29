@@ -25,6 +25,9 @@ object ScriptUtils {
         return Inventory.stream().name(*Constants.ANTIPOISON_NAMES.toTypedArray()).first()
     }
 
+    fun getDuelingRing(): Item? {
+        return Inventory.stream().nameContains(Constants.DUELING_RING_NAME_CONTAINS).firstOrNull()
+    }
 
     fun getDigsitePendant(): Item {
         var pendant: Item = Equipment.itemAt(Equipment.Slot.NECK)
@@ -57,13 +60,28 @@ object ScriptUtils {
     fun useDuelingRingToFerox(script: DerangedArchaeologistMagicKiller): Boolean {
         script.logger.debug("Using Ring of Dueling to teleport to Ferox Enclave...")
 
-        if (Teleport.RING_OF_DUELING_FEROX_ENCLAVE.trigger()) {
-            script.logger.debug("Teleport triggered, waiting to arrive at ${Constants.FEROX_ENTRANCE_TILE}...")
-            return Condition.wait({ Players.local().tile().distanceTo(Constants.FEROX_ENTRANCE_TILE) < 6 }, 300, 15)
-        } else {
-            script.logger.warn("Failed to trigger Ring of Dueling teleport to Ferox Enclave.")
+        // Verify ring exists
+        val ring = getDuelingRing()
+        if (ring == null || ring == Item.Nil) {
+            script.logger.warn("No Ring of Dueling found in inventory for teleport.")
             return false
         }
+
+        // Try triggering teleport (retry once if it fails)
+        for (attempt in 1..2) {
+            if (Teleport.RING_OF_DUELING_FEROX_ENCLAVE.trigger()) {
+                script.logger.debug("Teleport triggered (attempt $attempt), waiting to arrive at ${Constants.FEROX_ENTRANCE_TILE}...")
+                return Condition.wait({ Players.local().tile().distanceTo(Constants.FEROX_ENTRANCE_TILE) < 6 }, 300, 15)
+            }
+
+            if (attempt == 1) {
+                script.logger.warn("Teleport attempt $attempt failed, retrying...")
+                Condition.sleep(600)
+            }
+        }
+
+        script.logger.warn("Failed to trigger Ring of Dueling teleport after 2 attempts.")
+        return false
     }
 
     fun walkToFeroxBank(script: DerangedArchaeologistMagicKiller) {
@@ -82,7 +100,7 @@ object ScriptUtils {
                     val restoredSuccessfully = Condition.wait({ !needsStatRestoreCheck() }, 150, 20)
                     if (restoredSuccessfully) {
                         script.logger.info("Stats restored successfully.")
-                        Condition.sleep(1200)
+                        randomSleep(1200)
                         return true
                     } else {
                         script.logger.warn("Interacted with pool, but stats did not restore.")
@@ -149,6 +167,17 @@ object ScriptUtils {
             script.logger.debug("Enabling run energy.")
             Movement.running(true)
         }
+    }
+
+    // --- Timing Helpers ---
+
+    /**
+     * Sleep for a randomized duration within ±200ms of the base value.
+     */
+    fun randomSleep(baseMs: Int) {
+        val randomOffset = (-200..200).random()
+        val sleepTime = (baseMs + randomOffset).coerceAtLeast(0)
+        Condition.sleep(sleepTime)
     }
 
     // --- Geometry Helpers ---

@@ -59,7 +59,7 @@ class TravelToBossTask(script: DerangedArchaeologistMagicKiller) : Task(script) 
                 if (vine != null && vine.valid()) {
                     if (player.animation() == -1 && vine.interact(Constants.CHOP_ACTION)) {
                         script.logger.debug("Chopping vine...")
-                        Condition.sleep(1200)
+                        ScriptUtils.randomSleep(1200)
                     }
                 } else {
                     script.logger.debug("Vine not found or invalid, walking past.")
@@ -75,7 +75,7 @@ class TravelToBossTask(script: DerangedArchaeologistMagicKiller) : Task(script) 
                     script.logger.debug("Using mushtree, waiting for interface...")
                     if (Condition.wait({ Widgets.widget(Constants.MUSHTREE_INTERFACE_ID).valid() }, 200, 15)) {
                         script.logger.debug("Mushtree interface open.")
-                        Condition.sleep(600)
+                        ScriptUtils.randomSleep(600)
                         val swampOption = Widgets.widget(Constants.MUSHTREE_INTERFACE_ID).component(Constants.MUSHTREE_SWAMP_OPTION_COMPONENT)
                         if (swampOption.valid() && swampOption.click()) {
                             script.logger.debug("Clicked 'Verdant Valley', waiting for travel...")
@@ -94,7 +94,7 @@ class TravelToBossTask(script: DerangedArchaeologistMagicKiller) : Task(script) 
             if (pendant.valid()) {
                 script.logger.debug("Found pendant, interacting 'Rub'.")
                 if (pendant.interact(Constants.RUB_ACTION)) {
-                    Condition.sleep(600)
+                    ScriptUtils.randomSleep(600)
                     if (Condition.wait({ Widgets.widget(Constants.PENDANT_WIDGET_ID).valid() }, 200, 15)) {
                         script.logger.debug("Pendant widget open.")
                         val islandOption = Widgets.widget(Constants.PENDANT_WIDGET_ID)
