@@ -170,7 +170,7 @@ fun executeCleanupLoot(script: SalvageSorter): Boolean {
 
         if (itemToDrop.valid()) {
             if (!script.tapToDrop) {
-            itemToDrop.interact("Drop")}
+                itemToDrop.interact("Drop")}
             else {
                 itemToDrop.click()
             }
@@ -562,14 +562,21 @@ fun depositSalvage(script: SalvageSorter): Boolean {
     val depositedCount = (initialSalvageCount - finalSalvageCount).toInt()
 
     if (finalSalvageCount < initialSalvageCount) {
-        script.cargoHoldFull = false
         script.xpMessageCount += depositedCount
-        script.logger.info("DEPOSIT: SUCCESS - Deposited $depositedCount. Cargo count: ${script.xpMessageCount}")
+
+        // Flag cargo as full if within 20 of max capacity for earlier transition
+        if (script.xpMessageCount >= (script.maxCargoSpace.toInt() - 20)) {
+            script.cargoHoldFull = true
+            script.logger.info("DEPOSIT: SUCCESS - Deposited $depositedCount. Cargo count: ${script.xpMessageCount}. Near capacity (within 20), flagging as full.")
+        } else {
+            script.cargoHoldFull = false
+            script.logger.info("DEPOSIT: SUCCESS - Deposited $depositedCount. Cargo count: ${script.xpMessageCount}")
+        }
         return true
     } else {
         script.cargoHoldFull = true
         script.xpMessageCount = script.maxCargoSpace.toInt()
-        script.logger.warn("DEPOSIT: FAILED - Cargo FULL. Set count to 120.")
+        script.logger.warn("DEPOSIT: FAILED - Cargo FULL. Set count to ${script.maxCargoSpace}.")
         return false
     }
 }
