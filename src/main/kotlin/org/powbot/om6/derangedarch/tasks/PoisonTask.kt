@@ -17,7 +17,12 @@ class PoisonTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
             return false
         }
 
-        return ScriptUtils.isPoisoned()
+        if (!ScriptUtils.isPoisoned()) {
+            return false
+        }
+
+        val antipoison = ScriptUtils.getAntipoison()
+        return antipoison.valid()
     }
 
     override fun execute() {

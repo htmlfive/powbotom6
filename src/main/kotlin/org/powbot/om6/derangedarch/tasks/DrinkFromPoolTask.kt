@@ -32,5 +32,8 @@ class DrinkFromPoolTask(script: DerangedArchaeologistMagicKiller) : Task(script)
         ScriptUtils.drinkFromPool(script) { script.needsStatRestore() }
         script.hasAttemptedPoolDrink = true
         script.logger.debug("Setting hasAttemptedPoolDrink flag to true.")
+
+        // Allow break after restoring stats
+        script.canBreak()
     }
 }
