@@ -3,7 +3,6 @@ package org.powbot.om6.derangedarch.tasks
 import org.powbot.api.rt4.Bank
 import org.powbot.api.rt4.Equipment
 import org.powbot.api.rt4.Inventory
-import org.powbot.om6.derangedarch.Constants
 import org.powbot.om6.derangedarch.DerangedArchaeologistMagicKiller
 import org.powbot.om6.derangedarch.utils.ScriptUtils
 
