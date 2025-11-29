@@ -168,7 +168,7 @@ fun executeCleanupLoot(script: SalvageSorter): Boolean {
 
     shuffledDroppableItems.forEach { itemToDrop ->
         if (itemToDrop.valid()) {
-            itemToDrop.click()
+            itemToDrop.interact("Drop")
             Condition.sleep(Random.nextInt(CLEANUP_DROP_MIN, CLEANUP_DROP_MAX))
         }
     }
@@ -411,9 +411,14 @@ fun walkToHook(script: SalvageSorter): Boolean {
 
     script.logger.info("WALK: Not at hook location yet. Starting walk and assignment sequence.")
 
-    if (!assignGhost(script)) {
-        script.logger.warn("WALK: Failed to assign Ghost.")
-        return false
+    // Skip Ghost assignment in Power Salvage Mode
+    if (!script.powerSalvageMode) {
+        if (!assignGhost(script)) {
+            script.logger.warn("WALK: Failed to assign Ghost.")
+            return false
+        }
+    } else {
+        script.logger.info("WALK: Power Salvage Mode - Skipping Ghost assignment.")
     }
 
     val waitTime = Random.nextInt(WALK_WAIT_MIN, WALK_WAIT_MAX)
@@ -433,15 +438,21 @@ fun walkToHook(script: SalvageSorter): Boolean {
 }
 
 fun hookSalvage(script: SalvageSorter): Boolean {
-    if (Inventory.isFull() && !script.cargoHoldFull) {
-        script.logger.info("HOOK: Inventory full. Depositing first.")
-        return depositSalvage(script)
-    }
+    // Skip deposit logic in Power Salvage Mode - DropSalvageTask handles it
+    if (!script.powerSalvageMode) {
+        if (Inventory.isFull() && !script.cargoHoldFull) {
+            script.logger.info("HOOK: Inventory full. Depositing first.")
+            return depositSalvage(script)
+        }
 
-    if (Inventory.isFull() && script.cargoHoldFull) {
-        script.logger.error("HOOK: Both full. Stopping.")
-        ScriptManager.stop()
-        return false
+        if (Inventory.isFull() && script.cargoHoldFull) {
+            script.logger.error("HOOK: Both full. Stopping.")
+            ScriptManager.stop()
+            return false
+        }
+    } else {
+        // In Power Salvage Mode, inventory being full is handled by DropSalvageTask
+        script.logger.debug("HOOK: Power Salvage Mode - Skipping deposit logic.")
     }
 
     CameraSnapper.snapCameraToDirection(CardinalDirection.South, script)
@@ -449,7 +460,6 @@ fun hookSalvage(script: SalvageSorter): Boolean {
     Condition.sleep(mainWait)
 
     script.hookCastMessageFound = false
-    closeTabWithSleep(HOOK_TAB_CLOSE_MIN, HOOK_TAB_CLOSE_MAX)
 
     // Try tapping hook up to 3 times before giving up
     var messageFound = false
@@ -471,7 +481,6 @@ fun hookSalvage(script: SalvageSorter): Boolean {
     }
 
     if (messageFound) {
-        ensureInventoryOpen(HOOK_TAB_OPEN_MIN, HOOK_TAB_OPEN_MAX)
 
         script.logger.info("HOOK: Success. Waiting for inventory to fill...")
         script.hookingSalvageBool = true
@@ -554,7 +563,7 @@ fun depositSalvage(script: SalvageSorter): Boolean {
         return true
     } else {
         script.cargoHoldFull = true
-        script.xpMessageCount = 120
+        script.xpMessageCount = script.maxCargoSpace.toInt()
         script.logger.warn("DEPOSIT: FAILED - Cargo FULL. Set count to 120.")
         return false
     }

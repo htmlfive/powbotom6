@@ -9,7 +9,21 @@ class DeployHookTask(script: SalvageSorter) : Task(script) {
     private val extractorTask = CrystalExtractorTask(script)
 
     override fun activate(): Boolean {
-        // Only activate in SALVAGING phase when:
+        // In Power Salvage mode, only activate when:
+        // - We're in SALVAGING phase
+        // - Inventory is NOT full (when full, DropSalvageTask takes over)
+        if (script.powerSalvageMode) {
+            val inventoryFull = Inventory.isFull()
+            val shouldActivate = script.currentPhase == SalvagePhase.SALVAGING && !inventoryFull
+
+            if (script.currentPhase == SalvagePhase.SALVAGING || shouldActivate) {
+                script.logger.info("DEPLOY ACTIVATE CHECK (POWER MODE): Phase=${script.currentPhase.name}, invFull=$inventoryFull, salvageMessageFound=${script.salvageMessageFound}, RESULT=$shouldActivate")
+            }
+
+            return shouldActivate
+        }
+
+        // Normal mode: Only activate in SALVAGING phase when:
         // 1. Cargo is not full (otherwise we should be in sorting mode)
         // 2. Inventory is not full (when full, DepositCargoTask takes over)
 

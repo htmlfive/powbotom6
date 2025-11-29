@@ -32,18 +32,21 @@ private const val SALVAGE_SUCCESS_MESSAGE = "You cast out" // Assumed definition
 @ConfigList(
     [
         ScriptConfiguration(
+            "Power Salvage Mode",
+            "If true, skips sorting entirely and simply drops all salvage when inventory is full. Useful for Raft/Skiff salvaging below level 50 without Salvaging station.",
+            optionType = OptionType.BOOLEAN, defaultValue = "false"
+        ),
+        ScriptConfiguration(
+            "Enable Extractor",
+            "If true, enables the automatic tapping of the Crystal Extractor every ~64 seconds.",
+            optionType = OptionType.BOOLEAN, defaultValue = "true"
+        ),
+        ScriptConfiguration(
             "Salvage Item Name",
             "The exact name of the item dropped after salvaging the shipwreck.",
             optionType = OptionType.STRING,
             defaultValue = "Opulent salvage",
             allowedValues = ["Small salvage", "Fishy salvage", "Barracuda salvage", "Large salvage", "Plundered salvage", "Martial salvage", "Fremennik salvage", "Opulent salvage"]
-        ),
-        ScriptConfiguration(
-            "Min Withdraw Cooldown (s)",
-            "The minimum random time (in seconds) the script waits after cleanup/withdraw before trying again.",
-            optionType = OptionType.STRING,
-            defaultValue = "1",
-            visible = false
         ),
         ScriptConfiguration(
             "Start Sorting",
@@ -55,7 +58,13 @@ private const val SALVAGE_SUCCESS_MESSAGE = "You cast out" // Assumed definition
             "The maximum cargo space you can hold.",
             optionType = OptionType.STRING,
             defaultValue = "160"
-
+        ),
+        ScriptConfiguration(
+            "Min Withdraw Cooldown (s)",
+            "The minimum random time (in seconds) the script waits after cleanup/withdraw before trying again.",
+            optionType = OptionType.STRING,
+            defaultValue = "1",
+            visible = false
         ),
         ScriptConfiguration(
             "Max Withdraw Cooldown (s)",
@@ -63,12 +72,6 @@ private const val SALVAGE_SUCCESS_MESSAGE = "You cast out" // Assumed definition
             optionType = OptionType.STRING,
             defaultValue = "1",
             visible = false
-
-        ),
-        ScriptConfiguration(
-            "Enable Extractor",
-            "If true, enables the automatic tapping of the Crystal Extractor every ~64 seconds.",
-            optionType = OptionType.BOOLEAN, defaultValue = "true"
         ),
         ScriptConfiguration(
             "Extractor Tap Direction",
@@ -82,10 +85,12 @@ private const val SALVAGE_SUCCESS_MESSAGE = "You cast out" // Assumed definition
             optionType = OptionType.STRING, defaultValue = "North",
             allowedValues = ["North", "East", "South", "West"]
         )
+
     ]
 )
 class SalvageSorter : AbstractScript() {
     val maxCargoSpace: String get() = getOption<String>("Max Cargo Space")
+    val powerSalvageMode: Boolean get() = getOption<Boolean>("Power Salvage Mode")
     var salvageMessageFound = false
     var atHookLocation = false // ADDED: New flag to track if the player is at the salvaging spot
     var atSortLocation = false // NEW FLAG: Track if at sorting spot
@@ -136,6 +141,9 @@ class SalvageSorter : AbstractScript() {
             // HIGHEST PRIORITY
             CrystalExtractorTask(this),
             CleanupInventoryTask(this),
+
+            // POWER SALVAGE MODE TASK (High priority when enabled)
+            DropSalvageTask(this),
 
             // CORE SALVAGING TASKS
             DepositCargoTask(this),
@@ -199,7 +207,12 @@ class SalvageSorter : AbstractScript() {
 // Check if the user wants to start in SORTING mode (or if inventory is full)
         val startInSortingMode = startSorting
 
-        if (startInSortingMode) {
+        // Power Salvage Mode: Always start in salvaging mode
+        if (powerSalvageMode) {
+            this.logger.info("INIT: POWER SALVAGE MODE enabled - Starting in SALVAGING mode only.")
+            this.cargoHoldFull = false
+            this.currentPhase = SalvagePhase.SETUP_SALVAGING
+        } else if (startInSortingMode) {
             this.logger.info("INIT: Forcing initial phase to SETUP_SORTING (User request).")
             // 1. Force cargoHoldFull to TRUE to signal the script to enter the SORTING loop
             this.cargoHoldFull = true
@@ -228,13 +241,13 @@ class SalvageSorter : AbstractScript() {
                 val gain = currentCoinCount - initialCoinCount
                 String.format("%,d GP", gain)
             }
-            .addString("Withdraw Cooldown") {
-                val maxCooldown = currentWithdrawCooldownMs
-                val timeElapsed = System.currentTimeMillis() - lastWithdrawOrCleanupTime
-                val remainingSeconds = ((maxCooldown - timeElapsed) / 1000L).coerceAtLeast(0)
-
-                if (remainingSeconds > 0) "Next in: ${remainingSeconds}s" else "Ready"
-            }
+//            .addString("Withdraw Cooldown") {
+//                val maxCooldown = currentWithdrawCooldownMs
+//                val timeElapsed = System.currentTimeMillis() - lastWithdrawOrCleanupTime
+//                val remainingSeconds = ((maxCooldown - timeElapsed) / 1000L).coerceAtLeast(0)
+//
+//                if (remainingSeconds > 0) "Next in: ${remainingSeconds}s" else "Ready"
+//            }
             .addString("Salvage in Cargo (Approx)") { xpMessageCount.toString() }
             .build()
         addPaint(paint)
@@ -259,6 +272,40 @@ class SalvageSorter : AbstractScript() {
                 logger.info("POLL: Executing INTERRUPT: Cleanup Inventory")
                 cleanupTask.execute()
                 return
+            }
+
+            // --- POWER SALVAGE MODE CHECK ---
+            // In Power Salvage mode, we bypass all sorting/cargo logic
+            if (powerSalvageMode) {
+                val dropTask = allTasks.firstOrNull { it is DropSalvageTask && it.activate() }
+                if (dropTask != null) {
+                    logger.info("POLL: POWER SALVAGE MODE - Dropping salvage")
+                    dropTask.execute()
+                    return
+                }
+
+                // In Power Salvage mode, only use SetupSalvagingTask and DeployHookTask
+                val setupTask = allTasks.firstOrNull { it is SetupSalvagingTask && it.activate() }
+                if (setupTask != null) {
+                    logger.info("POLL: POWER SALVAGE MODE - Setup salvaging")
+                    setupTask.execute()
+                    return
+                }
+
+                val deployTask = allTasks.firstOrNull { it is DeployHookTask }
+                if (deployTask != null && deployTask.activate()) {
+                    logger.info("POLL: POWER SALVAGE MODE - Deploying hook")
+                    deployTask.execute()
+                    return
+                } else {
+                    // Ensure we're always in salvaging phase when power mode is enabled
+                    if (currentPhase != SalvagePhase.SALVAGING && currentPhase != SalvagePhase.SETUP_SALVAGING) {
+                        currentPhase = SalvagePhase.SETUP_SALVAGING
+                        logger.info("POLL: POWER SALVAGE MODE - Reset to SETUP_SALVAGING")
+                    }
+                    Condition.sleep(300)
+                    return
+                }
             }
 
             // --- 2. DETERMINE CURRENT STATE AND SELECT TASK ---

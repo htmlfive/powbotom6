@@ -10,6 +10,17 @@ class CleanupInventoryTask(script: SalvageSorter) : Task(script) {
 
     override fun activate(): Boolean {
         val hasSalvage = Inventory.stream().name(script.SALVAGE_NAME).isNotEmpty()
+
+        // In Power Salvage mode, NEVER clean up salvage here (DropSalvageTask handles it)
+        // Only clean up other junk items
+        if (script.powerSalvageMode) {
+            if (hasSalvage) return false
+
+            val hasJunk = Inventory.stream().name(*LootConfig.DISCARD_OR_ALCH_LIST).isNotEmpty()
+            return hasJunk
+        }
+
+        // Normal mode: Don't activate if we still have salvage to process
         if (hasSalvage) return false
 
         val hasCleanupLoot = Inventory.stream().name(*LootConfig.DISCARD_OR_ALCH_LIST).isNotEmpty()
