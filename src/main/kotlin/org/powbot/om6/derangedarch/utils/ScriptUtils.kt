@@ -67,20 +67,22 @@ object ScriptUtils {
             return false
         }
 
-        // Try triggering teleport (retry once if it fails)
-        for (attempt in 1..2) {
+        // Try triggering teleport (retry up to 5 times if it fails)
+        for (attempt in 1..5) {
             if (Teleport.RING_OF_DUELING_FEROX_ENCLAVE.trigger()) {
-                script.logger.debug("Teleport triggered (attempt $attempt), waiting to arrive at ${Constants.FEROX_ENTRANCE_TILE}...")
-                return Condition.wait({ Players.local().tile().distanceTo(Constants.FEROX_ENTRANCE_TILE) < 6 }, 300, 15)
+                script.logger.debug("Teleport triggered (attempt $attempt), waiting for teleport to complete...")
+                randomSleep(5000)
+                script.logger.debug("Checking if arrived at ${Constants.FEROX_ENTRANCE_TILE}...")
+                return Condition.wait({ Players.local().tile().distanceTo(Constants.FEROX_ENTRANCE_TILE) < 6 }, 300, 20)
             }
 
-            if (attempt == 1) {
+            if (attempt < 5) {
                 script.logger.warn("Teleport attempt $attempt failed, retrying...")
                 Condition.sleep(600)
             }
         }
 
-        script.logger.warn("Failed to trigger Ring of Dueling teleport after 2 attempts.")
+        script.logger.warn("Failed to trigger Ring of Dueling teleport after 5 attempts.")
         return false
     }
 
