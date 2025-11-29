@@ -36,26 +36,29 @@ object Constants {
      * Predefined locations with their coordinates.
      */
     enum class Location(val displayName: String, val coordinates: String) {
-        AL_KHARID_BANK("Al Kharid Bank", "3293,3174,0"),  // Fixed
-        ARDOUGNE_SOUTH_BANK("Ardougne South Bank", "2655,3283,0"),  // Looks OK
-        CATHERBY_BANK("Catherby Bank", "2813,3447,0"),  // Fixed
-        DRAYNOR_BANK("Draynor Bank", "3093,3244,0"),  // OK
-        EDGEVILLE_BANK("Edgeville Bank", "3093,3494,0"),  // OK
-        FALADOR_EAST_BANK("Falador East Bank", "3013,3355,0"),  // Your current coords
-        FALADOR_WEST_BANK("Falador West Bank", "2945,3368,0"),  // Your current coords
-        FREMENNIK_DOCKS("Fremennik Docks", "2629,3676,0"),  // OK
-        GNOME_STRONGHOLD_BANK("Gnome Stronghold Bank", "2445,3436,1"),  // OK
-        GRAND_EXCHANGE("Grand Exchange", "3165,3487,0"),  // OK
-        LUMBRIDGE_BANK("Lumbridge Bank", "3208,3220,2"),  // OK
-        POLLNIVNEACH_BANK("Pollnivneach", "3359,2970,0"),  // Fixed
-        SEERS_VILLAGE_BANK("Seers' Village Bank", "2726,3492,0"),  // Your coords (might need adjustment to 2708)
-        SHILO_VILLAGE_BANK("Shilo Village Bank", "2853,2955,0"),  // OK
-        TZHAAR_BANK("TzHaar Bank", "2480,5175,0"),  // Fixed (was 2444)
-        VARLAMORE_CITY_BANK("Varlamore City Bank", "1647,3115,0"),  // Can't verify
-        VARROCK_EAST_BANK("Varrock East Bank", "3253,3420,0"),  // Close enough
-        VARROCK_WEST_BANK("Varrock West Bank", "3185,3436,0"),  // OK
-        YANILLE_BANK("Yanille Bank", "2606,3093,0"),  // OK ✓
-        ZEAH_ARCEUUS_BANK("Zeah Arceuus Bank", "1541,3757,0"),  // Can't verify
+        AL_KHARID_BANK("Al Kharid Bank", "3269,3166,0"),  //Good
+        ARDOUGNE_SOUTH_BANK("Ardougne South Bank", "2655,3283,0"),  //Good
+        CATHERBY_BANK("Catherby Bank", "2808,3440,0"),  //Good
+        DIGSITE("Digsite", "3360,3445,0"),  //Good
+        DRAYNOR_BANK("Draynor Bank", "3093,3244,0"),  //Good
+        EDGEVILLE_BANK("Edgeville Bank", "3093,3490,0"),  //Good
+        FALADOR_EAST_BANK("Falador East Bank", "3013,3355,0"),  //Good
+        FALADOR_WEST_BANK("Falador West Bank", "2945,3368,0"),  //Good
+        FREMENNIK_DOCKS("Fremennik Docks", "2629,3680,0"),  //Good
+        GNOME_STRONGHOLD_BANK("Gnome Stronghold Bank", "2449,3481,1"),  //Good
+        GRAND_EXCHANGE("Grand Exchange", "3165,3487,0"),  //Good
+        LUMBRIDGE_BANK("Lumbridge Bank", "3208,3220,2"),  //Good
+        POLLNIVNEACH_BANK("Pollnivneach", "3359,2970,0"),  //Good
+        PORT_SARIM("Port Sarim", "3027,3027,0"),  //Good
+        SEERS_VILLAGE_BANK("Seers' Village Bank", "2726,3492,0"),  //Good
+        SHILO_VILLAGE_BANK("Shilo Village Bank", "2850,2955,0"),  //Good
+        TZHAAR_BANK("TzHaar Bank", "2445,5178,0"),  //Good
+        VARLAMORE_CITY_BANK("Varlamore City Bank", "1647,3115,0"),  //Good
+        VARROCK_EAST_BANK("Varrock East Bank", "3253,3420,0"),  //Good
+        VARROCK_WEST_BANK("Varrock West Bank", "3182,3440,0"),  //Good
+        YANILLE_BANK("Yanille Bank", "2610,3092,0"),  //Good
+        ZEAH_ARCEUUS_BANK("Zeah Arceuus Bank", "1629,3752,0"),  //Good
+
         CUSTOM("Custom (enter X,Y,Z below)", "");
 
         companion object {
