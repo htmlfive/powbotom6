@@ -54,6 +54,11 @@ private const val HOOK_CAST_MESSAGE_2 = "You start operating"
             optionType = OptionType.BOOLEAN, defaultValue = "false"
         ),
         ScriptConfiguration(
+            "Tap-to-drop",
+            "If true, enabled tap-to-drop before starting",
+            optionType = OptionType.BOOLEAN, defaultValue = "true"
+        ),
+        ScriptConfiguration(
             "Max Cargo Space",
             "The maximum cargo space you can hold.",
             optionType = OptionType.STRING,
@@ -95,7 +100,7 @@ class SalvageSorter : AbstractScript() {
     var atHookLocation = false // ADDED: New flag to track if the player is at the salvaging spot
     var atSortLocation = false // NEW FLAG: Track if at sorting spot
     val extractorTask = CrystalExtractorTask(this)
-
+    val tapToDrop: Boolean get() = getOption<Boolean>("Tap-to-drop")
     val requiredDropDirectionStr: String get() = getOption<String>("Drop Salvage Direction")
     val SALVAGE_NAME: String get() = getOption<String>("Salvage Item Name")
     val requiredDropDirection: CardinalDirection get() = CardinalDirection.valueOf(requiredDropDirectionStr)

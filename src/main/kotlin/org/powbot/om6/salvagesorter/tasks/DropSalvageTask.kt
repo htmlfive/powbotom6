@@ -46,8 +46,13 @@ class DropSalvageTask(script: SalvageSorter) : Task(script) {
         // Drop each item with a short delay between drops
         salvageItems.forEach { item ->
             if (item.valid()) {
-                item.click("Drop")
-                Condition.sleep(Random.nextInt(100, 200))
+                if (!script.tapToDrop) {
+                    item.interact("Drop")
+                    Condition.sleep(Random.nextInt(300, 500))
+                } else {
+                    item.click()
+                    Condition.sleep(Random.nextInt(300, 500))
+                }
             }
         }
 

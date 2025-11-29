@@ -167,8 +167,13 @@ fun executeCleanupLoot(script: SalvageSorter): Boolean {
     script.logger.info("CLEANUP: Dropping ${shuffledDroppableItems.size} items.")
 
     shuffledDroppableItems.forEach { itemToDrop ->
+
         if (itemToDrop.valid()) {
-            itemToDrop.interact("Drop")
+            if (!script.tapToDrop) {
+            itemToDrop.interact("Drop")}
+            else {
+                itemToDrop.click()
+            }
             Condition.sleep(Random.nextInt(CLEANUP_DROP_MIN, CLEANUP_DROP_MAX))
         }
     }
