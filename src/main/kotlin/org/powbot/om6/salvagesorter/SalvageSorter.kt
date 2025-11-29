@@ -13,14 +13,14 @@ import org.powbot.om6.salvagesorter.tasks.*
 import kotlin.random.Random
 import org.powbot.api.rt4.Inventory
 import org.powbot.mobile.script.ScriptManager
-import org.powbot.om6.salvager.ShipwreckSalvager.Companion.HOOK_CAST_MESSAGE_1
-import org.powbot.om6.salvager.ShipwreckSalvager.Companion.HOOK_CAST_MESSAGE_2
 
 private const val CARGO_MESSAGE = "Your crewmate on the salvaging hook cannot salvage as the cargo hold is full."
 private const val HARVESTER_MESSAGE = "Your crystal extractor has harvested"
 private const val COINS_ID = 995
 private const val SALVAGE_COMPLETE_MESSAGE = "You salvage all you can"
 private const val SALVAGE_SUCCESS_MESSAGE = "You cast out" // Assumed definition based on context
+private const val HOOK_CAST_MESSAGE_1 = "You cast out your salvaging hook"
+private const val HOOK_CAST_MESSAGE_2 = "You start operating"
 
 @ScriptManifest(
     name = "0m6 Shipwreck Sorter",
