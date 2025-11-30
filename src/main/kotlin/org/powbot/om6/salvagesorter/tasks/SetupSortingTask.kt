@@ -73,26 +73,31 @@ class SetupSortingTask(script: SalvageSorter) : Task(script) {
         script.logger.info("ASSIGNMENTS: Starting 5-tap sequence.")
         val mainWait = setupAssignment(script, Constants.ASSIGNMENT_MAIN_WAIT_MIN, Constants.ASSIGNMENT_MAIN_WAIT_MAX)
 
+        // Open Tab
         clickWidget(Constants.ROOT_SAILINGTAB,Constants.COMPONENT_SAILINGTAB) //Open tab
         Condition.sleep(Random.nextInt(600,900))
         Condition.wait{isWidgetVisible(Constants.ROOT_ASSIGN_WIDGET,Constants.COMPONENT_ASSIGN_WIDGET)}
+        //Click
         clickWidget(Constants.ROOT_ASSIGN_WIDGET,Constants.COMPONENT_ASSIGN_WIDGET,Constants.INDEX_ASSIGN_SLOT2) //Assign SLot 1
         Condition.sleep(Random.nextInt(600,900))
         Condition.wait{isWidgetVisible(Constants.ROOT_ASSIGN_WIDGET,Constants.COMPONENT_ASSIGN_WIDGETCONFIRM)}
+        //Click
         clickWidget(Constants.ROOT_ASSIGN_WIDGET,Constants.COMPONENT_ASSIGN_WIDGETCONFIRM,Constants.INDEX_ASSIGNCONFIRM_SLOT1) //Confirm
         Condition.sleep(Random.nextInt(600,900))
         Condition.wait{isWidgetVisible(Constants.ROOT_ASSIGN_WIDGET,Constants.COMPONENT_ASSIGN_WIDGET)}
+        //Click
         clickWidget(Constants.ROOT_ASSIGN_WIDGET,Constants.COMPONENT_ASSIGN_WIDGET,Constants.INDEX_ASSIGN_SLOT1) //Assign Cannon
         Condition.sleep(Random.nextInt(600,900))
         Condition.wait{isWidgetVisible(Constants.ROOT_ASSIGN_WIDGET,Constants.COMPONENT_ASSIGN_WIDGETCONFIRM)}
+        //Click
         clickWidget(Constants.ROOT_ASSIGN_WIDGET,Constants.COMPONENT_ASSIGN_WIDGETCONFIRM,Constants.INDEX_ASSIGNCONFIRM_SLOT2) //Confirm
         Condition.sleep(Random.nextInt(600,900))
         Condition.wait{isWidgetVisible(Constants.ROOT_ASSIGN_WIDGET,Constants.COMPONENT_ASSIGN_WIDGET)}
 
-        // Reopen and close inventory
-        ensureInventoryOpen(Constants.ASSIGNMENT_INV_OPEN_MIN, Constants.ASSIGNMENT_INV_OPEN_MAX)
-        Condition.sleep(mainWait)
-        closeTabWithSleep(mainWait, mainWait)
+//        // Reopen and close inventory
+//        ensureInventoryOpen(Constants.ASSIGNMENT_INV_OPEN_MIN, Constants.ASSIGNMENT_INV_OPEN_MAX)
+//        Condition.sleep(mainWait)
+//        closeTabWithSleep(mainWait, mainWait)
 
         return true
     }
