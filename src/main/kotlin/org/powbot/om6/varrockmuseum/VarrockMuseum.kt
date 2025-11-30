@@ -72,7 +72,6 @@ class VarrockMuseum : AbstractScript() {
     private var spamClick: Boolean = DEFAULT_SPAM_CLICK
     private var lampSkill: String = DEFAULT_LAMP_SKILL
     private var findsCollected = 0
-    private var findsCleaned = 0
     var currentTask: String = "Starting..."
     
     override fun onStart() {
@@ -95,8 +94,7 @@ class VarrockMuseum : AbstractScript() {
             .x(40)
             .y(80)
             .addString("Current Task:") { currentTask }
-            .addString("Finds Collected:") { findsCollected.toString() }
-            .addString("Finds Cleaned:") { findsCleaned.toString() }
+            .addString("Specimens:") { findsCollected.toString() }
             .trackSkill(SKILL_NAME_TO_ENUM[lampSkill] ?: Skill.Slayer)
             .build()
         addPaint(paint)
@@ -127,7 +125,6 @@ class VarrockMuseum : AbstractScript() {
             logger.info("Cleaning finds at specimen table...")
             if (interactWithObject(SPECIMEN_TABLE, ACTION_CLEAN)) {
                 Condition.wait({ Players.local().animation() == -1 && !inventoryContains(UNCLEANED_FIND) }, 1800, 28)
-                findsCleaned++
             }
             return
         }
