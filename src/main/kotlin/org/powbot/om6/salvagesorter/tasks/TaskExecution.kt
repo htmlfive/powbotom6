@@ -195,6 +195,7 @@ fun executeWithdrawCargo(script: SalvageSorter): Long {
     script.logger.info("CARGO: Starting 4-tap cargo withdrawal sequence.")
 
     val invCountBefore = Inventory.stream().count()
+    val salvageCountBefore = Inventory.stream().name(script.SALVAGE_NAME).count()
 
     // Tap 1: Open cargo
     if (!tapWithSleep(CARGO_TAP_1_X, CARGO_TAP_1_Y, 3, CARGO_TAP1_WAIT_MIN, CARGO_TAP1_WAIT_MAX)) {
@@ -232,15 +233,20 @@ fun executeWithdrawCargo(script: SalvageSorter): Long {
     }
 
     val invCountAfter = Inventory.stream().count()
+    val salvageCountAfter = Inventory.stream().name(script.SALVAGE_NAME).count()
     val inventoryFull = Inventory.isFull()
+    val salvageWithdrawn = (salvageCountAfter - salvageCountBefore).toInt()
 
     if (!inventoryFull) {
         script.logger.warn("CARGO: Inventory not full ($invCountAfter/28). Cargo depleted.")
+        script.xpMessageCount = 0
+        script.cargoHoldFull = false
         return -1L
     }
 
     val baseCooldownMs = script.randomWithdrawCooldownMs
-    script.logger.info("CARGO: Inventory full. Cooldown: ${baseCooldownMs / 1000}s.")
+    script.xpMessageCount -= salvageWithdrawn // Track actual withdrawal
+    script.logger.info("CARGO: Inventory full. Withdrew $salvageWithdrawn items. Cargo count now: ${script.xpMessageCount}. Cooldown: ${baseCooldownMs / 1000}s.")
     return baseCooldownMs
 }
 
@@ -565,7 +571,7 @@ fun depositSalvage(script: SalvageSorter): Boolean {
         script.xpMessageCount += depositedCount
 
         // Flag cargo as full if within 20 of max capacity for earlier transition
-        if (script.xpMessageCount >= (script.maxCargoSpace.toInt() - 20)) {
+        if (script.xpMessageCount >= (script.maxCargoSpace.toLong() - 20L)) {
             script.cargoHoldFull = true
             script.logger.info("DEPOSIT: SUCCESS - Deposited $depositedCount. Cargo count: ${script.xpMessageCount}. Near capacity (within 20), flagging as full.")
         } else {
