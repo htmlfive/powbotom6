@@ -8,6 +8,8 @@ import org.powbot.api.rt4.Objects
 import org.powbot.api.rt4.Players
 import org.powbot.om6.pestcontrol.data.Portal
 
+private val logger = org.slf4j.LoggerFactory.getLogger("Movement")
+
 fun Movement.walkToPortal(portal: Portal): Boolean {
     val player = Players.local()
 
@@ -23,6 +25,7 @@ fun Movement.walkToPortal(portal: Portal): Boolean {
             }
 
         if (gate != null) {
+            logger.info("Opening gate: ${portal.gate().name} for portal: ${portal.name}")
             if (gate.interact("Open")) {
                 return Condition.wait {
                     !gate.valid()

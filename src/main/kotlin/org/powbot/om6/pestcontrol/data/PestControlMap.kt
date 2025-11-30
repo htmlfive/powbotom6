@@ -4,6 +4,7 @@ import org.powbot.api.Area
 import org.powbot.api.Tile
 
 object PestControlMap {
+    private val logger = org.slf4j.LoggerFactory.getLogger("PestControlMap")
 
     var voidKnightTile: Tile = Tile.Nil
     var squireTile: Tile = Tile.Nil
@@ -17,6 +18,7 @@ object PestControlMap {
 
         squireTile = squire
         voidKnightTile = Tile(x + 2, y - 14)
+        logger.info("Map updated - Squire: $squire, Void Knight: $voidKnightTile")
 
         boatArea = Area(
             Tile(x, y + 7),

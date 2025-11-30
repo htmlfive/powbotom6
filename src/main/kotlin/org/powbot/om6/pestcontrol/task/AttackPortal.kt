@@ -13,7 +13,7 @@ import org.powbot.om6.pestcontrol.helpers.walkToPortal
 
 class AttackPortal(val activity: Activity): Task {
 
-    val logger = org.slf4j.LoggerFactory.getLogger("AttackPortal")
+    private val logger = org.slf4j.LoggerFactory.getLogger(javaClass.simpleName)
     var portal: Portal? = null
 
     override fun name(): String {
@@ -28,30 +28,36 @@ class AttackPortal(val activity: Activity): Task {
         if (portal == null || portal?.health() == 0) {
             portal = Portal.openPortals().randomOrNull() ?:
                     Portal.values().random()
+            logger.info("Selected new portal: ${portal?.name}")
             return
         }
 
         val portalDistance = portal!!.tile().distance()
         if (portalDistance <= 4) {
             if (portal!!.health() > 0 && !portal!!.hasShield() && attackPortal()) {
+                logger.info("Attacking portal: ${portal!!.name}, health: ${portal!!.health()}")
                 return
             }
         }
 
         if (fightBrawler()) {
+            logger.info("Fighting nearby Brawler")
             return
         }
         if (fightSpinner()) {
+            logger.info("Fighting Spinner (3+ nearby)")
             return
         }
 
         if (portal!!.tile().distance() <= 4) {
             val monster = Npcs.nextMonster(portal!!.tile())
             if (monster.valid()) {
+                logger.info("Attacking monster near portal: ${monster.name()}")
                 monster.interact("Attack") &&
                         Condition.wait { Players.local().interacting() == monster }
                 return
             } else if (portal?.health() == 0) {
+                logger.info("Portal destroyed: ${portal?.name}")
                 portal = null
             }
             return
@@ -59,10 +65,12 @@ class AttackPortal(val activity: Activity): Task {
 
         if (portal!!.tile().distance() > 4) {
             if (portal?.health() ?: 0 < 20) {
+                logger.info("Portal low health, selecting new target")
                 portal = null
                 return
             }
 
+            logger.info("Walking to portal: ${portal!!.name}, distance: $portalDistance")
             Movement.walkToPortal(portal!!)
             return
         }

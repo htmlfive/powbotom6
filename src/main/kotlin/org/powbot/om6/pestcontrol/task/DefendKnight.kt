@@ -13,7 +13,7 @@ import org.powbot.om6.pestcontrol.helpers.voidKnightHealth
 
 class DefendKnight(val activity: Activity): Task {
 
-    val logger = org.slf4j.LoggerFactory.getLogger("DefendKnight")
+    private val logger = org.slf4j.LoggerFactory.getLogger(javaClass.simpleName)
 
     override fun name(): String {
         return "Defending Knight"
@@ -26,15 +26,18 @@ class DefendKnight(val activity: Activity): Task {
     override fun run() {
         val monster = Npcs.nextMonster(Npcs.voidKnight())
         if (!monster.valid()) {
+            logger.info("No monsters near Void Knight")
             return
         }
 
         if (monster.interact("Attack")) {
+            logger.info("Attacking monster near Void Knight: ${monster.name()}")
             Condition.wait {
                 Players.local().interacting() == monster
             }
             return
         } else if (monster.tile().distance() > 4) {
+            logger.info("Walking to monster: ${monster.name()}, distance: ${monster.tile().distance()}")
             LocalPathFinder.findPath(monster.tile()).traverse()
             return
         }

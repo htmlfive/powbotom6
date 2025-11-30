@@ -13,6 +13,7 @@ import org.powbot.om6.pestcontrol.helpers.squire
 import kotlin.random.Random
 
 class LeaveBoat(val script: PowPestControl): Task {
+    private val logger = org.slf4j.LoggerFactory.getLogger(javaClass.simpleName)
     override fun name(): String {
         return "Leaving boat"
     }
@@ -24,7 +25,7 @@ class LeaveBoat(val script: PowPestControl): Task {
 
     override fun run() {
         script.playedGame = true
-
+        logger.info("Leaving boat, game starting")
         Input.tap(Game.tileToMap(Npcs.squire().tile().derive(Random.nextInt(2, 4), Random.nextInt(-12, -7))))
         Condition.wait { !valid() }
     }

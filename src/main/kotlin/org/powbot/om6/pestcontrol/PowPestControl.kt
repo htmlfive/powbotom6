@@ -85,24 +85,29 @@ class PowPestControl : AbstractScript() {
         val boatOpt = getOption<String?>("Boat Type")
         if (boatOpt != null) {
             boat = Boat.valueOf(boatOpt.replace(" ", ""))
+            logger.info("Boat type selected: ${boat?.name}")
         }
         val activityOpt = getOption<String?>("Activity")
         if (activityOpt != null) {
             activity = Activity.valueOf(activityOpt.replace(" ", ""))
+            logger.info("Activity selected: ${activity?.name}")
         }
 
         if (activity == null) {
+            logger.error("No activity set - stopping script")
             Notifications.showNotification("No activity set")
             ScriptManager.stop()
         }
 
         if (boat == null) {
+            logger.error("No boat set - stopping script")
             Notifications.showNotification("No boat set")
             ScriptManager.stop()
         }
 
         if (activity == Activity.Mix) {
             isMix = true
+            logger.info("Mix mode enabled - will alternate between activities")
         }
 
         EventFlows.collectTicks {
@@ -160,6 +165,7 @@ class PowPestControl : AbstractScript() {
 
     private fun initTasks() {
         tasks.clear()
+        logger.info("Initializing tasks for activity: ${activity?.name}")
 
         tasks.add(Sleep())
         tasks.add(SetZoom())
@@ -187,6 +193,7 @@ class PowPestControl : AbstractScript() {
 
         if (isMix && (gamesSinceChangedActivity == -1 || gamesSinceChangedActivity >= Random.nextInt(3, 7))) {
             activity = if (Random.nextBoolean()) Activity.DefendKnight else Activity.AttackPortal
+            logger.info("Mix mode: Switching activity to ${activity?.name}")
             initTasks()
 
             gamesSinceChangedActivity = 0

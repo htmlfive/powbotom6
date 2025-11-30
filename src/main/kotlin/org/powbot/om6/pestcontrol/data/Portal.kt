@@ -27,8 +27,12 @@ enum class Portal(val xOffset: Int, val yOffset: Int, val componentIdx: Int) {
     }
 
     companion object {
+        private val logger = org.slf4j.LoggerFactory.getLogger("Portal")
+
         fun openPortals(): List<Portal> {
-            return values().filter { !it.hasShield() && it.health() > 20 }
+            val portals = values().filter { !it.hasShield() && it.health() > 20 }
+            logger.info("Open portals found: ${portals.map { it.name }}")
+            return portals
         }
 
         fun nearestOpenPortal(): Portal? {

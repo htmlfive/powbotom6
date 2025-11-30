@@ -7,6 +7,7 @@ import org.powbot.om6.pestcontrol.helpers.currentPoints
 import org.powbot.om6.pestcontrol.helpers.voidKnightHealth
 
 class BoatWait(val script: PowPestControl) : Task {
+    private val logger = org.slf4j.LoggerFactory.getLogger(javaClass.simpleName)
     override fun name(): String {
         return "Waiting for next game"
     }
@@ -19,7 +20,7 @@ class BoatWait(val script: PowPestControl) : Task {
         if (script.playedGame) {
             script.gamesPlayed++
             script.gamesSinceChangedActivity++
-
+            logger.info("Game completed. Total games: ${script.gamesPlayed}")
             script.playedGame = false
         }
 
@@ -28,10 +29,12 @@ class BoatWait(val script: PowPestControl) : Task {
             val currPoints = currentPointsTxt.replace("Pest Points: ", "").trim().toInt()
             if (script.initialPoints == null) {
                 script.initialPoints = currPoints
+                logger.info("Initial points: $currPoints")
             }
 
             val pointsGained = currPoints - script.initialPoints!!
             if (pointsGained > script.pointsGained) {
+                logger.info("Points gained: $pointsGained (Current: $currPoints)")
                 script.pointsGained = pointsGained
             }
         }
