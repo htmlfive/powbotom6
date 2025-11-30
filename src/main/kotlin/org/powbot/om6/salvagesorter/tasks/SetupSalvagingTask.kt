@@ -2,6 +2,8 @@ package org.powbot.om6.salvagesorter.tasks
 
 import org.powbot.api.Condition
 import org.powbot.api.Random
+import org.powbot.api.rt4.ScrollHelper
+import org.powbot.api.rt4.Widgets
 import org.powbot.om6.salvagesorter.SalvageSorter
 import org.powbot.om6.salvagesorter.config.Constants
 import org.powbot.om6.salvagesorter.config.SalvagePhase
@@ -80,6 +82,13 @@ class SetupSalvagingTask(script: SalvageSorter) : Task(script) {
         clickWidget(Constants.ROOT_SAILINGTAB,Constants.COMPONENT_SAILINGTAB) //Open tab
         Condition.sleep(Random.nextInt(600,900))
         Condition.wait{isWidgetVisible(Constants.ROOT_ASSIGN_WIDGET,Constants.COMPONENT_ASSIGN_WIDGET)}
+
+        ScrollHelper.scrollTo(
+            item = Widgets.component(937, 25, 47),
+            pane = Widgets.component(937,23),
+            scrollComp = Widgets.component(937,32),
+        )
+
         //Click
         clickWidget(Constants.ROOT_ASSIGN_WIDGET,Constants.COMPONENT_ASSIGN_WIDGET,Constants.INDEX_ASSIGN_SLOT1) //Assign SLot 1
         Condition.sleep(Random.nextInt(600,900))
