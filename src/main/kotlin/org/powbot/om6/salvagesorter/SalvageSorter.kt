@@ -7,7 +7,9 @@ import org.powbot.api.script.paint.PaintBuilder
 import org.powbot.api.script.ScriptConfiguration.List as ConfigList
 import org.powbot.api.event.MessageEvent
 import org.powbot.api.event.MessageType
+import org.powbot.api.rt4.Camera
 import org.powbot.om6.salvagesorter.config.CardinalDirection
+import org.powbot.om6.salvagesorter.config.Constants
 import org.powbot.om6.salvagesorter.config.SalvagePhase
 import org.powbot.om6.salvagesorter.tasks.*
 import kotlin.random.Random
@@ -144,6 +146,7 @@ class SalvageSorter : AbstractScript() {
         logger.info("INIT: Comprehensive Task list initialized.")
         listOf(
             // HIGHEST PRIORITY
+            SetZoomTask(this),
             CrystalExtractorTask(this),
             CleanupInventoryTask(this),
 
@@ -203,6 +206,14 @@ class SalvageSorter : AbstractScript() {
 
     override fun onStart() {
         logger.info("SCRIPT START: Initializing Shipwreck Sorter...")
+
+        if (Camera.zoom != Constants.TARGET_ZOOM_LEVEL) {
+            logger.info("INIT: Setting camera zoom to ${Constants.TARGET_ZOOM_LEVEL}")
+            Camera.moveZoomSlider(Constants.TARGET_ZOOM_LEVEL.toDouble())
+            Condition.wait({ Camera.zoom == Constants.TARGET_ZOOM_LEVEL }, 100, 20)
+            Condition.sleep(Random.nextInt(600,1200))
+        }
+
         initialCoinCount = currentCoinCount
         logger.info("INIT: Tracking coins. Initial total GP (Inventory Only): $initialCoinCount")
         extractorTimer = 0L
@@ -261,7 +272,17 @@ class SalvageSorter : AbstractScript() {
 
     override fun poll() {
         try {
+            logger.debug("POLL START: phase=$currentPhase, cargoHoldFull=$cargoHoldFull, atSortLocation=$atSortLocation, atHookLocation=$atHookLocation")
+
             // --- 1. HIGHEST PRIORITY INTERRUPTS ---
+
+            // Zoom Check (Highest priority - ensure camera is set correctly)
+            val zoomTask = allTasks.firstOrNull { it is SetZoomTask && it.activate() }
+            if (zoomTask != null) {
+                logger.info("POLL: Executing INTERRUPT: Set Zoom")
+                zoomTask.execute()
+                return
+            }
 
             // Extractor Check (Always highest priority)
             val extractorTask = allTasks.firstOrNull { it is CrystalExtractorTask && it.activate() }

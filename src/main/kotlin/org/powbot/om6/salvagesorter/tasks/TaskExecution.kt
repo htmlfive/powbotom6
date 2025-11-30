@@ -13,11 +13,20 @@ import kotlin.random.Random as KotlinRandom
 // SLEEP TIMINGS (Easy Configuration)
 // ========================================
 
+// Widgets
+
+private const val ROOT_CARGOWIDGET = 943
+private const val COMPONENT_CARGOSPACE = 5
+private const val COMPONENT_DEPOSITSALVAGE = 14
+private const val INDEX_FIRSTSLOT = 0
+private const val COMPONENT_CLOSE = 1
+private const val INDEX_CLOSE = 11
+
 // Assignment Sleeps
-private const val ASSIGNMENT_MAIN_WAIT_MIN = 900
-private const val ASSIGNMENT_MAIN_WAIT_MAX = 1200
-private const val ASSIGNMENT_INV_OPEN_MIN = 200
-private const val ASSIGNMENT_INV_OPEN_MAX = 400
+private const val ASSIGNMENT_MAIN_WAIT_MIN = 1200
+private const val ASSIGNMENT_MAIN_WAIT_MAX = 1800
+private const val ASSIGNMENT_INV_OPEN_MIN = 600
+private const val ASSIGNMENT_INV_OPEN_MAX = 900
 
 // Walk Sleeps
 private const val WALK_WAIT_MIN = 1800
@@ -54,8 +63,8 @@ private const val SORT_TAB_OPEN_MIN = 200
 private const val SORT_TAB_OPEN_MAX = 400
 private const val SORT_TAB_CLOSE_MIN = 600
 private const val SORT_TAB_CLOSE_MAX = 1200
-private const val SORT_SUCCESS_WAIT_MIN = 5000
-private const val SORT_SUCCESS_WAIT_MAX = 8000
+private const val SORT_SUCCESS_WAIT_MIN = 1200
+private const val SORT_SUCCESS_WAIT_MAX = 2400
 private const val SORT_CHECK_INTERVAL = 2400
 private const val SORT_INITIAL_WAIT = 7200L
 private const val SORT_RETAP_MIN = 500
@@ -66,8 +75,8 @@ private const val SORT_POST_INTERRUPT_WAIT = 600
 // Cleanup Sleeps
 private const val CLEANUP_ALCH_MIN = 3000
 private const val CLEANUP_ALCH_MAX = 3600
-private const val CLEANUP_DROP_MIN = 300
-private const val CLEANUP_DROP_MAX = 500
+private const val CLEANUP_DROP_MIN = 80
+private const val CLEANUP_DROP_MAX = 150
 
 // WalkToSort Sleeps
 private const val WALKTOSORT_CAMERA_MIN = 600
