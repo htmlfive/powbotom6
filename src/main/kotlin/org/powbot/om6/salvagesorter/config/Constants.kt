@@ -39,6 +39,17 @@ object Constants {
     const val COMPONENT_CLOSE = 1
     const val INDEX_CLOSE = 11
 
+    const val ROOT_ASSIGN_WIDGET = 937
+    const val COMPONENT_ASSIGN_WIDGET = 25
+    const val INDEX_ASSIGN_CANNON = 31
+    const val INDEX_ASSIGN_SLOT1 = 43
+    const val INDEX_ASSIGN_SLOT2 = 47
+
+    const val COMPONENT_ASSIGN_WIDGETCONFIRM = 20
+    const val INDEX_ASSIGN_UNASSIGN = 0
+    const val INDEX_ASSIGNCONFIRM_SLOT1 = 1
+    const val INDEX_ASSIGNCONFIRM_SLOT2 = 2
+
     // ========================================
     // ASSIGNMENT SLEEP TIMINGS
     // ========================================
