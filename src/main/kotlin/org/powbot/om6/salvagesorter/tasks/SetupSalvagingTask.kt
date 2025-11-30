@@ -77,17 +77,22 @@ class SetupSalvagingTask(script: SalvageSorter) : Task(script) {
         script.logger.info("ASSIGNMENTS: Starting 3-tap ghost sequence.")
         val mainWait = setupAssignment(script, Constants.ASSIGNMENT_MAIN_WAIT_MIN, Constants.ASSIGNMENT_MAIN_WAIT_MAX)
 
-        val taps = listOf(
-            Constants.ASSIGN_BOTH_1_X to Constants.ASSIGN_BOTH_1_Y,
-            Constants.ASSIGN_BOTH_2_X to Constants.ASSIGN_BOTH_2_Y,
-            Constants.ASSIGN_BOTH_5_X to Constants.ASSIGN_BOTH_5_Y,
-            Constants.ASSIGN_CANNON_X to Constants.ASSIGN_CANNON_Y,
-            Constants.ASSIGN_BOTH_3_X to Constants.ASSIGN_BOTH_3_Y
-        )
+        tapWithSleep(Constants.ASSIGN_BOTH_1_X, Constants.ASSIGN_BOTH_1_Y, 3,1200,1800) //Open Tab
+        Condition.sleep(Random.nextInt(600,900))
+        Condition.wait{isWidgetVisible(Constants.ROOT_ASSIGN_WIDGET,Constants.COMPONENT_ASSIGN_WIDGET)}
+        clickWidget(Constants.ROOT_ASSIGN_WIDGET,Constants.COMPONENT_ASSIGN_WIDGET,Constants.INDEX_ASSIGN_SLOT1) //Assign SLot 1
+        Condition.sleep(Random.nextInt(600,900))
+        Condition.wait{isWidgetVisible(Constants.ROOT_ASSIGN_WIDGET,Constants.COMPONENT_ASSIGN_WIDGETCONFIRM)}
+        clickWidget(Constants.ROOT_ASSIGN_WIDGET,Constants.COMPONENT_ASSIGN_WIDGETCONFIRM,Constants.INDEX_ASSIGNCONFIRM_SLOT1) //Confirm
+        Condition.sleep(Random.nextInt(600,900))
+        Condition.wait{isWidgetVisible(Constants.ROOT_ASSIGN_WIDGET,Constants.COMPONENT_ASSIGN_WIDGET)}
+        clickWidget(Constants.ROOT_ASSIGN_WIDGET,Constants.COMPONENT_ASSIGN_WIDGET,Constants.INDEX_ASSIGN_CANNON) //Assign Cannon
+        Condition.sleep(Random.nextInt(600,900))
+        Condition.wait{isWidgetVisible(Constants.ROOT_ASSIGN_WIDGET,Constants.COMPONENT_ASSIGN_WIDGETCONFIRM)}
+        clickWidget(Constants.ROOT_ASSIGN_WIDGET,Constants.COMPONENT_ASSIGN_WIDGETCONFIRM,Constants.INDEX_ASSIGNCONFIRM_SLOT2) //Confirm
+        Condition.sleep(Random.nextInt(600,900))
+        Condition.wait{isWidgetVisible(Constants.ROOT_ASSIGN_WIDGET,Constants.COMPONENT_ASSIGN_WIDGET)}
 
-        if (!executeTapSequence(script, taps, 3, mainWait, mainWait, "GHOST")) {
-            return false
-        }
 
         // Reopen and close inventory
         ensureInventoryOpen(Constants.ASSIGNMENT_INV_OPEN_MIN, Constants.ASSIGNMENT_INV_OPEN_MAX)
