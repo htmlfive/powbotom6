@@ -46,6 +46,9 @@ object Constants {
     // Animation
     const val IDLE_ANIMATION = -1
 
+    // Prayer settings
+    const val PRAYER_ACTIVATION_WAIT_MS = 600
+
     // NPC names
     const val VOID_KNIGHT_NAME = "Void Knight"
     const val SQUIRE_NAME = "Squire"

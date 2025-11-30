@@ -21,6 +21,7 @@ import org.powbot.mobile.script.ScriptManager
 import org.powbot.mobile.service.ScriptUploader
 import org.powbot.om6.pestcontrol.data.Activity
 import org.powbot.om6.pestcontrol.data.Boat
+import org.powbot.om6.pestcontrol.data.PrayerType
 import org.powbot.om6.pestcontrol.data.PestControlMap
 import org.powbot.om6.pestcontrol.helpers.Zeal
 import org.powbot.om6.pestcontrol.helpers.squire
@@ -44,7 +45,7 @@ import org.powbot.om6.pestcontrol.task.*
         ScriptConfiguration(
             name = "Boat Type",
             description = "Which level boat",
-            defaultValue = "Easy",
+            defaultValue = "Hard",
             allowedValues = [
                 "Easy", "Medium", "Hard"
             ]
@@ -52,9 +53,25 @@ import org.powbot.om6.pestcontrol.task.*
         ScriptConfiguration(
             name = "Activity",
             description = "Which activity to take part in",
-            defaultValue = "Mix",
+            defaultValue = "Attack Portal",
             allowedValues = [
                 "Defend Knight", "Attack Portal", "Mix"
+            ]
+        ),
+        ScriptConfiguration(
+            name = "Overhead Prayer",
+            description = "Overhead prayer to activate during games",
+            defaultValue = "None",
+            allowedValues = [
+                "None", "Protect from Magic", "Protect from Melee", "Protect from Missiles", "Redemption"
+            ]
+        ),
+        ScriptConfiguration(
+            name = "Offensive Prayer",
+            description = "Offensive prayer to activate during games",
+            defaultValue = "None",
+            allowedValues = [
+                "None", "Eagle Eye", "Mystic Might", "Rigour"
             ]
         ),
     ]
@@ -80,6 +97,9 @@ class PestControl : AbstractScript() {
     var attackPortal: AttackPortal? = null
 
     var zealPercentage: Int? = null
+
+    var overheadPrayer: PrayerType? = null
+    var offensivePrayer: PrayerType? = null
 
     override fun onStart() {
         val boatOpt = getOption<String?>("Boat Type")
@@ -108,6 +128,19 @@ class PestControl : AbstractScript() {
         if (activity == Activity.Mix) {
             isMix = true
             logger.info("Mix mode enabled - will alternate between activities")
+        }
+
+        // Load prayer configurations
+        val overheadOpt = getOption<String?>("Overhead Prayer")
+        if (overheadOpt != null && overheadOpt != "None") {
+            overheadPrayer = PrayerType.fromDisplayName(overheadOpt)
+            logger.info("Overhead prayer: ${overheadPrayer?.prayerName}")
+        }
+
+        val offensiveOpt = getOption<String?>("Offensive Prayer")
+        if (offensiveOpt != null && offensiveOpt != "None") {
+            offensivePrayer = PrayerType.fromDisplayName(offensiveOpt)
+            logger.info("Offensive prayer: ${offensivePrayer?.prayerName}")
         }
 
         EventFlows.collectTicks {
@@ -171,6 +204,12 @@ class PestControl : AbstractScript() {
         tasks.add(SetZoom())
         tasks.add(BoatWait(this))
         tasks.add(LeaveBoat(this))
+        
+        // Add prayer activation task if prayers are configured
+        if (overheadPrayer != null || offensivePrayer != null) {
+            tasks.add(ActivatePrayers(this))
+        }
+        
         tasks.add(CrossGangplank(boat!!))
         tasks.add(AttackInteracting())
 
