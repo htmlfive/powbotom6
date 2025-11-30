@@ -1,9 +1,9 @@
-import org.powbot.webwalk.WebWalkerScript
+package org.powbot.om6.pestcontrol
 
 /**
  * Entry point for standalone execution.
  */
 fun main() {
-    val script = WebWalkerScript()
+    val script = PestControl()
     script.startScript("localhost", "WebWalker", false)
 }
