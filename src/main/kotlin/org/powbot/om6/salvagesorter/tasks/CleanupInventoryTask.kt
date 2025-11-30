@@ -1,9 +1,15 @@
 package org.powbot.om6.salvagesorter.tasks
 
+import org.powbot.api.Condition
+import org.powbot.api.Random
+import org.powbot.api.rt4.Game
 import org.powbot.api.rt4.Inventory
+import org.powbot.api.rt4.Magic
 import org.powbot.om6.salvagesorter.SalvageSorter
+import org.powbot.om6.salvagesorter.config.Constants
 import org.powbot.om6.salvagesorter.config.LootConfig
 import org.powbot.om6.salvagesorter.config.SalvagePhase
+import kotlin.random.Random as KotlinRandom
 
 class CleanupInventoryTask(script: SalvageSorter) : Task(script) {
     private val extractorTask = CrystalExtractorTask(script)
@@ -33,7 +39,7 @@ class CleanupInventoryTask(script: SalvageSorter) : Task(script) {
 
         if (extractorTask.checkAndExecuteInterrupt(script)) return
 
-        val success = executeCleanupLoot(script)
+        val success = executeCleanupLoot()
 
         if (extractorTask.checkAndExecuteInterrupt(script)) return
 
@@ -44,4 +50,64 @@ class CleanupInventoryTask(script: SalvageSorter) : Task(script) {
         script.logger.info("PHASE: Cleanup complete/failed. Transitioned to ${script.currentPhase.name}.")
     }
 
+    /**
+     * Executes cleanup of loot items (alching and dropping).
+     * @return true if any items were successfully cleaned up
+     */
+    private fun executeCleanupLoot(): Boolean {
+        var successfullyCleaned = false
+        CameraSnapper.snapCameraToDirection(script.requiredTapDirection, script)
+        val highAlchSpell = Magic.Spell.HIGH_ALCHEMY
+        script.logger.info("CLEANUP: Starting alching loop.")
+
+        LootConfig.ALCH_LIST.forEach { itemName ->
+            val item = Inventory.stream().name(itemName).firstOrNull()
+            if (item != null && item.valid()) {
+                script.logger.info("CLEANUP: Attempting High Alch on $itemName.")
+                successfullyCleaned = true
+
+                if (highAlchSpell.cast("Cast") && Condition.wait({ Game.tab() == Game.Tab.INVENTORY }, 125, 12)) {
+                    if (item.interact("Cast")) {
+                        Condition.wait({ Game.tab() == Game.Tab.MAGIC }, 125, 12)
+                        script.logger.info("CLEANUP: Alch successful. Sleeping for animation.")
+                        Condition.sleep(Random.nextInt(Constants.CLEANUP_ALCH_MIN, Constants.CLEANUP_ALCH_MAX))
+                        Condition.wait({ Inventory.stream().name(itemName).isEmpty() }, 300, 5)
+                    } else {
+                        script.logger.warn("CLEANUP: Failed to click item $itemName.")
+                    }
+                } else {
+                    script.logger.warn("CLEANUP: Failed to select High Alch spell.")
+                    return successfullyCleaned
+                }
+            }
+        }
+
+        if (!ensureInventoryOpen(Constants.ASSIGNMENT_INV_OPEN_MIN, Constants.ASSIGNMENT_INV_OPEN_MAX)) {
+            script.logger.warn("CLEANUP: Failed to open inventory tab.")
+        }
+
+        val shuffledDroppableItems = Inventory.stream()
+            .filter { item -> item.valid() && item.name() in LootConfig.DROP_LIST }
+            .toList()
+            .shuffled(KotlinRandom)
+
+        script.logger.info("CLEANUP: Dropping ${shuffledDroppableItems.size} items.")
+
+        shuffledDroppableItems.forEach { itemToDrop ->
+            if (itemToDrop.valid()) {
+                if (!script.tapToDrop) {
+                    itemToDrop.interact("Drop")
+                } else {
+                    itemToDrop.click()
+                }
+                Condition.sleep(Random.nextInt(Constants.CLEANUP_DROP_MIN, Constants.CLEANUP_DROP_MAX))
+            }
+        }
+
+        if (successfullyCleaned) {
+            Condition.sleep(Random.nextInt(Constants.CLEANUP_DROP_MIN, Constants.CLEANUP_DROP_MAX))
+        }
+
+        return successfullyCleaned
+    }
 }

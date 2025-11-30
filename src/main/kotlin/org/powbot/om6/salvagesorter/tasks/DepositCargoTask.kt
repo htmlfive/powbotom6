@@ -1,12 +1,12 @@
-// ========================================
-// DepositCargoTask.kt
-// ========================================
 package org.powbot.om6.salvagesorter.tasks
 
-import org.powbot.om6.salvagesorter.SalvageSorter
-import org.powbot.om6.salvagesorter.config.SalvagePhase
-import org.powbot.api.rt4.Inventory
 import org.powbot.api.Condition
+import org.powbot.api.Random
+import org.powbot.api.rt4.Inventory
+import org.powbot.om6.salvagesorter.SalvageSorter
+import org.powbot.om6.salvagesorter.config.CardinalDirection
+import org.powbot.om6.salvagesorter.config.Constants
+import org.powbot.om6.salvagesorter.config.SalvagePhase
 
 class DepositCargoTask(script: SalvageSorter) : Task(script) {
     private val extractorTask = CrystalExtractorTask(script)
@@ -24,7 +24,7 @@ class DepositCargoTask(script: SalvageSorter) : Task(script) {
         if (extractorTask.checkAndExecuteInterrupt(script)) return
 
         // Execute deposit - this will update script.cargoHoldFull
-        val success = depositSalvage(script)
+        val success = depositSalvage()
 
         // Check for extractor interrupt after action
         if (extractorTask.checkAndExecuteInterrupt(script)) return
@@ -37,6 +37,50 @@ class DepositCargoTask(script: SalvageSorter) : Task(script) {
             script.logger.warn("DEPOSIT: Deposit failed - Cargo hold is FULL.")
             // cargoHoldFull = true (set by depositSalvage)
             // State machine will switch to SORTING phase
+        }
+    }
+
+    /**
+     * Deposits salvage to the cargo hold.
+     * @return true if deposit was successful
+     */
+    private fun depositSalvage(): Boolean {
+        CameraSnapper.snapCameraToDirection(CardinalDirection.South, script)
+        Condition.sleep(Random.nextInt(Constants.DEPOSIT_PRE_WAIT_MIN, Constants.DEPOSIT_PRE_WAIT_MAX))
+
+        val initialSalvageCount = Inventory.stream().name(script.SALVAGE_NAME).count()
+        script.logger.info("DEPOSIT: Initial count: $initialSalvageCount")
+
+        Condition.sleep(Random.nextInt(Constants.DEPOSIT_BETWEEN_TAPS_MIN, Constants.DEPOSIT_BETWEEN_TAPS_MAX))
+
+        val depositTaps = listOf(
+            Constants.HOOK_SALVAGE_2_X to Constants.HOOK_SALVAGE_2_Y,
+            Constants.HOOK_SALVAGE_3_X to Constants.HOOK_SALVAGE_3_Y,
+            Constants.HOOK_SALVAGE_4_X to Constants.HOOK_SALVAGE_4_Y
+        )
+
+        executeTapSequence(script, depositTaps, 3, Constants.DEPOSIT_BETWEEN_TAPS_MIN, Constants.DEPOSIT_BETWEEN_TAPS_MAX, "DEPOSIT")
+
+        val finalSalvageCount = Inventory.stream().name(script.SALVAGE_NAME).count()
+        val depositedCount = (initialSalvageCount - finalSalvageCount).toInt()
+
+        if (finalSalvageCount < initialSalvageCount) {
+            script.xpMessageCount += depositedCount
+
+            // Flag cargo as full if within 20 of max capacity for earlier transition
+            if (script.xpMessageCount >= (script.maxCargoSpace.toLong() - 20L)) {
+                script.cargoHoldFull = true
+                script.logger.info("DEPOSIT: SUCCESS - Deposited $depositedCount. Cargo count: ${script.xpMessageCount}. Near capacity (within 20), flagging as full.")
+            } else {
+                script.cargoHoldFull = false
+                script.logger.info("DEPOSIT: SUCCESS - Deposited $depositedCount. Cargo count: ${script.xpMessageCount}")
+            }
+            return true
+        } else {
+            script.cargoHoldFull = true
+            script.xpMessageCount = script.maxCargoSpace.toInt()
+            script.logger.warn("DEPOSIT: FAILED - Cargo FULL. Set count to ${script.maxCargoSpace}.")
+            return false
         }
     }
 }

@@ -1,8 +1,10 @@
 package org.powbot.om6.salvagesorter.tasks
 
-import org.powbot.om6.salvagesorter.SalvageSorter
-import org.powbot.om6.salvagesorter.config.SalvagePhase
 import org.powbot.api.Condition
+import org.powbot.api.Random
+import org.powbot.om6.salvagesorter.SalvageSorter
+import org.powbot.om6.salvagesorter.config.Constants
+import org.powbot.om6.salvagesorter.config.SalvagePhase
 
 class SetupSalvagingTask(script: SalvageSorter) : Task(script) {
     override fun activate(): Boolean {
@@ -17,7 +19,7 @@ class SetupSalvagingTask(script: SalvageSorter) : Task(script) {
         script.logger.info("SETUP: Reset atSortLocation flag to false.")
 
         // Walk to salvaging spot (this will also set atHookLocation = true)
-        val success = walkToHook(script)
+        val success = walkToHook()
 
         if (success) {
             script.logger.info("SETUP: Setup complete. Transitioning to SALVAGING.")
@@ -27,5 +29,72 @@ class SetupSalvagingTask(script: SalvageSorter) : Task(script) {
             script.logger.warn("SETUP: Setup failed. Will retry.")
             Condition.sleep(1000)
         }
+    }
+
+    /**
+     * Walks to the hook location and assigns crew if needed.
+     * @return true if successfully arrived at hook location
+     */
+    private fun walkToHook(): Boolean {
+        if (script.atHookLocation) {
+            script.logger.info("WALK: Already at hook location. Skipping movement and assignment.")
+            return true
+        }
+
+        script.logger.info("WALK: Not at hook location yet. Starting walk and assignment sequence.")
+
+        // Skip Ghost assignment in Power Salvage Mode
+        if (!script.powerSalvageMode) {
+            if (!assignGhost()) {
+                script.logger.warn("WALK: Failed to assign Ghost.")
+                return false
+            }
+        } else {
+            script.logger.info("WALK: Power Salvage Mode - Skipping Ghost assignment.")
+        }
+
+        val waitTime = Random.nextInt(Constants.WALK_WAIT_MIN, Constants.WALK_WAIT_MAX)
+        Condition.sleep(waitTime)
+        CameraSnapper.snapCameraToDirection(script.requiredTapDirection, script)
+
+        script.logger.info("WALK: Tapping walk-to-hook.")
+
+        if (!tapWithSleep(Constants.HOOK_SALVAGE_6_X, Constants.HOOK_SALVAGE_6_Y, 3, waitTime, waitTime)) {
+            script.logger.warn("WALK: Failed to tap walk point.")
+            return false
+        }
+
+        script.atHookLocation = true
+        script.logger.info("WALK: Arrived at hook location. Flag set to true.")
+        return true
+    }
+
+    /**
+     * Assigns crew to Ghost position.
+     * @return true if assignment was successful
+     */
+    private fun assignGhost(): Boolean {
+        script.logger.info("ASSIGNMENTS: Starting 3-tap ghost sequence.")
+        val mainWait = setupAssignment(script, Constants.ASSIGNMENT_MAIN_WAIT_MIN, Constants.ASSIGNMENT_MAIN_WAIT_MAX)
+
+        val taps = listOf(
+            Constants.ASSIGN_BOTH_1_X to Constants.ASSIGN_BOTH_1_Y,
+            Constants.ASSIGN_BOTH_2_X to Constants.ASSIGN_BOTH_2_Y,
+            Constants.ASSIGN_BOTH_5_X to Constants.ASSIGN_BOTH_5_Y,
+            Constants.ASSIGN_CANNON_X to Constants.ASSIGN_CANNON_Y,
+            Constants.ASSIGN_BOTH_3_X to Constants.ASSIGN_BOTH_3_Y
+        )
+
+        if (!executeTapSequence(script, taps, 3, mainWait, mainWait, "GHOST")) {
+            return false
+        }
+
+        // Reopen and close inventory
+        ensureInventoryOpen(Constants.ASSIGNMENT_INV_OPEN_MIN, Constants.ASSIGNMENT_INV_OPEN_MAX)
+        Condition.sleep(mainWait)
+        closeTabWithSleep(mainWait, mainWait)
+
+        script.logger.info("ASSIGNMENTS: Ghost complete.")
+        return true
     }
 }

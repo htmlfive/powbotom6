@@ -103,7 +103,7 @@ fun isWidgetVisible(root: Int, component: Int, index: Int): Boolean {
 }
 
 // ========================================
-// UTILITY FUNCTIONS
+// TAP UTILITY FUNCTIONS
 // ========================================
 
 /**
@@ -134,6 +134,10 @@ fun tapWithSleep(x: Int, y: Int, offsetRange: Int = 3, sleepMin: Int, sleepMax: 
     return true
 }
 
+// ========================================
+// INVENTORY UTILITY FUNCTIONS
+// ========================================
+
 /**
  * Ensures inventory tab is open.
  * @param sleepMin Minimum sleep time in milliseconds after opening (default: 200)
@@ -158,6 +162,10 @@ fun closeTabWithSleep(sleepMin: Int, sleepMax: Int) {
     Game.closeOpenTab()
     Condition.sleep(Random.nextInt(sleepMin, sleepMax))
 }
+
+// ========================================
+// DIALOGUE UTILITY FUNCTIONS
+// ========================================
 
 /**
  * Handles dialogue if present.
@@ -186,6 +194,10 @@ fun handleMultipleDialogues(maxAttempts: Int = 2, sleepMin: Int = 500, sleepMax:
     }
     return count
 }
+
+// ========================================
+// ASSIGNMENT UTILITY FUNCTIONS
+// ========================================
 
 /**
  * Common assignment sequence setup.

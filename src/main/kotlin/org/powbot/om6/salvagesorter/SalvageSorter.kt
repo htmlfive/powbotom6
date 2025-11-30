@@ -8,21 +8,13 @@ import org.powbot.api.script.ScriptConfiguration.List as ConfigList
 import org.powbot.api.event.MessageEvent
 import org.powbot.api.event.MessageType
 import org.powbot.api.rt4.Camera
+import org.powbot.api.rt4.Inventory
+import org.powbot.mobile.script.ScriptManager
 import org.powbot.om6.salvagesorter.config.CardinalDirection
 import org.powbot.om6.salvagesorter.config.Constants
 import org.powbot.om6.salvagesorter.config.SalvagePhase
 import org.powbot.om6.salvagesorter.tasks.*
 import kotlin.random.Random
-import org.powbot.api.rt4.Inventory
-import org.powbot.mobile.script.ScriptManager
-
-private const val CARGO_MESSAGE = "Your crewmate on the salvaging hook cannot salvage as the cargo hold is full."
-private const val HARVESTER_MESSAGE = "Your crystal extractor has harvested"
-private const val COINS_ID = 995
-private const val SALVAGE_COMPLETE_MESSAGE = "You salvage all you can"
-private const val SALVAGE_SUCCESS_MESSAGE = "You cast out" // Assumed definition based on context
-private const val HOOK_CAST_MESSAGE_1 = "You cast out your salvaging hook"
-private const val HOOK_CAST_MESSAGE_2 = "You start operating"
 
 @ScriptManifest(
     name = "0m6 Shipwreck Sorter",
@@ -99,8 +91,8 @@ class SalvageSorter : AbstractScript() {
     val maxCargoSpace: String get() = getOption<String>("Max Cargo Space")
     val powerSalvageMode: Boolean get() = getOption<Boolean>("Power Salvage Mode")
     var salvageMessageFound = false
-    var atHookLocation = false // ADDED: New flag to track if the player is at the salvaging spot
-    var atSortLocation = false // NEW FLAG: Track if at sorting spot
+    var atHookLocation = false
+    var atSortLocation = false
     val extractorTask = CrystalExtractorTask(this)
     val tapToDrop: Boolean get() = getOption<Boolean>("Tap-to-drop")
     val requiredDropDirectionStr: String get() = getOption<String>("Drop Salvage Direction")
@@ -124,11 +116,11 @@ class SalvageSorter : AbstractScript() {
     @Volatile var phaseStartTime: Long = 0L
     @Volatile var xpMessageCount: Int = 0
     @Volatile var initialCoinCount: Long = 0L
-    @Volatile var cargoHoldFull: Boolean = true // Core state flag: true = SORTING phase, false = SALVAGING phase
+    @Volatile var cargoHoldFull: Boolean = true
 
     private val currentCoinCount: Long
         get() {
-            val invCoins = Inventory.stream().id(COINS_ID).firstOrNull()?.stackSize() ?: 0
+            val invCoins = Inventory.stream().id(Constants.COINS_ID).firstOrNull()?.stackSize() ?: 0
             return invCoins.toLong()
         }
 
@@ -172,26 +164,26 @@ class SalvageSorter : AbstractScript() {
     @Subscribe
     fun onMessageEvent(change: MessageEvent) {
         if (change.messageType == MessageType.Game) {
-            if (change.message.contains(HARVESTER_MESSAGE)) {
+            if (change.message.contains(Constants.HARVESTER_MESSAGE)) {
                 logger.info("EVENT: HARVESTER MESSAGE DETECTED! Message: ${change.message}")
                 harvesterMessageFound = true
             }
         }
 
-        if (change.message.contains(HOOK_CAST_MESSAGE_1) || change.message.contains(HOOK_CAST_MESSAGE_2)) {
+        if (change.message.contains(Constants.HOOK_CAST_MESSAGE_1) || change.message.contains(Constants.HOOK_CAST_MESSAGE_2)) {
             logger.info("EVENT: CONFIRMATION - Action start message detected: ${change.message}")
             hookCastMessageFound = true
         }
 
         if (change.messageType == MessageType.Game) {
-            if (change.message.contains(CARGO_MESSAGE)) {
+            if (change.message.contains(Constants.CARGO_MESSAGE)) {
                 logger.info("EVENT: CARGO MESSAGE DETECTED! Message: ${change.message}")
                 cargoMessageFound = true
                 cargoHoldFull = true
             }
         }
         if (change.messageType == MessageType.Game) {
-            if (change.message.contains(SALVAGE_COMPLETE_MESSAGE) || change.message.contains(SALVAGE_SUCCESS_MESSAGE)) {
+            if (change.message.contains(Constants.SALVAGE_COMPLETE_MESSAGE) || change.message.contains(Constants.SALVAGE_SUCCESS_MESSAGE)) {
                 logger.info("EVENT: Salvage ending message detected via EventBus! Message: ${change.message}")
                 salvageMessageFound = true
             }
@@ -207,11 +199,12 @@ class SalvageSorter : AbstractScript() {
     override fun onStart() {
         logger.info("SCRIPT START: Initializing Shipwreck Sorter...")
 
+        // Set zoom to target level if needed
         if (Camera.zoom != Constants.TARGET_ZOOM_LEVEL) {
             logger.info("INIT: Setting camera zoom to ${Constants.TARGET_ZOOM_LEVEL}")
             Camera.moveZoomSlider(Constants.TARGET_ZOOM_LEVEL.toDouble())
             Condition.wait({ Camera.zoom == Constants.TARGET_ZOOM_LEVEL }, 100, 20)
-            Condition.sleep(Random.nextInt(600,1200))
+            Condition.sleep(Random.nextInt(600, 1200))
         }
 
         initialCoinCount = currentCoinCount
@@ -220,7 +213,7 @@ class SalvageSorter : AbstractScript() {
         phaseStartTime = System.currentTimeMillis()
         currentPhase = SalvagePhase.IDLE
 
-// Check if the user wants to start in SORTING mode (or if inventory is full)
+        // Check if the user wants to start in SORTING mode (or if inventory is full)
         val startInSortingMode = startSorting
 
         // Power Salvage Mode: Always start in salvaging mode
@@ -230,9 +223,7 @@ class SalvageSorter : AbstractScript() {
             this.currentPhase = SalvagePhase.SETUP_SALVAGING
         } else if (startInSortingMode) {
             this.logger.info("INIT: Forcing initial phase to SETUP_SORTING (User request).")
-            // 1. Force cargoHoldFull to TRUE to signal the script to enter the SORTING loop
             this.cargoHoldFull = true
-            // 2. Set the initial phase to start the sorting flow
             this.currentPhase = SalvagePhase.SETUP_SORTING
         } else {
             this.logger.info("INIT: Starting in default SALVAGING mode.")
@@ -257,17 +248,9 @@ class SalvageSorter : AbstractScript() {
                 val gain = currentCoinCount - initialCoinCount
                 String.format("%,d GP", gain)
             }
-//            .addString("Withdraw Cooldown") {
-//                val maxCooldown = currentWithdrawCooldownMs
-//                val timeElapsed = System.currentTimeMillis() - lastWithdrawOrCleanupTime
-//                val remainingSeconds = ((maxCooldown - timeElapsed) / 1000L).coerceAtLeast(0)
-//
-//                if (remainingSeconds > 0) "Next in: ${remainingSeconds}s" else "Ready"
-//            }
             .addString("Salvage in Cargo (Approx)") { xpMessageCount.toString() }
             .build()
         addPaint(paint)
-
     }
 
     override fun poll() {
@@ -301,7 +284,6 @@ class SalvageSorter : AbstractScript() {
             }
 
             // --- POWER SALVAGE MODE CHECK ---
-            // In Power Salvage mode, we bypass all sorting/cargo logic
             if (powerSalvageMode) {
                 val dropTask = allTasks.firstOrNull { it is DropSalvageTask && it.activate() }
                 if (dropTask != null) {
@@ -310,7 +292,6 @@ class SalvageSorter : AbstractScript() {
                     return
                 }
 
-                // In Power Salvage mode, only use SetupSalvagingTask and DeployHookTask
                 val setupTask = allTasks.firstOrNull { it is SetupSalvagingTask && it.activate() }
                 if (setupTask != null) {
                     logger.info("POLL: POWER SALVAGE MODE - Setup salvaging")
@@ -324,7 +305,6 @@ class SalvageSorter : AbstractScript() {
                     deployTask.execute()
                     return
                 } else {
-                    // Ensure we're always in salvaging phase when power mode is enabled
                     if (currentPhase != SalvagePhase.SALVAGING && currentPhase != SalvagePhase.SETUP_SALVAGING) {
                         currentPhase = SalvagePhase.SETUP_SALVAGING
                         logger.info("POLL: POWER SALVAGE MODE - Reset to SETUP_SALVAGING")
@@ -342,8 +322,6 @@ class SalvageSorter : AbstractScript() {
             logger.debug("POLL: State Check - cargoFull=$cargoHoldFull, hasSalvage=$hasSalvageInInventory, invFull=$inventoryFull, phase=$currentPhase")
 
             val nextTask: Task? = when {
-                // Replace your poll() STATE A (SORTING PHASE) section with this:
-
                 // STATE A: SORTING PHASE (Cargo Hold is Full OR in process of emptying)
                 cargoHoldFull -> {
                     logger.debug("STATE: SORTING PHASE (cargoHoldFull=true)")
@@ -372,7 +350,7 @@ class SalvageSorter : AbstractScript() {
                     }
                 }
 
-// STATE B: SALVAGING PHASE (Cargo Hold is Not Full - ready to salvage)
+                // STATE B: SALVAGING PHASE (Cargo Hold is Not Full - ready to salvage)
                 else -> {
                     logger.debug("STATE: SALVAGING PHASE (cargoHoldFull=false)")
 
@@ -405,7 +383,6 @@ class SalvageSorter : AbstractScript() {
                             }
                         }
                     }
-
                 }
             }
 

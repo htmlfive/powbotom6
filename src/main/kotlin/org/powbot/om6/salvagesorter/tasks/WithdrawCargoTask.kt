@@ -1,7 +1,10 @@
 package org.powbot.om6.salvagesorter.tasks
 
+import org.powbot.api.Condition
+import org.powbot.api.Random
 import org.powbot.api.rt4.Inventory
 import org.powbot.om6.salvagesorter.SalvageSorter
+import org.powbot.om6.salvagesorter.config.Constants
 import org.powbot.om6.salvagesorter.config.LootConfig
 import org.powbot.om6.salvagesorter.config.SalvagePhase
 
@@ -39,7 +42,7 @@ class WithdrawCargoTask(script: SalvageSorter) : Task(script) {
         if (extractorTask.checkAndExecuteInterrupt(script)) return
 
         // Execute withdrawal - returns cooldown time (0L = failed, -1L = cargo depleted, >0L = success)
-        val finalCooldownMs = executeWithdrawCargo(script)
+        val finalCooldownMs = executeWithdrawCargo()
 
         if (extractorTask.checkAndExecuteInterrupt(script)) return
 
@@ -107,5 +110,70 @@ class WithdrawCargoTask(script: SalvageSorter) : Task(script) {
                 }
             }
         }
+    }
+
+    /**
+     * Executes the 4-tap cargo withdrawal sequence.
+     * @return Cooldown time in ms (0L = failed, -1L = cargo depleted, >0L = success)
+     */
+    private fun executeWithdrawCargo(): Long {
+        val mainWait = Random.nextInt(Constants.CARGO_MAIN_WAIT_MIN, Constants.CARGO_MAIN_WAIT_MAX)
+        CameraSnapper.snapCameraToDirection(script.requiredTapDirection, script)
+        script.logger.info("CARGO: Starting 4-tap cargo withdrawal sequence.")
+
+        val invCountBefore = Inventory.stream().count()
+        val salvageCountBefore = Inventory.stream().name(script.SALVAGE_NAME).count()
+
+        // Tap 1: Open cargo
+        if (!tapWithSleep(Constants.CARGO_TAP_1_X, Constants.CARGO_TAP_1_Y, 3, Constants.CARGO_TAP1_WAIT_MIN, Constants.CARGO_TAP1_WAIT_MAX)) {
+            script.logger.warn("CARGO: Failed at tap 1")
+            return 0L
+        }
+        script.logger.info("CARGO TAP 1 (Open): Complete")
+
+        // Tap 2: Withdraw
+        if (!tapWithSleep(Constants.CARGO_TAP_2_X, Constants.CARGO_TAP_2_Y, 3, mainWait, mainWait)) {
+            script.logger.warn("CARGO: Failed at tap 2")
+            return 0L
+        }
+        script.logger.info("CARGO TAP 2 (Withdraw): Complete")
+
+        // Tap 3: Close
+        if (!tapWithSleep(Constants.CARGO_TAP_3_X, Constants.CARGO_TAP_3_Y, 3, mainWait, mainWait)) {
+            script.logger.warn("CARGO: Failed at tap 3")
+            return 0L
+        }
+        script.logger.info("CARGO TAP 3 (Close): Complete")
+
+        // Tap 4: Walk back
+        if (!tapWithSleep(Constants.CARGO_TAP_4_X, Constants.CARGO_TAP_4_Y, 3, Constants.CARGO_TAP4_WAIT_MIN, Constants.CARGO_TAP4_WAIT_MAX)) {
+            script.logger.warn("CARGO: Failed at tap 4")
+            return 0L
+        }
+        script.logger.info("CARGO TAP 4 (Walk back): Complete")
+
+        val hasSalvage = Inventory.stream().name(script.SALVAGE_NAME).isNotEmpty()
+        if (!hasSalvage) {
+            script.logger.warn("CARGO: Withdrawal failed - no salvage obtained.")
+            script.cargoHoldFull = false
+            return 0L
+        }
+
+        val invCountAfter = Inventory.stream().count()
+        val salvageCountAfter = Inventory.stream().name(script.SALVAGE_NAME).count()
+        val inventoryFull = Inventory.isFull()
+        val salvageWithdrawn = (salvageCountAfter - salvageCountBefore).toInt()
+
+        if (!inventoryFull) {
+            script.logger.warn("CARGO: Inventory not full ($invCountAfter/28). Cargo depleted.")
+            script.xpMessageCount = 0
+            script.cargoHoldFull = false
+            return -1L
+        }
+
+        val baseCooldownMs = script.randomWithdrawCooldownMs
+        script.xpMessageCount -= salvageWithdrawn // Track actual withdrawal
+        script.logger.info("CARGO: Inventory full. Withdrew $salvageWithdrawn items. Cargo count now: ${script.xpMessageCount}. Cooldown: ${baseCooldownMs / 1000}s.")
+        return baseCooldownMs
     }
 }
