@@ -2,6 +2,7 @@ package org.powbot.om6.varrockmuseum
 
 import org.powbot.api.Condition
 import org.powbot.api.Random
+import org.powbot.api.rt4.Equipment
 import org.powbot.api.rt4.Players
 import org.powbot.api.rt4.walking.model.Skill
 import org.powbot.api.script.AbstractScript
@@ -10,6 +11,7 @@ import org.powbot.api.script.ScriptCategory
 import org.powbot.api.script.ScriptConfiguration
 import org.powbot.api.script.ScriptManifest
 import org.powbot.api.script.paint.PaintBuilder
+import org.powbot.mobile.script.ScriptManager
 import org.powbot.om6.varrockmuseum.VarrockMuseumConstants.ACTION_ADD_FINDS
 import org.powbot.om6.varrockmuseum.VarrockMuseumConstants.ACTION_CLEAN
 import org.powbot.om6.varrockmuseum.VarrockMuseumConstants.ACTION_TAKE
@@ -38,7 +40,7 @@ import org.powbot.om6.varrockmuseum.VarrockMuseumUtils.waitUntil
 
 @ScriptManifest(
     name = "0m6 Varrock Museum",
-    description = "Collects and cleans specimens at the Varrock Museum",
+    description = "Collects and cleans specimens at the Varrock Museum. Start with Tool kit (Brush and Pick) in inventory, and Leather boots & gloves equipped while inside the cleaning area.",
     version = "1.0.0",
     author = "0m6",
     category = ScriptCategory.Thieving
@@ -101,7 +103,45 @@ class VarrockMuseum : AbstractScript() {
     }
     
     override fun poll(): Unit {
+        // Check if player is within 4 tiles of the museum area (3264, 3444)
+        val playerTile = Players.local().tile()
+        val museumTile = org.powbot.api.Tile(3264, 3444, 0)
+        if (playerTile.distanceTo(museumTile) > 4) {
+            logger.error("Player too far from museum area! Must be within 4 tiles of (3264, 3444)")
+            ScriptManager.stop()
+            return
+        }
+        
+        // Check for required items - stop script if missing
+        if (!inventoryContains("Rock pick") || !inventoryContains("Specimen brush")) {
+            logger.error("Missing required tool: Rock pick or Specimen brush not found in inventory!")
+            ScriptManager.stop()
+            return
+        }
+        
+        if (!Equipment.stream().name("Leather gloves").isNotEmpty() || !Equipment.stream().name("Leather boots").isNotEmpty()) {
+            logger.error("Missing required equipment: Leather gloves or Leather boots not equipped!")
+            ScriptManager.stop()
+            return
+        }
+        
+        // Task 4: Drop unwanted items
+        if (inventoryContainsAny(dropList)) {
+            currentTask = "Dropping items"
+            logger.info("Dropping unwanted items: $dropList")
+            dropItems(dropList)
+            return
+        }
 
+        // Task 5: Rub antique lamp
+        if (inventoryContains(ANTIQUE_LAMP)) {
+            currentTask = "Rubbing lamp"
+            logger.info("Rubbing antique lamp for $lampSkill XP...")
+            if (rubLamp(lampSkill, LAMP_SKILL_WIDGET, LAMP_SKILL_IDS)) {
+                Condition.sleep(Random.nextInt(600, 1200))
+            }
+            return
+        }
         // Task 1: Take specimens until inventory is full (LOWEST PRIORITY)
         if (!inventoryFull()) {
             currentTask = "Taking specimens"
@@ -144,23 +184,7 @@ class VarrockMuseum : AbstractScript() {
             return
         }
         
-        // Task 4: Drop unwanted items
-        if (inventoryContainsAny(dropList)) {
-            currentTask = "Dropping items"
-            logger.info("Dropping unwanted items: $dropList")
-            dropItems(dropList)
-            return
-        }
 
-        // Task 5: Rub antique lamp
-        if (inventoryContains(ANTIQUE_LAMP)) {
-            currentTask = "Rubbing lamp"
-            logger.info("Rubbing antique lamp for $lampSkill XP...")
-            if (rubLamp(lampSkill, LAMP_SKILL_WIDGET, LAMP_SKILL_IDS)) {
-                Condition.sleep(Random.nextInt(600, 1200))
-            }
-            return
-        }
 
         
         // Task 6: Restart cycle
