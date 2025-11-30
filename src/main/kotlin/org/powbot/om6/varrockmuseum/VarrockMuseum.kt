@@ -166,7 +166,7 @@ class VarrockMuseum : AbstractScript() {
             if (interactWithObject(SPECIMEN_TABLE, ACTION_CLEAN)) {
                 Condition.wait({ Players.local().animation() == -1 && !inventoryContains(UNCLEANED_FIND) }, 1800, 28)
             }
-            return
+
         }
         
         // Task 3: Add finds to storage crate
@@ -183,10 +183,7 @@ class VarrockMuseum : AbstractScript() {
             }
             return
         }
-        
 
-
-        
         // Task 6: Restart cycle
         currentTask = "Idle"
         Condition.sleep(Random.nextInt(600,1200))
