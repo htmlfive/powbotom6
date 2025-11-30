@@ -3,6 +3,8 @@ package org.powbot.om6.moths.tasks
 import org.powbot.om6.moths.Constants
 import org.powbot.om6.moths.MoonlightMothCatcher
 import org.powbot.om6.moths.ScriptUtils
+import org.powbot.om6.api.*
+import org.powbot.om6.api.ObjectUtils.findByName
 
 /**
  * Task to travel to the moth catching location.
@@ -18,7 +20,7 @@ class TravelToMothsTask(script: MoonlightMothCatcher) : Task(script) {
         script.logger.info("TRAVEL: Moving to moth location")
 
         // Check if we need to climb down stairs
-        val stairsDown = ScriptUtils.findStairs(Constants.ACTION_CLIMB_DOWN)
+        val stairsDown = findByName(Constants.ACTION_CLIMB_DOWN)
         if (stairsDown != null && stairsDown.valid()) {
             script.logger.info("TRAVEL: Climbing down stairs")
             ScriptUtils.climbStairs(Constants.ACTION_CLIMB_DOWN)
