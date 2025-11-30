@@ -113,8 +113,8 @@ object Constants {
 
     const val CLEANUP_ALCH_MIN = 3000
     const val CLEANUP_ALCH_MAX = 3600
-    const val CLEANUP_DROP_MIN = 80
-    const val CLEANUP_DROP_MAX = 150
+    const val CLEANUP_DROP_MIN = 200
+    const val CLEANUP_DROP_MAX = 300
 
     // ========================================
     // WALK TO SORT SLEEP TIMINGS
