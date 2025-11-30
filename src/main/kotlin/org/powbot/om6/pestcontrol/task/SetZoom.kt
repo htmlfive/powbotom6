@@ -1,11 +1,12 @@
 package org.powbot.om6.pestcontrol.task
 
 import org.powbot.api.rt4.Camera
+import org.powbot.om6.pestcontrol.Constants
 
 class SetZoom: Task {
     private val logger = org.slf4j.LoggerFactory.getLogger(javaClass.simpleName)
     override fun valid(): Boolean {
-        return Camera.zoom > 5
+        return Camera.zoom > Constants.MAX_ZOOM_LEVEL
     }
 
     override fun run() {

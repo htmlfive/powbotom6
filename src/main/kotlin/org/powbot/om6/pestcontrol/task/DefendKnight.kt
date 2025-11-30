@@ -5,6 +5,8 @@ import org.powbot.api.rt4.Components
 import org.powbot.api.rt4.Npcs
 import org.powbot.api.rt4.Players
 import org.powbot.api.rt4.walking.local.LocalPathFinder
+import org.powbot.om6.pestcontrol.Constants
+import org.powbot.om6.pestcontrol.ScriptUtils
 import org.powbot.om6.pestcontrol.data.Activity
 import org.powbot.om6.pestcontrol.helpers.nextMonster
 import org.powbot.om6.pestcontrol.helpers.voidKnight
@@ -30,13 +32,10 @@ class DefendKnight(val activity: Activity): Task {
             return
         }
 
-        if (monster.interact("Attack")) {
+        if (ScriptUtils.attackNpc(monster)) {
             logger.info("Attacking monster near Void Knight: ${monster.name()}")
-            Condition.wait {
-                Players.local().interacting() == monster
-            }
             return
-        } else if (monster.tile().distance() > 4) {
+        } else if (monster.tile().distance() > Constants.KNIGHT_DISTANCE_THRESHOLD) {
             logger.info("Walking to monster: ${monster.name()}, distance: ${monster.tile().distance()}")
             LocalPathFinder.findPath(monster.tile()).traverse()
             return

@@ -2,11 +2,11 @@ package org.powbot.om6.pestcontrol.task
 
 import org.powbot.api.Condition
 import org.powbot.api.rt4.Components
-import org.powbot.om6.pestcontrol.PowPestControl
+import org.powbot.om6.pestcontrol.PestControl
 import org.powbot.om6.pestcontrol.helpers.currentPoints
 import org.powbot.om6.pestcontrol.helpers.voidKnightHealth
 
-class BoatWait(val script: PowPestControl) : Task {
+class BoatWait(val script: PestControl) : Task {
     private val logger = org.slf4j.LoggerFactory.getLogger(javaClass.simpleName)
     override fun name(): String {
         return "Waiting for next game"

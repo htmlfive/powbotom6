@@ -7,6 +7,7 @@ import org.powbot.api.rt4.Chat
 import org.powbot.api.rt4.Components
 import org.powbot.api.rt4.Movement
 import org.powbot.api.rt4.Objects
+import org.powbot.om6.pestcontrol.Constants
 import org.powbot.om6.pestcontrol.data.Boat
 import org.powbot.om6.pestcontrol.helpers.currentPoints
 import org.powbot.om6.pestcontrol.helpers.voidKnightHealth
@@ -24,7 +25,7 @@ class CrossGangplank(val boat: Boat): Task {
     override fun run() {
         Condition.wait({
             Chat.canContinue()
-        }, 3, 500)
+        }, Constants.CHAT_WAIT_ATTEMPTS, Constants.CHAT_WAIT_INTERVAL)
 
         if (Chat.canContinue()) {
             logger.info("Closing chat dialog")
@@ -35,17 +36,19 @@ class CrossGangplank(val boat: Boat): Task {
                 }
                 return
             } else {
-                Condition.sleep(nextInt(600, 800))
+                Condition.sleep(nextInt(Constants.CHAT_CLOSE_MIN_DELAY, Constants.CHAT_CLOSE_MAX_DELAY))
             }
         }
 
-        val gangplank = Objects.stream(20).name("Gangplank").within(boat.gangplankTile, 4.toDouble()).first()
+        val gangplank = Objects.stream(Constants.OBJECT_SEARCH_DISTANCE)
+            .name(Constants.GANGPLANK_NAME)
+            .within(boat.gangplankTile, Constants.GANGPLANK_SEARCH_DISTANCE).first()
         if (gangplank.valid()) {
-            if (gangplank.interact("Cross")) {
+            if (gangplank.interact(Constants.CROSS_ACTION)) {
                 logger.info("Crossing gangplank for ${boat.name} boat")
                 Condition.wait { Components.currentPoints().visible() }
                 return
-            } else if (gangplank.tile.distance() > 4) {
+            } else if (gangplank.tile.distance() > Constants.GANGPLANK_SEARCH_DISTANCE) {
                 logger.info("Walking to gangplank")
                 Movement.walkTo(gangplank)
                 return

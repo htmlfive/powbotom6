@@ -28,16 +28,16 @@ import org.powbot.om6.pestcontrol.helpers.voidKnightHealth
 import org.powbot.om6.pestcontrol.task.*
 
 
-fun main(args: Array<String>) {
-    ScriptUploader().uploadAndStart("0m6PestControl", "", "localhost", false, useDefaultConfigs = false)
-}
+//fun main(args: Array<String>) {
+//    ScriptUploader().uploadAndStart("0m6PestControl", "", "localhost", false, useDefaultConfigs = false)
+//}
 
 @ScriptManifest(
     name = "0m6 PestControl",
     description = "Plays the pest control minigame, start geared up",
     version = "1.0.0",
     category = ScriptCategory.Minigame,
-    markdownFileName = "powpestcontrol.md"
+    markdownFileName = "pestcontrol.md"
 )
 @ScriptConfiguration.List(
     [
@@ -59,7 +59,7 @@ fun main(args: Array<String>) {
         ),
     ]
 )
-class PowPestControl : AbstractScript() {
+class PestControl : AbstractScript() {
 
     val tasks: MutableList<Task> = mutableListOf<Task>()
     var status: String = "None"
@@ -191,7 +191,7 @@ class PowPestControl : AbstractScript() {
             PestControlMap.update(squire.tile())
         }
 
-        if (isMix && (gamesSinceChangedActivity == -1 || gamesSinceChangedActivity >= Random.nextInt(3, 7))) {
+        if (isMix && (gamesSinceChangedActivity == -1 || gamesSinceChangedActivity >= Random.nextInt(Constants.MIN_GAMES_BEFORE_ACTIVITY_CHANGE, Constants.MAX_GAMES_BEFORE_ACTIVITY_CHANGE))) {
             activity = if (Random.nextBoolean()) Activity.DefendKnight else Activity.AttackPortal
             logger.info("Mix mode: Switching activity to ${activity?.name}")
             initTasks()
@@ -199,7 +199,7 @@ class PowPestControl : AbstractScript() {
             gamesSinceChangedActivity = 0
         }
 
-        if (!Movement.running() && Movement.energyLevel() >= Random.nextInt(5, 10)) {
+        if (!Movement.running() && Movement.energyLevel() >= Random.nextInt(Constants.MIN_ENERGY_LEVEL, Constants.MAX_ENERGY_LEVEL)) {
             Movement.running(true)
         }
 
