@@ -2,6 +2,7 @@ package org.powbot.om6.salvagesorter.tasks
 
 import org.powbot.api.Condition
 import org.powbot.api.Random
+import org.powbot.api.rt4.Components
 import org.powbot.api.rt4.Inventory
 import org.powbot.om6.salvagesorter.SalvageSorter
 import org.powbot.om6.salvagesorter.config.Constants
@@ -125,24 +126,30 @@ class WithdrawCargoTask(script: SalvageSorter) : Task(script) {
         val salvageCountBefore = Inventory.stream().name(script.SALVAGE_NAME).count()
 
         // Tap 1: Open cargo
-        if (!tapWithSleep(Constants.CARGO_TAP_1_X, Constants.CARGO_TAP_1_Y, 3, Constants.CARGO_TAP1_WAIT_MIN, Constants.CARGO_TAP1_WAIT_MAX)) {
+        if (!tapWithSleep(Constants.CARGO_TAP_1_X, Constants.CARGO_TAP_1_Y, 3, 600, 1200)) {
             script.logger.warn("CARGO: Failed at tap 1")
             return 0L
         }
         script.logger.info("CARGO TAP 1 (Open): Complete")
+        Condition.wait{isWidgetVisible(Constants.ROOT_CARGO_WIDGET,Constants.COMPONENT_WITHDRAW,Constants.INDEX_FIRST_SLOT)}
 
         // Tap 2: Withdraw
-        if (!tapWithSleep(Constants.CARGO_TAP_2_X, Constants.CARGO_TAP_2_Y, 3, mainWait, mainWait)) {
+        if (!clickWidget(Constants.ROOT_CARGO_WIDGET,Constants.COMPONENT_WITHDRAW,Constants.INDEX_FIRST_SLOT)) {
             script.logger.warn("CARGO: Failed at tap 2")
             return 0L
         }
+        Condition.sleep(600)
+        Condition.wait{Inventory.stream().name(script.SALVAGE_NAME).isNotEmpty()}
         script.logger.info("CARGO TAP 2 (Withdraw): Complete")
 
         // Tap 3: Close
-        if (!tapWithSleep(Constants.CARGO_TAP_3_X, Constants.CARGO_TAP_3_Y, 3, mainWait, mainWait)) {
+        if (!clickWidget(Constants.ROOT_CARGO_WIDGET,Constants.COMPONENT_CLOSE,Constants.INDEX_CLOSE)) {
             script.logger.warn("CARGO: Failed at tap 3")
             return 0L
         }
+        Condition.sleep(600)
+        Condition.wait{!isWidgetVisible(Constants.ROOT_CARGO_WIDGET,Constants.COMPONENT_WITHDRAW,Constants.INDEX_FIRST_SLOT)}
+
         script.logger.info("CARGO TAP 3 (Close): Complete")
 
         // Tap 4: Walk back
@@ -151,8 +158,8 @@ class WithdrawCargoTask(script: SalvageSorter) : Task(script) {
             return 0L
         }
         script.logger.info("CARGO TAP 4 (Walk back): Complete")
-
         val hasSalvage = Inventory.stream().name(script.SALVAGE_NAME).isNotEmpty()
+
         if (!hasSalvage) {
             script.logger.warn("CARGO: Withdrawal failed - no salvage obtained.")
             script.cargoHoldFull = false

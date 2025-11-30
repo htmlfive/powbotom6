@@ -51,15 +51,18 @@ class DepositCargoTask(script: SalvageSorter) : Task(script) {
         val initialSalvageCount = Inventory.stream().name(script.SALVAGE_NAME).count()
         script.logger.info("DEPOSIT: Initial count: $initialSalvageCount")
 
-        Condition.sleep(Random.nextInt(Constants.DEPOSIT_BETWEEN_TAPS_MIN, Constants.DEPOSIT_BETWEEN_TAPS_MAX))
+        // Tap 1: Open
+        tapWithSleep(Constants.HOOK_SALVAGE_2_X, Constants.HOOK_SALVAGE_2_Y,3,600,900)
+        Condition.wait{isWidgetVisible(Constants.ROOT_CARGO_WIDGET,Constants.COMPONENT_DEPOSIT_SALVAGE)}
 
-        val depositTaps = listOf(
-            Constants.HOOK_SALVAGE_2_X to Constants.HOOK_SALVAGE_2_Y,
-            Constants.HOOK_SALVAGE_3_X to Constants.HOOK_SALVAGE_3_Y,
-            Constants.HOOK_SALVAGE_4_X to Constants.HOOK_SALVAGE_4_Y
-        )
+        // Tap 2: Deposit
+        clickWidget(Constants.ROOT_CARGO_WIDGET,Constants.COMPONENT_DEPOSIT_SALVAGE)
+        Condition.sleep(Random.nextInt(600,900))
 
-        executeTapSequence(script, depositTaps, 3, Constants.DEPOSIT_BETWEEN_TAPS_MIN, Constants.DEPOSIT_BETWEEN_TAPS_MAX, "DEPOSIT")
+        // Tap 3: Close
+        clickWidget(Constants.ROOT_CARGO_WIDGET,Constants.COMPONENT_CLOSE,Constants.INDEX_CLOSE)
+        Condition.sleep(600)
+        Condition.wait{!isWidgetVisible(Constants.ROOT_CARGO_WIDGET,Constants.COMPONENT_WITHDRAW,Constants.INDEX_FIRST_SLOT)}
 
         val finalSalvageCount = Inventory.stream().name(script.SALVAGE_NAME).count()
         val depositedCount = (initialSalvageCount - finalSalvageCount).toInt()

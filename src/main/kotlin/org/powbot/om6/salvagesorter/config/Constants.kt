@@ -35,9 +35,14 @@ object Constants {
     const val ROOT_CARGO_WIDGET = 943
     const val COMPONENT_CARGO_SPACE = 5
     const val COMPONENT_DEPOSIT_SALVAGE = 14
+    const val COMPONENT_WITHDRAW = 10
     const val INDEX_FIRST_SLOT = 0
+
     const val COMPONENT_CLOSE = 1
     const val INDEX_CLOSE = 11
+
+    const val ROOT_SAILINGTAB = 601
+    const val COMPONENT_SAILINGTAB = 93
 
     const val ROOT_ASSIGN_WIDGET = 937
     const val COMPONENT_ASSIGN_WIDGET = 25
@@ -181,16 +186,16 @@ object Constants {
     // HOOK/SALVAGE TAP COORDINATES
     // ========================================
 
-    const val HOOK_SALVAGE_1_X = 525
-    const val HOOK_SALVAGE_1_Y = 406
-    const val HOOK_SALVAGE_2_X = 337
-    const val HOOK_SALVAGE_2_Y = 350
+    const val HOOK_SALVAGE_1_X = 525 // TAP HOOK
+    const val HOOK_SALVAGE_1_Y = 406 // TAP HOOK
+    const val HOOK_SALVAGE_2_X = 337 // TAP CARGO
+    const val HOOK_SALVAGE_2_Y = 350 // TAP CARGO
     const val HOOK_SALVAGE_3_X = 551
     const val HOOK_SALVAGE_3_Y = 308
     const val HOOK_SALVAGE_4_X = 570
     const val HOOK_SALVAGE_4_Y = 165
-    const val HOOK_SALVAGE_6_X = 791
-    const val HOOK_SALVAGE_6_Y = 63
+    const val HOOK_SALVAGE_6_X = 791 // TAP WALK TO HOOK
+    const val HOOK_SALVAGE_6_Y = 63 // TAP WALK TO HOOK
 
     // ========================================
     // WALK TO SORT TAP COORDINATES

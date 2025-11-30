@@ -77,7 +77,7 @@ class SetupSalvagingTask(script: SalvageSorter) : Task(script) {
         script.logger.info("ASSIGNMENTS: Starting 3-tap ghost sequence.")
         val mainWait = setupAssignment(script, Constants.ASSIGNMENT_MAIN_WAIT_MIN, Constants.ASSIGNMENT_MAIN_WAIT_MAX)
 
-        tapWithSleep(Constants.ASSIGN_BOTH_1_X, Constants.ASSIGN_BOTH_1_Y, 3,1200,1800) //Open Tab
+        clickWidget(Constants.ROOT_SAILINGTAB,Constants.COMPONENT_SAILINGTAB) //Open tab
         Condition.sleep(Random.nextInt(600,900))
         Condition.wait{isWidgetVisible(Constants.ROOT_ASSIGN_WIDGET,Constants.COMPONENT_ASSIGN_WIDGET)}
         clickWidget(Constants.ROOT_ASSIGN_WIDGET,Constants.COMPONENT_ASSIGN_WIDGET,Constants.INDEX_ASSIGN_SLOT1) //Assign SLot 1
