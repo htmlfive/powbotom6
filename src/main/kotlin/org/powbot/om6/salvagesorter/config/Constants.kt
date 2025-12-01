@@ -4,6 +4,59 @@ package org.powbot.om6.salvagesorter.config
  * Constants used throughout the SalvageSorter script.
  */
 object Constants {
+
+    // ========================================
+    // CARGO HOLD COORDINATES (Withdraw)
+    // ========================================
+
+    /** X coordinate for opening cargo hold interface at sorting location */
+    const val CARGO_OPEN_X = 584
+    /** Y coordinate for opening cargo hold interface at sorting location */
+    const val CARGO_OPEN_Y = 148
+
+    /** X coordinate for walking back to sorting position after withdrawing */
+    const val CARGO_WALKBACK_X = 432
+    /** Y coordinate for walking back to sorting position after withdrawing */
+    const val CARGO_WALKBACK_Y = 490
+
+    // ========================================
+    // SALVAGE HOOK COORDINATES
+    // ========================================
+
+    /** X coordinate for tapping the salvage hook to deploy it */
+    const val HOOK_DEPLOY_X = 525
+    /** Y coordinate for tapping the salvage hook to deploy it */
+    const val HOOK_DEPLOY_Y = 406
+
+    /** X coordinate for opening cargo hold at hook location (for depositing) */
+    const val HOOK_CARGO_OPEN_X = 337
+    /** Y coordinate for opening cargo hold at hook location (for depositing) */
+    const val HOOK_CARGO_OPEN_Y = 350
+
+    /** X coordinate for walking to hook location from sorting */
+    const val HOOK_WALK_TO_X = 791
+    /** Y coordinate for walking to hook location from sorting */
+    const val HOOK_WALK_TO_Y = 63
+
+    // ========================================
+    // SORTING COORDINATES
+    // ========================================
+
+    /** X coordinate for tapping the sort button on salvage */
+    const val SORT_BUTTON_X = 574
+    /** Y coordinate for tapping the sort button on salvage */
+    const val SORT_BUTTON_Y = 359
+    /** Tolerance for sort button X coordinate (for click validation) */
+    const val SORT_BUTTON_TOLERANCE_X = 10
+    /** Tolerance for sort button Y coordinate (for click validation) */
+    const val SORT_BUTTON_TOLERANCE_Y = 10
+
+    /** X coordinate for walking to sorting location from hook */
+    const val SORT_WALK_TO_X = 580
+    /** Y coordinate for walking to sorting location from hook */
+    const val SORT_WALK_TO_Y = 482
+
+
     // ========================================
     // CAMERA SETTINGS
     // ========================================
@@ -142,56 +195,5 @@ object Constants {
     /** Standard sleep between widget clicks/interactions */
     const val WIDGET_INTERACTION_MIN = 600
     const val WIDGET_INTERACTION_MAX = 900
-
-    // ========================================
-    // CARGO HOLD COORDINATES (Withdraw)
-    // ========================================
-
-    /** X coordinate for opening cargo hold interface at sorting location */
-    const val CARGO_OPEN_X = 584
-    /** Y coordinate for opening cargo hold interface at sorting location */
-    const val CARGO_OPEN_Y = 148
-
-    /** X coordinate for walking back to sorting position after withdrawing */
-    const val CARGO_WALKBACK_X = 432
-    /** Y coordinate for walking back to sorting position after withdrawing */
-    const val CARGO_WALKBACK_Y = 490
-
-    // ========================================
-    // SALVAGE HOOK COORDINATES
-    // ========================================
-
-    /** X coordinate for tapping the salvage hook to deploy it */
-    const val HOOK_DEPLOY_X = 525
-    /** Y coordinate for tapping the salvage hook to deploy it */
-    const val HOOK_DEPLOY_Y = 406
-
-    /** X coordinate for opening cargo hold at hook location (for depositing) */
-    const val HOOK_CARGO_OPEN_X = 337
-    /** Y coordinate for opening cargo hold at hook location (for depositing) */
-    const val HOOK_CARGO_OPEN_Y = 350
-
-    /** X coordinate for walking to hook location from spawn */
-    const val HOOK_WALK_TO_X = 791
-    /** Y coordinate for walking to hook location from spawn */
-    const val HOOK_WALK_TO_Y = 63
-
-    // ========================================
-    // SORTING COORDINATES
-    // ========================================
-
-    /** X coordinate for tapping the sort button on salvage */
-    const val SORT_BUTTON_X = 574
-    /** Y coordinate for tapping the sort button on salvage */
-    const val SORT_BUTTON_Y = 359
-    /** Tolerance for sort button X coordinate (for click validation) */
-    const val SORT_BUTTON_TOLERANCE_X = 10
-    /** Tolerance for sort button Y coordinate (for click validation) */
-    const val SORT_BUTTON_TOLERANCE_Y = 10
-
-    /** X coordinate for walking to sorting location from hook */
-    const val SORT_WALK_TO_X = 580
-    /** Y coordinate for walking to sorting location from hook */
-    const val SORT_WALK_TO_Y = 482
 
 }
