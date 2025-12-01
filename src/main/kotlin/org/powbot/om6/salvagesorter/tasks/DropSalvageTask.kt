@@ -5,6 +5,7 @@ import org.powbot.om6.salvagesorter.SalvageSorter
 import org.powbot.om6.salvagesorter.config.SalvagePhase
 import org.powbot.api.Condition
 import org.powbot.api.Random
+import org.powbot.api.rt4.Game
 
 class DropSalvageTask(script: SalvageSorter) : Task(script) {
     override fun activate(): Boolean {
@@ -42,7 +43,7 @@ class DropSalvageTask(script: SalvageSorter) : Task(script) {
         }
 
         script.logger.info("POWER SALVAGE: Dropping ${salvageItems.size} salvage items.")
-
+        Game.setSingleTapToggle(false)
         // Drop each item with a short delay between drops
         salvageItems.forEach { item ->
             if (item.valid()) {

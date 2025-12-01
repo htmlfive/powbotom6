@@ -55,6 +55,7 @@ class CleanupInventoryTask(script: SalvageSorter) : Task(script) {
      * @return true if any items were successfully cleaned up
      */
     private fun executeCleanupLoot(): Boolean {
+        Game.setSingleTapToggle(false)
         var successfullyCleaned = false
         CameraSnapper.snapCameraToDirection(script.requiredTapDirection, script)
         val highAlchSpell = Magic.Spell.HIGH_ALCHEMY
@@ -92,7 +93,7 @@ class CleanupInventoryTask(script: SalvageSorter) : Task(script) {
             .shuffled(KotlinRandom)
 
         script.logger.info("CLEANUP: Dropping ${shuffledDroppableItems.size} items.")
-
+        Game.setSingleTapToggle(false)
         shuffledDroppableItems.forEach { itemToDrop ->
             if (itemToDrop.valid()) {
                 if (!script.tapToDrop) {
