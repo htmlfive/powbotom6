@@ -182,7 +182,7 @@ object Constants {
     const val SORT_INITIAL_WAIT = 7200L
     const val SORT_RETAP_MIN = 500
     const val SORT_RETAP_MAX = 800
-    const val SORT_MAIN_CHECK_INTERVAL = 1800
+    const val SORT_MAIN_CHECK_INTERVAL = 600
     const val SORT_POST_INTERRUPT_WAIT = 600
 
     // ========================================

@@ -15,27 +15,17 @@ import org.powbot.om6.salvagesorter.SalvageSorter
  * Clicks a widget component by root and component indices.
  * @param root The root widget index
  * @param component The component index within the root widget
+ * @param index Optional sub-component index
  * @param action Optional action to perform (e.g., "Select"). If null, performs a simple click.
  * @return true if the widget was valid and clicked successfully
  */
-fun clickWidget(root: Int, component: Int, action: String? = null): Boolean {
+fun clickWidget(root: Int, component: Int, index: Int? = null, action: String? = null): Boolean {
     Game.setSingleTapToggle(false)
-    val widget = Widgets.widget(root).component(component)
-    if (!widget.valid()) return false
-    return if (action != null) widget.interact(action) else widget.click()
-}
-
-/**
- * Clicks a widget component with a sub-index (for nested components).
- * @param root The root widget index
- * @param component The component index within the root widget
- * @param index The sub-component index
- * @param action Optional action to perform. If null, performs a simple click.
- * @return true if the widget was valid and clicked successfully
- */
-fun clickWidget(root: Int, component: Int, index: Int, action: String? = null): Boolean {
-    Game.setSingleTapToggle(false)
-    val widget = Widgets.widget(root).component(component).component(index)
+    val widget = if (index != null) {
+        Widgets.widget(root).component(component).component(index)
+    } else {
+        Widgets.widget(root).component(component)
+    }
     if (!widget.valid()) return false
     return if (action != null) widget.interact(action) else widget.click()
 }
@@ -44,6 +34,7 @@ fun clickWidget(root: Int, component: Int, index: Int, action: String? = null): 
  * Clicks a widget with retry logic.
  * @param root The root widget index
  * @param component The component index within the root widget
+ * @param index Optional sub-component index
  * @param action Optional action to perform
  * @param maxAttempts Maximum number of attempts (default: 3)
  * @param retryDelayMs Delay between retries in milliseconds (default: 600)
@@ -54,51 +45,7 @@ fun clickWidget(root: Int, component: Int, index: Int, action: String? = null): 
 fun clickWidgetWithRetry(
     root: Int,
     component: Int,
-    action: String? = null,
-    maxAttempts: Int = 3,
-    retryDelayMs: Int = 600,
-    logPrefix: String? = null,
-    script: SalvageSorter? = null
-): Boolean {
-    Game.setSingleTapToggle(false)
-    for (attempt in 1..maxAttempts) {
-        if (clickWidget(root, component, action)) {
-            if (logPrefix != null && script != null && attempt > 1) {
-                script.logger.info("$logPrefix: Click succeeded on attempt $attempt/$maxAttempts")
-            }
-            return true
-        }
-        
-        if (attempt < maxAttempts) {
-            if (logPrefix != null && script != null) {
-                script.logger.warn("$logPrefix: Click failed on attempt $attempt/$maxAttempts, retrying...")
-            }
-            Condition.sleep(retryDelayMs)
-        }
-    }
-    
-    if (logPrefix != null && script != null) {
-        script.logger.warn("$logPrefix: Click failed after $maxAttempts attempts")
-    }
-    return false
-}
-
-/**
- * Clicks a widget with sub-index and retry logic.
- * @param root The root widget index
- * @param component The component index within the root widget
- * @param index The sub-component index
- * @param action Optional action to perform
- * @param maxAttempts Maximum number of attempts (default: 3)
- * @param retryDelayMs Delay between retries in milliseconds (default: 600)
- * @param logPrefix Optional prefix for logging (if null, no logging)
- * @param script Optional script instance for logging
- * @return true if the widget was clicked successfully within maxAttempts
- */
-fun clickWidgetWithRetry(
-    root: Int,
-    component: Int,
-    index: Int,
+    index: Int? = null,
     action: String? = null,
     maxAttempts: Int = 3,
     retryDelayMs: Int = 600,
@@ -113,7 +60,7 @@ fun clickWidgetWithRetry(
             }
             return true
         }
-        
+
         if (attempt < maxAttempts) {
             if (logPrefix != null && script != null) {
                 script.logger.warn("$logPrefix: Click failed on attempt $attempt/$maxAttempts, retrying...")
@@ -121,7 +68,7 @@ fun clickWidgetWithRetry(
             Condition.sleep(retryDelayMs)
         }
     }
-    
+
     if (logPrefix != null && script != null) {
         script.logger.warn("$logPrefix: Click failed after $maxAttempts attempts")
     }
@@ -129,76 +76,24 @@ fun clickWidgetWithRetry(
 }
 
 /**
- * Clicks a widget and waits for a condition.
- * @param root The root widget index
- * @param component The component index
- * @param condition The condition to wait for after clicking
- * @param timeout Maximum time to wait in milliseconds (default: 2400)
- * @param action Optional action to perform
- * @return true if clicked and condition was met
- */
-fun clickWidgetAndWait(
-    root: Int,
-    component: Int,
-    condition: () -> Boolean,
-    timeout: Int = 2400,
-    action: String? = null
-): Boolean {
-    Game.setSingleTapToggle(false)
-    if (!clickWidget(root, component, action)) return false
-    return Condition.wait(condition, 100, timeout / 100)
-}
-
-/**
- * Clicks a widget with sub-index and waits for a condition.
- * @param root The root widget index
- * @param component The component index
- * @param index The sub-component index
- * @param condition The condition to wait for after clicking
- * @param timeout Maximum time to wait in milliseconds (default: 2400)
- * @param action Optional action to perform
- * @return true if clicked and condition was met
- */
-fun clickWidgetAndWait(
-    root: Int,
-    component: Int,
-    index: Int,
-    condition: () -> Boolean,
-    timeout: Int = 2400,
-    action: String? = null
-): Boolean {
-    Game.setSingleTapToggle(false)
-    if (!clickWidget(root, component, index, action)) return false
-    return Condition.wait(condition, 100, timeout / 100)
-}
-
-/**
  * Checks if a widget component is visible and valid.
  * @param root The root widget index
  * @param component The component index
+ * @param index Optional sub-component index
  * @return true if the widget is valid and visible
  */
-fun isWidgetVisible(root: Int, component: Int): Boolean {
+fun isWidgetVisible(root: Int, component: Int, index: Int? = null): Boolean {
     Game.setSingleTapToggle(false)
-    val widget = Widgets.widget(root).component(component)
-    return widget.valid() && widget.visible()
-}
-
-/**
- * Checks if a widget component with sub-index is visible and valid.
- * @param root The root widget index
- * @param component The component index
- * @param index The sub-component index
- * @return true if the widget is valid and visible
- */
-fun isWidgetVisible(root: Int, component: Int, index: Int): Boolean {
-    Game.setSingleTapToggle(false)
-    val widget = Widgets.widget(root).component(component).component(index)
+    val widget = if (index != null) {
+        Widgets.widget(root).component(component).component(index)
+    } else {
+        Widgets.widget(root).component(component)
+    }
     return widget.valid() && widget.visible()
 }
 
 // ========================================
-// TAP UTILITY FUNCTIONS
+// TAP/CLICK UTILITY FUNCTIONS
 // ========================================
 
 /**
@@ -216,19 +111,30 @@ fun tapWithOffset(x: Int, y: Int, offsetRange: Int = 3): Boolean {
 }
 
 /**
- * Taps with offset and sleeps afterward.
- * @param x The base X coordinate to tap
- * @param y The base Y coordinate to tap
- * @param offsetRange The maximum random offset in pixels (default: 3)
- * @param sleepMin Minimum sleep time in milliseconds after tap
- * @param sleepMax Maximum sleep time in milliseconds after tap
- * @return true if the tap was successful
+ * Clicks an object at specific screen coordinates and selects a menu action
+ * @param screenX X coordinate on screen
+ * @param screenY Y coordinate on screen
+ * @param action The menu action to select (e.g., "Deploy", "Take", "Use")
+ * @return true if successful, false otherwise
  */
-fun tapWithSleep(x: Int, y: Int, offsetRange: Int = 3, sleepMin: Int, sleepMax: Int): Boolean {
-    Game.setSingleTapToggle(false)
-    if (!tapWithOffset(x, y, offsetRange)) return false
-    Condition.sleep(Random.nextInt(sleepMin, sleepMax))
-    return true
+fun clickAtCoordinates(screenX: Int, screenY: Int, action: String): Boolean {
+    val randomX = screenX + Random.nextInt(-5, 5)
+    val randomY = screenY + Random.nextInt(-5, 5)
+    val point = Point(randomX, randomY)
+
+    Game.setSingleTapToggle(true)
+    Condition.sleep(Random.nextInt(60, 80))
+    Input.tap(point)
+
+    // Wait for menu to open
+    if (!Condition.wait({ Menu.opened() }, freq = 100, tries = 20)) {
+        return false
+    }
+
+    // Click the menu action
+    return Menu.click { cmd ->
+        cmd.action.contains(action, ignoreCase = true)
+    }
 }
 
 // ========================================
@@ -318,65 +224,129 @@ fun setupAssignment(script: SalvageSorter, mainWaitMin: Int = 900, mainWaitMax: 
     return mainWait
 }
 
+// ========================================
+// SORTING UTILITY FUNCTIONS
+// ========================================
+
 /**
- * Execute a tap sequence with uniform sleep between taps.
- * @param script The SalvageSorter script instance for logging
- * @param coordinates List of (x, y) coordinate pairs to tap in sequence
- * @param offsetRange The maximum random offset in pixels for each tap (default: 3)
- * @param sleepMin Minimum sleep time in milliseconds between taps
- * @param sleepMax Maximum sleep time in milliseconds between taps
- * @param logPrefix Prefix for log messages (default: "TAP")
- * @return true if all taps in the sequence were successful
+ * Monitors salvage count and retaps if sorting doesn't start.
+ * Handles the initial wait period where we verify the sort action actually started.
+ *
+ * @param script The SalvageSorter script instance
+ * @param salvageItemName Name of the salvage item to monitor
+ * @param initialCount Initial salvage count before tap
+ * @param tapX X coordinate for retapping
+ * @param tapY Y coordinate for retapping
+ * @param action Menu action to use when retapping
+ * @param initialWaitMs How long to wait for sort to start (default: from Constants)
+ * @param checkIntervalMs How often to check count (default: from Constants)
+ * @param maxRetapFailures Maximum number of failed retaps before giving up (default: 2)
+ * @param retapSleepMin Min sleep after retap (default: from Constants)
+ * @param retapSleepMax Max sleep after retap (default: from Constants)
+ * @return Current salvage count after monitoring period
  */
-fun executeTapSequence(
+fun monitorAndRetapIfStalled(
     script: SalvageSorter,
-    coordinates: List<Pair<Int, Int>>,
-    offsetRange: Int = 3,
-    sleepMin: Int,
-    sleepMax: Int,
-    logPrefix: String = "TAP"
-): Boolean {
-    coordinates.forEachIndexed { index, (x, y) ->
-        if (!tapWithSleep(x, y, offsetRange, sleepMin, sleepMax)) {
-            script.logger.warn("$logPrefix: Failed at tap ${index + 1} of ${coordinates.size}")
-            return false
+    salvageItemName: String,
+    initialCount: Long,
+    tapX: Int,
+    tapY: Int,
+    action: String,
+    initialWaitMs: Long,
+    checkIntervalMs: Long,
+    maxRetapFailures: Int = 2,
+    retapSleepMin: Int,
+    retapSleepMax: Int
+): Long {
+    var elapsed = 0L
+    var currentCount = initialCount
+    var lastCount = initialCount
+    var retapFailureCount = 0
+
+    script.logger.info("RETAP: Starting ${initialWaitMs}ms check for active sorting.")
+
+    while (elapsed < initialWaitMs) {
+        Condition.sleep(checkIntervalMs.toInt())
+        elapsed += checkIntervalMs
+
+        currentCount = Inventory.stream().name(salvageItemName).count()
+
+        if (currentCount < initialCount) {
+            script.logger.info("RETAP: Sort started. Items removed: ${initialCount - currentCount}.")
+            break
         }
-        script.logger.info("$logPrefix ${index + 1}: Complete")
+
+        handleDialogue(retapSleepMin, retapSleepMax)
+
+        if (currentCount >= lastCount) {
+            retapFailureCount++
+
+            if (retapFailureCount > maxRetapFailures) {
+                script.logger.error("FATAL: Sort stalled after $maxRetapFailures retaps. Stopping.")
+                org.powbot.mobile.script.ScriptManager.stop()
+                return currentCount
+            }
+
+            script.logger.warn("RETAP: Count unchanged. Retapping (Attempt $retapFailureCount).")
+            if (clickAtCoordinates(tapX, tapY, action)) {
+                Condition.sleep(Random.nextInt(retapSleepMin, retapSleepMax))
+                lastCount = currentCount
+            }
+        } else {
+            retapFailureCount = 0
+            lastCount = currentCount
+        }
     }
-    return true
+
+    return currentCount
 }
 
 /**
- * Clicks an object at specific screen coordinates and selects a menu action
- * @param screenX X coordinate on screen
- * @param screenY Y coordinate on screen
- * @param action The menu action to select (e.g., "Deploy", "Take", "Use")
- * @return true if successful, false otherwise
+ * Waits for inventory to be cleared of a specific item.
+ * Handles extractor interrupts and retaps if needed.
+ *
+ * @param script The SalvageSorter script instance
+ * @param extractorTask The extractor task to check for interrupts
+ * @param salvageItemName Name of the item to wait for removal
+ * @param tapX X coordinate for retapping after interrupt
+ * @param tapY Y coordinate for retapping after interrupt
+ * @param maxAttempts Maximum polling attempts (default: 20)
+ * @param checkIntervalMs Interval between checks in ms (default: from Constants)
+ * @param postInterruptWaitMs Wait time after extractor interrupt (default: from Constants)
+ * @return true if inventory was successfully cleared, false if timeout
  */
-fun clickAtCoordinates(
-    screenX: Int,
-    screenY: Int,
-    action: String,
-
+fun waitForInventoryClear(
+    script: SalvageSorter,
+    extractorTask: CrystalExtractorTask,
+    salvageItemName: String,
+    tapX: Int,
+    tapY: Int,
+    maxAttempts: Int = 20,
+    checkIntervalMs: Long,
+    postInterruptWaitMs: Long
 ): Boolean {
-    val randomX = screenX + Random.nextInt(-5, 5)
-    val randomY = screenY + Random.nextInt(-5, 5)
-    val point = Point(randomX, randomY)
+    var attempts = 0
 
-    Game.setSingleTapToggle(true)
-    Condition.sleep(Random.nextInt(60,80))
-    Input.tap(point)
+    script.logger.info("POLLING: Waiting for inventory clear.")
 
+    while (attempts < maxAttempts) {
+        if (extractorTask.checkAndExecuteInterrupt(script)) {
+            script.logger.warn("INTERRUPT: Extractor ran. Re-tapping Sort.")
+            if (tapWithOffset(tapX, tapY, 0)) {
+                Condition.sleep(postInterruptWaitMs.toInt())
+                attempts = 0
+                continue
+            }
+        }
 
-    // Wait for menu to open
-    if (!Condition.wait({ Menu.opened() }, freq = 100, tries = 20)) {
-        return false
+        if (Inventory.stream().name(salvageItemName).isEmpty()) {
+            script.logger.info("POLLING: Inventory cleared.")
+            return true
+        }
+
+        Condition.sleep(checkIntervalMs.toInt())
+        attempts++
     }
 
-    // Click the menu action
-    val success = Menu.click { cmd ->
-        cmd.action.contains(action, ignoreCase = true)
-    }
-    //Game.setSingleTapToggle(false)
-    return success
+    return false
 }
