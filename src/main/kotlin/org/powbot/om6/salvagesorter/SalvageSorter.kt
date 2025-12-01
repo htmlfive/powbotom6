@@ -2,6 +2,7 @@ package org.powbot.om6.salvagesorter
 
 import com.google.common.eventbus.Subscribe
 import org.powbot.api.Condition
+import org.powbot.api.Notifications
 import org.powbot.api.event.MessageEvent
 import org.powbot.api.event.MessageType
 import org.powbot.api.rt4.Camera
@@ -384,6 +385,7 @@ class SalvageSorter : AbstractScript() {
             // Safety: Stop if logged out
             if (!Game.loggedIn()) {
                 logger.error("POLL: Logged out. Stopping script.")
+                Notifications.showNotification("POLL: Logged out. Stopping script.")
                 ScriptManager.stop()
             }
 

@@ -1,7 +1,9 @@
 package org.powbot.om6.salvagesorter.tasks
 
 import org.powbot.api.Condition
+import org.powbot.api.Notifications
 import org.powbot.api.Random
+import org.powbot.mobile.script.ScriptManager
 import org.powbot.om6.salvagesorter.SalvageSorter
 
 class CrystalExtractorTask(script: SalvageSorter) : Task(script) {
@@ -51,34 +53,55 @@ class CrystalExtractorTask(script: SalvageSorter) : Task(script) {
     }
 
     fun executeExtractorTap(): Boolean {
-        try {
-            val x = 307
-            val y = 231
+        val maxRetries = Random.nextInt(2,4)
+        var attempt = 0
 
-            CameraSnapper.snapCameraToDirection(script.cameraDirection, script)
+        while (attempt < maxRetries) {
+            attempt++
+            try {
+                val x = 307
+                val y = 231
 
-            val randomOffsetX = Random.nextInt(-6, 7)
-            val randomOffsetY = Random.nextInt(-5, 6)
-            val finalX = x + randomOffsetX
-            val finalY = y + randomOffsetY
-            script.harvesterMessageFound = false
+                CameraSnapper.snapCameraToDirection(script.cameraDirection, script)
 
-            script.logger.info("ACTION: Executing extractor tap at X=$finalX, Y=$finalY (Offset: $randomOffsetX, $randomOffsetY).")
+                val randomOffsetX = Random.nextInt(-6, 7)
+                val randomOffsetY = Random.nextInt(-5, 6)
+                val finalX = x + randomOffsetX
+                val finalY = y + randomOffsetY
+                script.harvesterMessageFound = false
 
-            if (clickAtCoordinates(x,y,"Harvest")) {
+                script.logger.info("ACTION: Executing extractor tap at X=$finalX, Y=$finalY (Offset: $randomOffsetX, $randomOffsetY). [Attempt $attempt/$maxRetries]")
 
-                val waitTime = Random.nextInt(2400, 3000)
-                script.logger.info("WAIT: Extractor tap successful. Waiting $waitTime ms.")
-                Condition.sleep(waitTime)
-                return true
+                if (clickAtCoordinates(x, y, "Harvest")) {
+                    val waitTime = Random.nextInt(2400, 3000)
+                    script.logger.info("WAIT: Extractor tap successful. Waiting $waitTime ms.")
+                    Condition.sleep(waitTime)
+                    return true
+                }
+
+                script.logger.warn("FAIL: Failed to execute Input.tap() at ($finalX, $finalY). [Attempt $attempt/$maxRetries]")
+
+                if (attempt < maxRetries) {
+                    val retryDelay = Random.nextInt(800, 1200)
+                    script.logger.info("RETRY: Waiting $retryDelay ms before retry...")
+                    Condition.sleep(retryDelay)
+                }
+            } catch (e: Exception) {
+                script.logger.error("CRASH PROTECTION: Extractor tap sequence failed with exception: ${e.message} [Attempt $attempt/$maxRetries]", e)
+
+                if (attempt < maxRetries) {
+                    val retryDelay = Random.nextInt(800, 1200)
+                    script.logger.info("RETRY: Waiting $retryDelay ms before retry...")
+                    Condition.sleep(retryDelay)
+                }
             }
-
-            script.logger.warn("FAIL: Failed to execute Input.tap() at ($finalX, $finalY).")
-            return false
-        } catch (e: Exception) {
-            script.logger.error("CRASH PROTECTION: Extractor tap sequence failed with exception: ${e.message}", e)
-            return false
         }
+
+        script.logger.error("FAIL: Extractor tap failed after $maxRetries attempts. Stopping.")
+        Notifications.showNotification("FAIL: Extractor tap failed after $maxRetries attempts. Stopping.")
+        ScriptManager.stop()
+
+        return false
     }
 
     /**

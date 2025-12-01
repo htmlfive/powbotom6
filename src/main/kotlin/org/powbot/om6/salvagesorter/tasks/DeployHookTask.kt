@@ -1,6 +1,7 @@
 package org.powbot.om6.salvagesorter.tasks
 
 import org.powbot.api.Condition
+import org.powbot.api.Notifications
 import org.powbot.api.Random
 import org.powbot.api.rt4.Chat
 import org.powbot.api.rt4.Inventory
@@ -99,6 +100,8 @@ class DeployHookTask(script: SalvageSorter) : Task(script) {
 
             if (Inventory.isFull() && script.cargoHoldFull) {
                 script.logger.error("HOOK: Both full. Stopping.")
+                Notifications.showNotification("HOOK: Both full. Stopping.")
+
                 ScriptManager.stop()
                 return false
             }
@@ -115,7 +118,7 @@ class DeployHookTask(script: SalvageSorter) : Task(script) {
 
         // Try tapping hook up to 3 times before giving up
         var messageFound = false
-        for (attempt in 1..3) {
+        for (attempt in 1..Random.nextInt(2,3)) {
             script.logger.info("HOOK: Attempt $attempt/3 - Tapping hook")
 
             if (!clickAtCoordinates(Constants.HOOK_DEPLOY_X, Constants.HOOK_DEPLOY_Y, Constants.HOOK_DEPLOY_MENUOPTION)) {
@@ -185,6 +188,7 @@ class DeployHookTask(script: SalvageSorter) : Task(script) {
                 return true
             } else {
                 script.logger.error("HOOK: No confirmation after 3 attempts. Stopping.")
+                Notifications.showNotification("HOOK: No confirmation after 3 attempts. Stopping.")
                 ScriptManager.stop()
                 return false
             }

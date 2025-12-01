@@ -2,9 +2,11 @@ package org.powbot.om6.salvagesorter.tasks
 
 import org.powbot.api.Condition
 import org.powbot.api.Input
+import org.powbot.api.Notifications
 import org.powbot.api.Point
 import org.powbot.api.Random
 import org.powbot.api.rt4.*
+import org.powbot.mobile.script.ScriptManager
 import org.powbot.om6.salvagesorter.SalvageSorter
 
 // ========================================
@@ -71,6 +73,8 @@ fun clickWidgetWithRetry(
 
     if (logPrefix != null && script != null) {
         script.logger.warn("$logPrefix: Click failed after $maxAttempts attempts")
+        Notifications.showNotification("$logPrefix: Click failed after $maxAttempts attempts. Stopping script.")
+        ScriptManager.stop()
     }
     return false
 }
@@ -258,6 +262,7 @@ fun monitorAndRetapIfStalled(
 
             if (retapFailureCount > maxRetapFailures) {
                 script.logger.error("FATAL: Sort stalled after $maxRetapFailures retaps. Stopping.")
+                Notifications.showNotification("FATAL: Sort stalled after $maxRetapFailures retaps. Stopping.")
                 org.powbot.mobile.script.ScriptManager.stop()
                 return currentCount
             }
