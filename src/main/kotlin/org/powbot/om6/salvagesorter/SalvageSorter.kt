@@ -8,6 +8,7 @@ import org.powbot.api.script.ScriptConfiguration.List as ConfigList
 import org.powbot.api.event.MessageEvent
 import org.powbot.api.event.MessageType
 import org.powbot.api.rt4.Camera
+import org.powbot.api.rt4.Game
 import org.powbot.api.rt4.Inventory
 import org.powbot.mobile.script.ScriptManager
 import org.powbot.om6.salvagesorter.config.CardinalDirection
@@ -256,6 +257,7 @@ class SalvageSorter : AbstractScript() {
     override fun poll() {
         try {
             logger.debug("POLL START: phase=$currentPhase, cargoHoldFull=$cargoHoldFull, atSortLocation=$atSortLocation, atHookLocation=$atHookLocation")
+            Game.setSingleTapToggle(false)
 
             // --- 1. HIGHEST PRIORITY INTERRUPTS ---
 
@@ -417,7 +419,7 @@ class SalvageSorter : AbstractScript() {
             }
 
             // Safety: Stop if logged out
-            if (!org.powbot.api.rt4.Game.loggedIn()) {
+            if (!Game.loggedIn()) {
                 logger.error("POLL: Logged out. Stopping script.")
                 ScriptManager.stop()
             }
