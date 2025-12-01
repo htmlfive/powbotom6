@@ -89,9 +89,9 @@ class SetupSortingTask(script: SalvageSorter) : Task(script) {
         // Step 2: Scroll to sorting positions
         script.logger.info("ASSIGNMENTS: Step 2 - Scrolling to sorting positions")
         ScrollHelper.scrollTo(
-            item = Widgets.component(937, 25, 47),
-            pane = Widgets.component(937, 23),
-            scrollComp = Widgets.component(937, 32),
+            getItem = { Widgets.component(937, 25, 47) },
+            getPane = { Widgets.component(937, 23) },
+            getScrollComp = { Widgets.component(937, 32) }
         )
         script.logger.info("ASSIGNMENTS: Step 2 - Scroll complete")
 
