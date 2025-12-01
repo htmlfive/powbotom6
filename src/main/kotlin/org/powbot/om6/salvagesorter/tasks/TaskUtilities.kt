@@ -200,31 +200,6 @@ fun handleMultipleDialogues(maxAttempts: Int = 2, sleepMin: Int = 500, sleepMax:
 }
 
 // ========================================
-// ASSIGNMENT UTILITY FUNCTIONS
-// ========================================
-
-/**
- * Common assignment sequence setup.
- * @param script The SalvageSorter script instance
- * @param mainWaitMin Minimum wait time in milliseconds (default: 900)
- * @param mainWaitMax Maximum wait time in milliseconds (default: 1200)
- * @return The calculated main wait time used
- */
-fun setupAssignment(script: SalvageSorter, mainWaitMin: Int = 900, mainWaitMax: Int = 1200): Int {
-    val mainWait = Random.nextInt(mainWaitMin, mainWaitMax)
-    CameraSnapper.snapCameraToDirection(script.cameraDirection, script)
-
-    if (!ensureInventoryOpen()) {
-        script.logger.warn("ASSIGNMENT: Failed to open inventory")
-    }
-
-    Condition.sleep(mainWait)
-    closeTabWithSleep(100, 200)
-
-    return mainWait
-}
-
-// ========================================
 // SORTING UTILITY FUNCTIONS
 // ========================================
 

@@ -123,8 +123,6 @@ object Constants {
     // ASSIGNMENT SLEEP TIMINGS
     // ========================================
 
-    const val ASSIGNMENT_MAIN_WAIT_MIN = 1200
-    const val ASSIGNMENT_MAIN_WAIT_MAX = 1800
     const val ASSIGNMENT_INV_OPEN_MIN = 100
     const val ASSIGNMENT_INV_OPEN_MAX = 200
 
@@ -152,13 +150,6 @@ object Constants {
     const val DEPOSIT_PRE_WAIT_MAX = 1100
     const val DEPOSIT_BETWEEN_TAPS_MIN = 1200
     const val DEPOSIT_BETWEEN_TAPS_MAX = 1800
-
-    // ========================================
-    // CARGO WITHDRAW SLEEP TIMINGS
-    // ========================================
-
-    const val CARGO_WALKBACK_WAIT_MIN = 1800
-    const val CARGO_WALKBACK_WAIT_MAX = 2400
 
     // ========================================
     // SORT SLEEP TIMINGS
