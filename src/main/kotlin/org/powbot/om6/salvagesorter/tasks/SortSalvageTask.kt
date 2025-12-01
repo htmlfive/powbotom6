@@ -72,7 +72,7 @@ class SortSalvageTask(script: SalvageSorter) : Task(script) {
             tapX = finalX,
             tapY = finalY,
             action = Constants.SORT_BUTTON_MENUOPTION,
-            initialWaitMs = Constants.SORT_INITIAL_WAIT.toLong(),
+            initialWaitMs = Constants.SORT_INITIAL_WAIT,
             checkIntervalMs = Constants.SORT_CHECK_INTERVAL.toLong(),
             maxRetapFailures = 2,
             retapSleepMin = Constants.SORT_RETAP_MIN,

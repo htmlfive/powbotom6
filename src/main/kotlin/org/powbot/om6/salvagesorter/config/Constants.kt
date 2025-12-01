@@ -45,8 +45,6 @@ object Constants {
     /** Y coordinate for walking to hook location from sorting */
     const val HOOK_WALK_TO_Y = 100 //63
 
-    const val HOOK_WALK_TO_MENUOPTION = "Walk here" //
-
 
     // ========================================
     // SORTING COORDINATES
@@ -69,7 +67,6 @@ object Constants {
     /** Y coordinate for walking to sorting location from hook */
     const val SORT_WALK_TO_Y = 490
 
-    const val SORT_WALK_TO_MENUOPTION = "Walk here"
 
 
     // ========================================
@@ -119,7 +116,6 @@ object Constants {
     const val INDEX_ASSIGN_SLOT2 = 47
 
     const val COMPONENT_ASSIGN_WIDGETCONFIRM = 20
-    const val INDEX_ASSIGN_UNASSIGN = 0
     const val INDEX_ASSIGNCONFIRM_SLOT1 = 1
     const val INDEX_ASSIGNCONFIRM_SLOT2 = 2
 
@@ -131,8 +127,6 @@ object Constants {
     const val ASSIGNMENT_MAIN_WAIT_MAX = 1800
     const val ASSIGNMENT_INV_OPEN_MIN = 100
     const val ASSIGNMENT_INV_OPEN_MAX = 200
-    const val ASSIGNMENT_TAB_CLOSE_MIN = 100
-    const val ASSIGNMENT_TAB_CLOSE_MAX = 200
 
     // ========================================
     // WALK SLEEP TIMINGS
@@ -200,8 +194,6 @@ object Constants {
 
     const val WALKTOSORT_CAMERA_MIN = 600
     const val WALKTOSORT_CAMERA_MAX = 1200
-    const val WALKTOSORT_WALK_MIN = 1800
-    const val WALKTOSORT_WALK_MAX = 2400
 
     // ========================================
     // WIDGET INTERACTION SLEEP TIMINGS

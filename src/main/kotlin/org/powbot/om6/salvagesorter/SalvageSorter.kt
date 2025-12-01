@@ -73,7 +73,6 @@ class SalvageSorter : AbstractScript() {
     var salvageMessageFound = false
     var atHookLocation = false
     var atSortLocation = false
-    val extractorTask = CrystalExtractorTask(this)
     val tapToDrop: Boolean get() = getOption<Boolean>("Tap-to-drop")
     val SALVAGE_NAME: String get() = getOption<String>("Salvage Item Name")
     var hookingSalvageBool = false
@@ -221,7 +220,7 @@ class SalvageSorter : AbstractScript() {
 
     override fun poll() {
         try {
-            logger.debug("POLL START: phase=$currentPhase, cargoHoldFull=$cargoHoldFull, atSortLocation=$atSortLocation, atHookLocation=$atHookLocation")
+            logger.info("POLL START: phase=$currentPhase, cargoHoldFull=$cargoHoldFull, atSortLocation=$atSortLocation, atHookLocation=$atHookLocation")
 
             // --- 1. HIGHEST PRIORITY INTERRUPTS ---
 
@@ -285,7 +284,7 @@ class SalvageSorter : AbstractScript() {
             val hasSalvageInInventory = Inventory.stream().name(SALVAGE_NAME).isNotEmpty()
             val inventoryFull = Inventory.isFull()
 
-            logger.debug("POLL: State Check - cargoFull=$cargoHoldFull, hasSalvage=$hasSalvageInInventory, invFull=$inventoryFull, phase=$currentPhase")
+            logger.info("POLL: State Check - cargoFull=$cargoHoldFull, hasSalvage=$hasSalvageInInventory, invFull=$inventoryFull, phase=$currentPhase")
 
             val nextTask: Task? = when {
                 // STATE A: SORTING PHASE (Cargo Hold is Full OR in process of emptying)

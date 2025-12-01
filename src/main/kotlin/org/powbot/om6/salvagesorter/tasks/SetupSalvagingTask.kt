@@ -85,7 +85,6 @@ class SetupSalvagingTask(script: SalvageSorter) : Task(script) {
      */
     private fun assignGhost(): Boolean {
         script.logger.info("ASSIGNMENTS: Starting Ghost assignment sequence.")
-        val mainWait = setupAssignment(script, Constants.ASSIGNMENT_MAIN_WAIT_MIN, Constants.ASSIGNMENT_MAIN_WAIT_MAX)
 
         // Step 1: Open Sailing Tab
         script.logger.info("ASSIGNMENTS: Step 1 - Opening sailing tab")
