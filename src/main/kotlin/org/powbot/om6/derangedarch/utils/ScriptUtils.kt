@@ -1,6 +1,7 @@
 package org.powbot.om6.derangedarch.utils
 
 import org.powbot.api.Condition
+import org.powbot.api.Notifications
 import org.powbot.api.rt4.*
 import org.powbot.dax.teleports.Teleport
 import org.powbot.mobile.script.ScriptManager
@@ -202,6 +203,7 @@ object ScriptUtils {
 
     fun stopScript(reason: String, script: DerangedArchaeologistMagicKiller) {
         script.logger.warn("FATAL: $reason Stopping script.")
+        Notifications.showNotification("FATAL: $reason Stopping script.")
         ScriptManager.stop()
     }
 }

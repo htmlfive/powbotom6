@@ -1,6 +1,7 @@
 package org.powbot.om6.varrockmuseum
 
 import org.powbot.api.Condition
+import org.powbot.api.Notifications
 import org.powbot.api.Random
 import org.powbot.api.rt4.Equipment
 import org.powbot.api.rt4.Players
@@ -121,6 +122,7 @@ class VarrockMuseum : AbstractScript() {
         val museumTile = org.powbot.api.Tile(3264, 3444, 0)
         if (playerTile.distanceTo(museumTile) > 4) {
             logger.error("Player too far from museum area! Must be within 4 tiles of (3264, 3444)")
+            Notifications.showNotification("Player too far from museum area! Must be within 4 tiles of (3264, 3444)")
             ScriptManager.stop()
             return false
         }
@@ -130,6 +132,7 @@ class VarrockMuseum : AbstractScript() {
     private fun checkRequiredItems(): Boolean {
         if (!inventoryContains("Rock pick") || !inventoryContains("Specimen brush")|| !inventoryContains("Trowel")) {
             logger.error("Missing required tool: Rock pick or Specimen brush not found in inventory!")
+            Notifications.showNotification("Missing required tool: Rock pick, Trowel, or Specimen brush not found in inventory!")
             ScriptManager.stop()
             return false
         }
@@ -139,6 +142,7 @@ class VarrockMuseum : AbstractScript() {
     private fun checkRequiredEquipment(): Boolean {
         if (!Equipment.stream().name("Leather gloves").isNotEmpty() || !Equipment.stream().name("Leather boots").isNotEmpty()) {
             logger.error("Missing required equipment: Leather gloves or Leather boots not equipped!")
+            Notifications.showNotification("Missing required equipment: Leather gloves or Leather boots not equipped!")
             ScriptManager.stop()
             return false
         }

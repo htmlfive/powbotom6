@@ -1,5 +1,6 @@
 package org.powbot.webwalk
 
+import org.powbot.api.Notifications
 import org.powbot.api.Tile
 import org.powbot.api.rt4.Players
 import org.powbot.api.script.*
@@ -79,6 +80,7 @@ class WebWalkerScript : AbstractScript() {
         } else {
             // Fallback - shouldn't happen
             logger.error("Invalid location selection: $selectedLocation")
+            Notifications.showNotification("Invalid location selection: $selectedLocation, if this is wrong open a bug report!")
             ScriptManager.stop()
             return
         }
@@ -87,6 +89,7 @@ class WebWalkerScript : AbstractScript() {
         if (!ScriptUtils.isValidTile(targetTile)) {
             logger.error("Configuration error: Invalid target location")
             logger.error("Coordinates: ${if (location == Constants.Location.CUSTOM) customCoordinates else location?.coordinates}")
+            Notifications.showNotification("Coordinates: ${if (location == Constants.Location.CUSTOM) customCoordinates else location?.coordinates}, if this is wrong open a bug report!")
             ScriptManager.stop()
             return
         }
@@ -165,6 +168,7 @@ class WebWalkerScript : AbstractScript() {
         // Safety check in case onStart failed
         if (targetTile == Tile.Nil) {
             logger.error("Target tile is invalid. Stopping script.")
+            Notifications.showNotification("Target tile is invalid. Stopping script.")
             ScriptManager.stop()
             return
         }
@@ -179,6 +183,7 @@ class WebWalkerScript : AbstractScript() {
         } else {
             // No valid tasks found - this shouldn't happen if tasks are properly configured
             logger.warn("No valid tasks found. Stopping script.")
+            Notifications.showNotification("No valid tasks found. Stopping script.")
             ScriptManager.stop()
         }
     }

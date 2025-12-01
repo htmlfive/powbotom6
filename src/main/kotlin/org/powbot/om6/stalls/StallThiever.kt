@@ -1,6 +1,7 @@
 package org.powbot.om6.stalls
 
 import org.powbot.api.Condition
+import org.powbot.api.Notifications
 import org.powbot.api.Tile
 import org.powbot.api.event.GameObjectActionEvent
 import org.powbot.api.script.*
@@ -102,6 +103,7 @@ class StallThiever : AbstractScript() {
 
         if (!ScriptUtils.isConfigurationValid(thievingTile, bankTile, stallTargetEvents)) {
             logger.warn("Configuration not set correctly. Please restart the script and configure all options.")
+            Notifications.showNotification("Configuration not set correctly. Please restart the script and configure all options.")
             ScriptManager.stop()
             return
         }

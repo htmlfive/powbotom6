@@ -2,6 +2,7 @@ package org.powbot.om6.derangedarch.tasks
 
 import org.powbot.api.Area
 import org.powbot.api.Condition
+import org.powbot.api.Notifications
 import org.powbot.api.Tile
 import org.powbot.api.rt4.*
 import org.powbot.mobile.script.ScriptManager
@@ -20,6 +21,7 @@ class FightTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
             val bossTarget = boss.interacting()
             if (bossTarget is Player && bossTarget != Players.local()) {
                 script.logger.warn("Another player is fighting the boss. Stopping script to avoid crashing.")
+                Notifications.showNotification("Another player detected fighting the boss during execute. Stopping script.")
                 ScriptManager.stop()
                 return false
             }
@@ -45,6 +47,7 @@ class FightTask(script: DerangedArchaeologistMagicKiller) : Task(script) {
         val bossTarget = boss.interacting()
         if (bossTarget is Player && bossTarget != Players.local()) {
             script.logger.warn("Another player detected fighting the boss during execute. Stopping script.")
+            Notifications.showNotification("Another player detected fighting the boss during execute. Stopping script.")
             ScriptManager.stop()
             return
         }

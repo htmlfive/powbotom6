@@ -1,6 +1,7 @@
 package org.powbot.webwalk.tasks
 
 import org.powbot.api.Condition
+import org.powbot.api.Notifications
 import org.powbot.api.Tile
 import org.powbot.api.rt4.Movement
 import org.powbot.api.rt4.Players
@@ -99,7 +100,7 @@ class DestinationReachedTask(
     override fun execute() {
         script.logger.info("Destination reached: ${ScriptUtils.formatTile(targetTile)}")
         script.logger.info("Script completed successfully. Stopping...")
-
+        Notifications.showNotification("Destination reached: ${ScriptUtils.formatTile(targetTile)} Stopping")
         // Brief pause before stopping
         Condition.sleep(Constants.DESTINATION_SLEEP_TIME)
 
