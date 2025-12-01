@@ -3,7 +3,6 @@ package org.powbot.om6.salvagesorter.tasks
 import org.powbot.api.Condition
 import org.powbot.api.Random
 import org.powbot.om6.salvagesorter.SalvageSorter
-import org.powbot.om6.salvagesorter.config.SalvagePhase
 
 class CrystalExtractorTask(script: SalvageSorter) : Task(script) {
 

@@ -1,11 +1,11 @@
 package org.powbot.om6.salvagesorter.tasks
 
-import org.powbot.api.rt4.Inventory
-import org.powbot.om6.salvagesorter.SalvageSorter
-import org.powbot.om6.salvagesorter.config.SalvagePhase
 import org.powbot.api.Condition
 import org.powbot.api.Random
 import org.powbot.api.rt4.Game
+import org.powbot.api.rt4.Inventory
+import org.powbot.om6.salvagesorter.SalvageSorter
+import org.powbot.om6.salvagesorter.config.SalvagePhase
 
 class DropSalvageTask(script: SalvageSorter) : Task(script) {
     override fun activate(): Boolean {

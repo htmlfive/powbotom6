@@ -2,20 +2,20 @@ package org.powbot.om6.salvagesorter
 
 import com.google.common.eventbus.Subscribe
 import org.powbot.api.Condition
-import org.powbot.api.script.*
-import org.powbot.api.script.paint.PaintBuilder
-import org.powbot.api.script.ScriptConfiguration.List as ConfigList
 import org.powbot.api.event.MessageEvent
 import org.powbot.api.event.MessageType
 import org.powbot.api.rt4.Camera
 import org.powbot.api.rt4.Game
 import org.powbot.api.rt4.Inventory
+import org.powbot.api.script.*
+import org.powbot.api.script.paint.PaintBuilder
 import org.powbot.mobile.script.ScriptManager
 import org.powbot.om6.salvagesorter.config.CardinalDirection
 import org.powbot.om6.salvagesorter.config.Constants
 import org.powbot.om6.salvagesorter.config.SalvagePhase
 import org.powbot.om6.salvagesorter.tasks.*
 import kotlin.random.Random
+import org.powbot.api.script.ScriptConfiguration.List as ConfigList
 
 @ScriptManifest(
     name = "0m6 Shipwreck Sorter",
