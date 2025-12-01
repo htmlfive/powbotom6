@@ -41,9 +41,9 @@ object Constants {
     const val HOOK_CARGO_MENUOPTION = "Open"
 
     /** X coordinate for walking to hook location from sorting */
-    const val HOOK_WALK_TO_X = 466 //791
+    const val HOOK_WALK_TO_X = 791 //791
     /** Y coordinate for walking to hook location from sorting */
-    const val HOOK_WALK_TO_Y = 212 //63
+    const val HOOK_WALK_TO_Y = 63 //63
 
     const val HOOK_WALK_TO_MENUOPTION = "Walk here" //
 

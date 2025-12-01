@@ -120,7 +120,7 @@ class WithdrawCargoTask(script: SalvageSorter) : Task(script) {
         CameraSnapper.snapCameraToDirection(script.requiredTapDirection, script)
         script.logger.info("WITHDRAW: Starting 4-step cargo withdrawal sequence.")
 
-        val invCountBefore = Inventory.stream().count()
+        val invCountBefore = 28 - Inventory.stream().count()
         val salvageCountBefore = Inventory.stream().name(script.SALVAGE_NAME).count()
 
         // Step 1: Open cargo interface

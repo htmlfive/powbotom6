@@ -3,6 +3,7 @@ package org.powbot.om6.salvagesorter.tasks
 import org.powbot.api.Condition
 import org.powbot.api.Random
 import org.powbot.api.rt4.Camera
+import org.powbot.api.rt4.Game
 import org.powbot.api.rt4.Widgets
 import org.powbot.om6.salvagesorter.SalvageSorter
 import org.powbot.om6.salvagesorter.config.CardinalDirection
@@ -14,6 +15,7 @@ object CameraSnapper {
     private const val PITCH_MAX = 41
 
     fun snapCameraToDirection(direction: CardinalDirection, script: SalvageSorter) {
+        Game.setSingleTapToggle(false)
         val yawNeeded = direction.yaw
         val COMPASS_ACTION = direction.action
         script.logger.info("LOGIC: Attempting to snap camera to ${direction.name} (Yaw: $yawNeeded). Current Yaw: ${Camera.yaw()}, Current Pitch: ${Camera.pitch()}")

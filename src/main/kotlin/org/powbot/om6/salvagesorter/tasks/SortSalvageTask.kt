@@ -2,6 +2,7 @@ package org.powbot.om6.salvagesorter.tasks
 
 import org.powbot.api.Condition
 import org.powbot.api.Random
+import org.powbot.api.rt4.Game
 import org.powbot.api.rt4.Inventory
 import org.powbot.mobile.script.ScriptManager
 import org.powbot.om6.salvagesorter.SalvageSorter
@@ -40,6 +41,8 @@ class SortSalvageTask(script: SalvageSorter) : Task(script) {
      * @return true if sorting completed successfully
      */
     private fun executeTapSortSalvage(): Boolean {
+        Game.setSingleTapToggle(false)
+
         val salvageItemName = script.SALVAGE_NAME
         CameraSnapper.snapCameraToDirection(script.requiredDropDirection, script)
         Condition.sleep(Random.nextInt(Constants.SORT_PRE_TAP_MIN, Constants.SORT_PRE_TAP_MAX))
