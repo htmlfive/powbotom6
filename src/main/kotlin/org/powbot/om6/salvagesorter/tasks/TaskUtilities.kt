@@ -2,6 +2,7 @@ package org.powbot.om6.salvagesorter.tasks
 
 import org.powbot.api.Condition
 import org.powbot.api.Input
+import org.powbot.api.Point
 import org.powbot.api.Random
 import org.powbot.api.rt4.*
 import org.powbot.om6.salvagesorter.SalvageSorter
@@ -332,4 +333,38 @@ fun executeTapSequence(
         script.logger.info("$logPrefix ${index + 1}: Complete")
     }
     return true
+}
+
+/**
+ * Clicks an object at specific screen coordinates and selects a menu action
+ * @param screenX X coordinate on screen
+ * @param screenY Y coordinate on screen
+ * @param action The menu action to select (e.g., "Deploy", "Take", "Use")
+ * @return true if successful, false otherwise
+ */
+fun clickAtCoordinates(
+    screenX: Int,
+    screenY: Int,
+    action: String,
+
+): Boolean {
+    val randomX = screenX + Random.nextInt(-3, 4)
+    val randomY = screenY + Random.nextInt(-3, 4)
+    val point = Point(randomX, randomY)
+    Game.setSingleTapToggle(true)
+
+    Input.tap(point)
+
+
+    // Wait for menu to open
+    if (!Condition.wait({ Menu.opened() }, freq = 100, tries = 20)) {
+        return false
+    }
+
+    // Click the menu action
+    val success = Menu.click { cmd ->
+        cmd.action.contains(action, ignoreCase = true)
+    }
+    Game.setSingleTapToggle(false)
+    return success
 }
