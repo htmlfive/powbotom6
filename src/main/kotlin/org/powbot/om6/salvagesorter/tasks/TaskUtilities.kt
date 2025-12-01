@@ -341,3 +341,16 @@ fun waitForInventoryClear(
 
     return false
 }
+
+fun retryAction(maxRetries: Int, delayMs: Int, action: () -> Boolean): Boolean {
+    for (i in 1..maxRetries) {
+        // 1. Execute the action
+        if (action()) {
+            return true
+        }
+        if (i < maxRetries) {
+            Condition.sleep(600)
+        }
+    }
+    return false
+}

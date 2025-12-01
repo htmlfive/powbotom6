@@ -5,15 +5,22 @@ import org.powbot.api.Notifications
 import org.powbot.api.Random
 import org.powbot.mobile.script.ScriptManager
 import org.powbot.om6.salvagesorter.SalvageSorter
+import org.powbot.om6.salvagesorter.config.SalvagePhase
 
 class CrystalExtractorTask(script: SalvageSorter) : Task(script) {
 
     override fun activate(): Boolean {
         if (!script.enableExtractor) return false
 
+        // Only activate during SORTING_LOOT or SALVAGING phases
+        val isAllowedPhase = script.currentPhase == SalvagePhase.SORTING_LOOT || script.currentPhase == SalvagePhase.SALVAGING
+        if (!isAllowedPhase) {
+            return false
+        }
+
         // High Priority: Chat Message Override
         if (script.harvesterMessageFound) {
-            script.logger.debug("ACTIVATE: Active due to Harvester message override.")
+            script.logger.debug("ACTIVATE: Active due to Harvester message override during ${script.currentPhase.name}.")
             return true
         }
 
@@ -22,7 +29,7 @@ class CrystalExtractorTask(script: SalvageSorter) : Task(script) {
         val timerExpired = currentTime - script.extractorTimer >= script.extractorInterval
 
         if (timerExpired) {
-            script.logger.debug("ACTIVATE: Active due to ${script.extractorInterval / 1000}-second timer expiration.")
+            script.logger.debug("ACTIVATE: Active due to ${script.extractorInterval / 1000}-second timer expiration during ${script.currentPhase.name}.")
             return true
         }
 
@@ -53,7 +60,7 @@ class CrystalExtractorTask(script: SalvageSorter) : Task(script) {
     }
 
     fun executeExtractorTap(): Boolean {
-        val maxRetries = Random.nextInt(2,4)
+        val maxRetries = Random.nextInt(2,5)
         var attempt = 0
 
         while (attempt < maxRetries) {
@@ -64,8 +71,8 @@ class CrystalExtractorTask(script: SalvageSorter) : Task(script) {
 
                 CameraSnapper.snapCameraToDirection(script.cameraDirection, script)
 
-                val randomOffsetX = Random.nextInt(-6, 7)
-                val randomOffsetY = Random.nextInt(-5, 6)
+                val randomOffsetX = Random.nextInt(-3, 3)
+                val randomOffsetY = Random.nextInt(-3, 3)
                 val finalX = x + randomOffsetX
                 val finalY = y + randomOffsetY
                 script.harvesterMessageFound = false

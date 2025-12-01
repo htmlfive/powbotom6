@@ -52,11 +52,15 @@ class SetupSortingTask(script: SalvageSorter) : Task(script) {
         Condition.sleep(Random.nextInt(Constants.WALKTOSORT_CAMERA_MIN, Constants.WALKTOSORT_CAMERA_MAX))
 
         script.logger.info("WALK_SORT: Tapping walk point.")
+        val stepSuccess = retryAction(Random.nextInt(2,3), 750) {
+            clickAtCoordinates(Constants.SORT_WALK_TO_X, Constants.SORT_WALK_TO_Y, Constants.SORT_BUTTON_MENUOPTION)
+        }
 
-        if (!clickAtCoordinates(Constants.SORT_WALK_TO_X, Constants.SORT_WALK_TO_Y, Constants.SORT_BUTTON_MENUOPTION)) {
-            script.logger.warn("WALK_SORT: Failed to tap.")
+        if (!stepSuccess) {
+            script.logger.warn("WALK: Failed to tap walk point.")
             return false
         }
+
 
         script.atSortLocation = true
         script.logger.info("WALK_SORT: Arrived at sort location.")

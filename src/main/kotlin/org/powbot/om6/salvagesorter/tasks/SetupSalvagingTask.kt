@@ -68,11 +68,14 @@ class SetupSalvagingTask(script: SalvageSorter) : Task(script) {
         CameraSnapper.snapCameraToDirection(script.cameraDirection, script)
 
         script.logger.info("WALK: Tapping walk-to-hook.")
-
-        if (!clickAtCoordinates(Constants.HOOK_WALK_TO_X, Constants.HOOK_WALK_TO_Y, Constants.HOOK_DEPLOY_MENUOPTION)) {
+        val stepSuccess = retryAction(Random.nextInt(2,3), 750) { // Use a slightly longer delay for movement
+            clickAtCoordinates(Constants.HOOK_WALK_TO_X, Constants.HOOK_WALK_TO_Y, Constants.HOOK_DEPLOY_MENUOPTION)
+        }
+        if (!stepSuccess) {
             script.logger.warn("WALK: Failed to tap walk point.")
             return false
         }
+
 
         script.atHookLocation = true
         script.logger.info("WALK: Arrived at hook location. Flag set to true.")
