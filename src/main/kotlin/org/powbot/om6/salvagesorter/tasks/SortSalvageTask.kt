@@ -44,8 +44,8 @@ class SortSalvageTask(script: SalvageSorter) : Task(script) {
         Condition.sleep(Random.nextInt(Constants.SORT_PRE_TAP_MIN, Constants.SORT_PRE_TAP_MAX))
 
         // Calculate tap coordinates with random offset
-        val randomOffsetX = Random.nextInt(-Constants.SORT_BUTTON_TOLERANCE_X, Constants.SORT_BUTTON_TOLERANCE_X + 13)
-        val randomOffsetY = Random.nextInt(-Constants.SORT_BUTTON_TOLERANCE_Y, Constants.SORT_BUTTON_TOLERANCE_Y + 1)
+        val randomOffsetX = Random.nextInt(-Constants.SORT_BUTTON_TOLERANCE_X, Constants.SORT_BUTTON_TOLERANCE_X)
+        val randomOffsetY = Random.nextInt(-Constants.SORT_BUTTON_TOLERANCE_Y, Constants.SORT_BUTTON_TOLERANCE_Y)
         val finalX = Constants.SORT_BUTTON_X + randomOffsetX
         val finalY = Constants.SORT_BUTTON_Y + randomOffsetY
 
@@ -74,7 +74,7 @@ class SortSalvageTask(script: SalvageSorter) : Task(script) {
             action = Constants.SORT_BUTTON_MENUOPTION,
             initialWaitMs = Constants.SORT_INITIAL_WAIT,
             checkIntervalMs = Constants.SORT_CHECK_INTERVAL.toLong(),
-            maxRetapFailures = 2,
+            maxRetapFailures = Random.nextInt(2,3),
             retapSleepMin = Constants.SORT_RETAP_MIN,
             retapSleepMax = Constants.SORT_RETAP_MAX
         )

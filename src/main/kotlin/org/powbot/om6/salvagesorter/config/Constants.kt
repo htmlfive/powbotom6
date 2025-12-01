@@ -58,9 +58,9 @@ object Constants {
     const val SORT_BUTTON_MENUOPTION = "Sort-salvage"
 
     /** Tolerance for sort button X coordinate (for click validation) */
-    const val SORT_BUTTON_TOLERANCE_X = 10
+    const val SORT_BUTTON_TOLERANCE_X = 5
     /** Tolerance for sort button Y coordinate (for click validation) */
-    const val SORT_BUTTON_TOLERANCE_Y = 10
+    const val SORT_BUTTON_TOLERANCE_Y = 5
 
     /** X coordinate for walking to sorting location from hook */
     const val SORT_WALK_TO_X = 579

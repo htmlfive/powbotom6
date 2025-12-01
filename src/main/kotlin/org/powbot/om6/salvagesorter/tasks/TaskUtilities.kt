@@ -239,7 +239,7 @@ fun monitorAndRetapIfStalled(
 ): Long {
     var elapsed = 0L
     var currentCount = initialCount
-    var lastCount = initialCount
+    var lastCount = initialCount // The count *before* the last tap/action
     var retapFailureCount = 0
 
     script.logger.info("RETAP: Starting ${initialWaitMs}ms check for active sorting.")
@@ -250,16 +250,17 @@ fun monitorAndRetapIfStalled(
 
         currentCount = Inventory.stream().name(salvageItemName).count()
 
+        // 1. SUCCESS: Count has dropped, meaning the sort started.
         if (currentCount < initialCount) {
             script.logger.info("RETAP: Sort started. Items removed: ${initialCount - currentCount}.")
-            break
+            return currentCount // Exit immediately
         }
 
-        handleDialogue(retapSleepMin, retapSleepMax)
+        // 2. Failure Check: If we are past the initial wait and the count still hasn't dropped,
+        // it means the action failed. We now check the retap failure limit.
+        if (elapsed >= initialWaitMs || currentCount >= lastCount) {
 
-        if (currentCount >= lastCount) {
-            retapFailureCount++
-
+            // Check the failure count against the limit
             if (retapFailureCount > maxRetapFailures) {
                 script.logger.error("FATAL: Sort stalled after $maxRetapFailures retaps. Stopping.")
                 Notifications.showNotification("FATAL: Sort stalled after $maxRetapFailures retaps. Stopping.")
@@ -267,17 +268,27 @@ fun monitorAndRetapIfStalled(
                 return currentCount
             }
 
-            script.logger.warn("RETAP: Count unchanged. Retapping (Attempt $retapFailureCount).")
+            // Perform the Retap
+            script.logger.warn("RETAP: Count unchanged/stalled. Retapping (Attempt ${retapFailureCount + 1}).")
             if (clickAtCoordinates(tapX, tapY, action)) {
+                // IMPORTANT: Increment the failure count here, as a retap attempt has now been made
+                retapFailureCount++
+
+                // Sleep to allow the action to process
                 Condition.sleep(Random.nextInt(retapSleepMin, retapSleepMax))
+
+                // Update lastCount to the count *before* the current retap sleep.
+                // The next check will see if the count dropped *after* this retap.
                 lastCount = currentCount
             }
-        } else {
-            retapFailureCount = 0
-            lastCount = currentCount
         }
+
+        handleDialogue(retapSleepMin, retapSleepMax)
     }
 
+    // After the initial wait loop completes without the count dropping,
+    // we return the final count, assuming a failure/stall has been handled
+    // by the failure count check inside the loop.
     return currentCount
 }
 
