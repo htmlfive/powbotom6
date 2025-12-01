@@ -14,11 +14,14 @@ object Constants {
     /** Y coordinate for opening cargo hold interface at sorting location */
     const val CARGO_OPEN_Y = 148
 
+    const val CARGO_OPEN_MENUOPTION = "Open"
+
     /** X coordinate for walking back to sorting position after withdrawing */
     const val CARGO_WALKBACK_X = 432
     /** Y coordinate for walking back to sorting position after withdrawing */
     const val CARGO_WALKBACK_Y = 490
 
+    const val CARGO_WALKBACK_MENUOPTION = "Walk here"
     // ========================================
     // SALVAGE HOOK COORDINATES
     // ========================================
@@ -28,15 +31,22 @@ object Constants {
     /** Y coordinate for tapping the salvage hook to deploy it */
     const val HOOK_DEPLOY_Y = 406
 
+    const val HOOK_DEPLOY_MENUOPTION = "Deploy"
+
     /** X coordinate for opening cargo hold at hook location (for depositing) */
     const val HOOK_CARGO_OPEN_X = 337
     /** Y coordinate for opening cargo hold at hook location (for depositing) */
     const val HOOK_CARGO_OPEN_Y = 350
 
+    const val HOOK_CARGO_MENUOPTION = "Open"
+
     /** X coordinate for walking to hook location from sorting */
-    const val HOOK_WALK_TO_X = 791
+    const val HOOK_WALK_TO_X = 466 //791
     /** Y coordinate for walking to hook location from sorting */
-    const val HOOK_WALK_TO_Y = 63
+    const val HOOK_WALK_TO_Y = 212 //63
+
+    const val HOOK_WALK_TO_MENUOPTION = "Walk here" //
+
 
     // ========================================
     // SORTING COORDINATES
@@ -46,6 +56,9 @@ object Constants {
     const val SORT_BUTTON_X = 574
     /** Y coordinate for tapping the sort button on salvage */
     const val SORT_BUTTON_Y = 359
+
+    const val SORT_BUTTON_MENUOPTION = "Sort-salvage"
+
     /** Tolerance for sort button X coordinate (for click validation) */
     const val SORT_BUTTON_TOLERANCE_X = 10
     /** Tolerance for sort button Y coordinate (for click validation) */
@@ -55,6 +68,8 @@ object Constants {
     const val SORT_WALK_TO_X = 580
     /** Y coordinate for walking to sorting location from hook */
     const val SORT_WALK_TO_Y = 482
+
+    const val SORT_WALK_TO_MENUOPTION = "Walk here"
 
 
     // ========================================
