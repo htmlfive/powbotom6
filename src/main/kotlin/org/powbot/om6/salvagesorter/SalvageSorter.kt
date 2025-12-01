@@ -56,7 +56,7 @@ import kotlin.random.Random
             "Max Cargo Space",
             "The maximum cargo space you can hold.",
             optionType = OptionType.STRING,
-            defaultValue = "160"
+            defaultValue = "210"
         ),
         ScriptConfiguration(
             "Min Withdraw Cooldown (s)",

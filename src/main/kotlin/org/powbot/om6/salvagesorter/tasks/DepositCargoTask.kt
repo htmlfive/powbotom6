@@ -71,7 +71,7 @@ class DepositCargoTask(script: SalvageSorter) : Task(script) {
             script.xpMessageCount += depositedCount
 
             // Flag cargo as full if within 20 of max capacity for earlier transition
-            if (script.xpMessageCount >= (script.maxCargoSpace.toLong() - 20L)) {
+            if (script.xpMessageCount >= (script.maxCargoSpace.toLong() - 30L)) {
                 script.cargoHoldFull = true
                 script.logger.info("DEPOSIT: SUCCESS - Deposited $depositedCount. Cargo count: ${script.xpMessageCount}. Near capacity (within 20), flagging as full.")
             } else {
