@@ -12,9 +12,19 @@ class CrystalExtractorTask(script: SalvageSorter) : Task(script) {
     override fun activate(): Boolean {
         if (!script.enableExtractor) return false
 
-        // Only activate during SORTING_LOOT or SALVAGING phases
-        val isAllowedPhase = script.currentPhase == SalvagePhase.SORTING_LOOT || script.currentPhase == SalvagePhase.SALVAGING
+        // Only activate during SORTING_LOOT, SALVAGING, or CLEANING phases (not during WITHDRAWING)
+        val isAllowedPhase = script.currentPhase in listOf(
+            SalvagePhase.SORTING_LOOT,
+            SalvagePhase.SALVAGING,
+            SalvagePhase.CLEANING
+        )
         if (!isAllowedPhase) {
+            return false
+        }
+
+        // Don't activate if at withdraw spot during SORTING_LOOT phase
+        if (script.currentPhase == SalvagePhase.SORTING_LOOT && script.atWithdrawSpot) {
+            script.logger.debug("ACTIVATE: Skipping extractor - at withdraw spot, need to walk back first.")
             return false
         }
 

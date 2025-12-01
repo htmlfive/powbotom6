@@ -74,6 +74,7 @@ class SalvageSorter : AbstractScript() {
     var salvageMessageFound = false
     var atHookLocation = false
     var atSortLocation = false
+    var atWithdrawSpot = false
     val tapToDrop: Boolean get() = getOption<Boolean>("Tap-to-drop")
     val SALVAGE_NAME: String get() = getOption<String>("Salvage Item Name")
     var hookingSalvageBool = false
@@ -215,6 +216,7 @@ class SalvageSorter : AbstractScript() {
                 String.format("%,d GP", gain)
             }
             .addString("Salvage in Cargo (Approx)") { cargoHoldCount.toString() }
+            .addString("At Withdraw Spot") { if (atWithdrawSpot) "YES" else "NO" }
             .build()
         addPaint(paint)
     }

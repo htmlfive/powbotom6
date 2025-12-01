@@ -8,10 +8,10 @@ enum class SalvagePhase {
     SALVAGING,
     SETUP_SORTING,
     SORTING_LOOT,
-
-    // Kept for backward compatibility or paint/logging internal state:
-    IDLE,
-    DEPOSITING,
     WITHDRAWING,
-    CLEANING
+    CLEANING,
+
+    // Kept for backward compatibility:
+    IDLE,
+    DEPOSITING
 }

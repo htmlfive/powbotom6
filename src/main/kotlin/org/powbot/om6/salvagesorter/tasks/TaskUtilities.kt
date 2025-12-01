@@ -264,7 +264,7 @@ fun monitorAndRetapIfStalled(
             if (retapFailureCount > maxRetapFailures) {
                 script.logger.error("FATAL: Sort stalled after $maxRetapFailures retaps. Stopping.")
                 Notifications.showNotification("FATAL: Sort stalled after $maxRetapFailures retaps. Stopping.")
-                org.powbot.mobile.script.ScriptManager.stop()
+                ScriptManager.stop()
                 return currentCount
             }
 
@@ -349,7 +349,7 @@ fun retryAction(maxRetries: Int, delayMs: Int, action: () -> Boolean): Boolean {
             return true
         }
         if (i < maxRetries) {
-            Condition.sleep(600)
+            Condition.sleep(delayMs)
         }
     }
     return false

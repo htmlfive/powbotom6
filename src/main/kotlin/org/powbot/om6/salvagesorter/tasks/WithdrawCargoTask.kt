@@ -1,13 +1,12 @@
 package org.powbot.om6.salvagesorter.tasks
 
 import org.powbot.api.Condition
+import org.powbot.api.Random
 import org.powbot.api.rt4.Inventory
 import org.powbot.om6.salvagesorter.SalvageSorter
 import org.powbot.om6.salvagesorter.config.Constants
 import org.powbot.om6.salvagesorter.config.LootConfig
 import org.powbot.om6.salvagesorter.config.SalvagePhase
-// Assuming retryAction extension function is imported/available in this scope.
-// If your RetryUtils.kt is in a different package, you may need an import here.
 
 class WithdrawCargoTask(script: SalvageSorter) : Task(script) {
     private val extractorTask = CrystalExtractorTask(script)
@@ -32,6 +31,8 @@ class WithdrawCargoTask(script: SalvageSorter) : Task(script) {
 
     override fun execute() {
         script.logger.info("WITHDRAW: Starting withdrawal sequence.")
+        script.atWithdrawSpot = true
+        script.logger.info("WITHDRAW: Set atWithdrawSpot = true")
 
         if (extractorTask.checkAndExecuteInterrupt(script)) return
 
@@ -60,6 +61,7 @@ class WithdrawCargoTask(script: SalvageSorter) : Task(script) {
                     script.logger.info("WITHDRAW: No salvage left. Transitioning to SETUP_SALVAGING.")
                     script.cargoHoldFull = false
                     script.atSortLocation = false // Reset flag when leaving sorting area
+                    script.atWithdrawSpot = false
                     script.currentPhase = SalvagePhase.SETUP_SALVAGING
                 }
             }
@@ -67,6 +69,8 @@ class WithdrawCargoTask(script: SalvageSorter) : Task(script) {
             // Case 2: Normal successful withdrawal (inventory full)
             1 -> {
                 script.logger.info("WITHDRAW: Withdrawal successful. Cargo count updated from widget.")
+                //script.atWithdrawSpot = false
+                script.logger.info("WITHDRAW: Set atWithdrawSpot = false (walk back complete)")
             }
 
             // Case 3: Complete failure (no salvage obtained at all)
@@ -86,6 +90,7 @@ class WithdrawCargoTask(script: SalvageSorter) : Task(script) {
                     script.logger.info("WITHDRAW: No salvage in inventory. Transitioning to SALVAGING mode.")
                     script.cargoHoldFull = false
                     script.atSortLocation = false // Reset flag when leaving sorting area
+                    //script.atWithdrawSpot = false
                     script.currentPhase = SalvagePhase.SETUP_SALVAGING
                 }
             }
@@ -169,6 +174,7 @@ class WithdrawCargoTask(script: SalvageSorter) : Task(script) {
             return 0
         }
         script.logger.info("WITHDRAW: Step 4 - Walk back tap successful")
+        Condition.sleep(Random.nextInt(1400,1800))
 
         // Validate withdrawal results
         val hasSalvage = Inventory.stream().name(script.SALVAGE_NAME).isNotEmpty()

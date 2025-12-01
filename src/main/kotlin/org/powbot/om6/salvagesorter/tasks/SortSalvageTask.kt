@@ -18,7 +18,7 @@ class SortSalvageTask(script: SalvageSorter) : Task(script) {
 
     override fun execute() {
         script.logger.info("SORT: Starting sort sequence.")
-
+        script.atWithdrawSpot = false
         if (extractorTask.checkAndExecuteInterrupt(script)) return
 
         val success = executeTapSortSalvage()
