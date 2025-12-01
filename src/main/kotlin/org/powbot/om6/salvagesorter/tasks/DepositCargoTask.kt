@@ -3,6 +3,7 @@ package org.powbot.om6.salvagesorter.tasks
 import org.powbot.api.Condition
 import org.powbot.api.Random
 import org.powbot.api.rt4.Inventory
+import org.powbot.api.rt4.Widgets
 import org.powbot.om6.salvagesorter.SalvageSorter
 import org.powbot.om6.salvagesorter.config.Constants
 import org.powbot.om6.salvagesorter.config.SalvagePhase
@@ -45,6 +46,7 @@ class DepositCargoTask(script: SalvageSorter) : Task(script) {
      */
     private fun depositSalvage(): Boolean
     {
+
         CameraSnapper.snapCameraToDirection(script.cameraDirection, script)
         Condition.sleep(Random.nextInt(Constants.DEPOSIT_PRE_WAIT_MIN, Constants.DEPOSIT_PRE_WAIT_MAX))
 
@@ -75,6 +77,10 @@ class DepositCargoTask(script: SalvageSorter) : Task(script) {
 
         Condition.sleep(Random.nextInt(Constants.WIDGET_INTERACTION_MIN, Constants.WIDGET_INTERACTION_MAX))
 
+        // Read the actual cargo count from widget before closing
+        val actualCargoCount = WidgetUtils.getNumber(Constants.ROOT_CARGO_WIDGET, Constants.COMPONENT_CARGO_SPACE)
+        script.logger.info("DEPOSIT: Read cargo count from widget: $actualCargoCount")
+
         // Step 3: Close cargo interface
         script.logger.info("DEPOSIT: Step 3 - Closing cargo interface")
         if (!clickWidgetWithRetry(Constants.ROOT_CARGO_WIDGET, Constants.COMPONENT_CLOSE, Constants.INDEX_CLOSE, logPrefix = "DEPOSIT: Step 3", script = script)) {
@@ -92,25 +98,25 @@ class DepositCargoTask(script: SalvageSorter) : Task(script) {
         script.logger.info("DEPOSIT: Step 3 - Cargo widget confirmed closed")
 
         val finalSalvageCount = Inventory.stream().name(script.SALVAGE_NAME).count()
-        val depositedCount = (initialSalvageCount - finalSalvageCount).toInt()
 
         if (finalSalvageCount < initialSalvageCount) {
-            script.cargoHoldCount += depositedCount
+            // Update cargo count to actual value from widget
+            script.cargoHoldCount = actualCargoCount
 
             // Flag cargo as full if within 30 of max capacity for earlier transition
             if (script.cargoHoldCount >= (script.maxCargoSpace.toLong() - 30L)) {
                 script.cargoHoldFull = true
-                script.logger.info("DEPOSIT: SUCCESS - Deposited $depositedCount items. Cargo count: ${script.cargoHoldCount}. Near capacity (within 30), flagging as full.")
+                script.logger.info("DEPOSIT: SUCCESS - Cargo count (from widget): ${script.cargoHoldCount}. Near capacity (within 30), flagging as full.")
             } else {
                 script.cargoHoldFull = false
-                script.logger.info("DEPOSIT: SUCCESS - Deposited $depositedCount items. Cargo count: ${script.cargoHoldCount}")
+                script.logger.info("DEPOSIT: SUCCESS - Cargo count (from widget): ${script.cargoHoldCount}")
             }
             script.logger.info("DEPOSIT: Deposit sequence complete - all steps validated successfully")
             return true
         } else {
             script.cargoHoldFull = true
-            script.cargoHoldCount = script.maxCargoSpace.toInt()
-            script.logger.warn("DEPOSIT: FAILED - Cargo FULL (no items deposited). Set count to ${script.maxCargoSpace}.")
+            script.cargoHoldCount = actualCargoCount // Use actual value even on failure
+            script.logger.warn("DEPOSIT: FAILED - Cargo FULL (no items deposited). Cargo count (from widget): ${script.cargoHoldCount}.")
             return false
         }
     }

@@ -31,9 +31,6 @@ class WithdrawCargoTask(script: SalvageSorter) : Task(script) {
     override fun execute() {
         script.logger.info("WITHDRAW: Starting withdrawal sequence.")
 
-        val emptySlotsBefore = Inventory.emptySlotCount()
-        script.logger.info("WITHDRAW: Empty slots before: $emptySlotsBefore.")
-
         if (extractorTask.checkAndExecuteInterrupt(script)) return
 
         // Execute withdrawal - returns status (0 = failed, -1 = cargo depleted, 1 = success)
@@ -67,13 +64,7 @@ class WithdrawCargoTask(script: SalvageSorter) : Task(script) {
 
             // Case 2: Normal successful withdrawal (inventory full)
             1 -> {
-                val emptySlotsAfter = Inventory.emptySlotCount()
-                val withdrawnCount = emptySlotsBefore - emptySlotsAfter
-
-                if (withdrawnCount > 0) {
-                    script.cargoHoldCount = (script.cargoHoldCount - withdrawnCount).coerceAtLeast(0)
-                    script.logger.info("WITHDRAW: Withdrew $withdrawnCount items. Remaining cargo count: ${script.cargoHoldCount}.")
-                }
+                script.logger.info("WITHDRAW: Withdrawal successful. Cargo count updated from widget.")
             }
 
             // Case 3: Complete failure (no salvage obtained at all)
@@ -139,6 +130,10 @@ class WithdrawCargoTask(script: SalvageSorter) : Task(script) {
             script.logger.info("WITHDRAW: Step 2 - Salvage confirmed in inventory")
         }
 
+        // Read the actual cargo count from widget before closing
+        val actualCargoCount = WidgetUtils.getNumber(Constants.ROOT_CARGO_WIDGET, Constants.COMPONENT_CARGO_SPACE)
+        script.logger.info("WITHDRAW: Read cargo count from widget: $actualCargoCount")
+
         // Step 3: Close cargo interface
         script.logger.info("WITHDRAW: Step 3 - Closing cargo interface")
         if (!clickWidgetWithRetry(Constants.ROOT_CARGO_WIDGET, Constants.COMPONENT_CLOSE, Constants.INDEX_CLOSE, logPrefix = "WITHDRAW: Step 3", script = script)) {
@@ -168,23 +163,22 @@ class WithdrawCargoTask(script: SalvageSorter) : Task(script) {
 
         if (!hasSalvage) {
             script.logger.warn("WITHDRAW: Withdrawal failed - no salvage obtained.")
-            script.cargoHoldFull = false
+            script.cargoHoldCount = actualCargoCount // Update to actual value
+            script.cargoHoldFull = actualCargoCount == 0
             return 0
         }
 
-        val salvageCountAfter = Inventory.stream().name(script.SALVAGE_NAME).count()
         val inventoryFull = Inventory.isFull()
-        val salvageWithdrawn = (salvageCountAfter - salvageCountBefore).toInt()
 
         if (!inventoryFull) {
             script.logger.warn("WITHDRAW: Inventory not full (${Inventory.stream().count()}/28). Cargo depleted.")
-            script.cargoHoldCount = 0
-            script.cargoHoldFull = false
+            script.cargoHoldCount = actualCargoCount // Update to actual value
+            script.cargoHoldFull = actualCargoCount == 0
             return -1
         }
 
-        script.cargoHoldCount -= salvageWithdrawn // Track actual withdrawal
-        script.logger.info("WITHDRAW: Inventory full. Withdrew $salvageWithdrawn items. Cargo count now: ${script.cargoHoldCount}.")
+        script.cargoHoldCount = actualCargoCount // Update to actual value from widget
+        script.logger.info("WITHDRAW: Inventory full. Cargo count (from widget): ${script.cargoHoldCount}.")
         script.logger.info("WITHDRAW: Withdrawal sequence complete - all steps validated successfully")
         return 1
     }

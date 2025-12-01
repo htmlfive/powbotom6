@@ -98,7 +98,7 @@ object Constants {
     // ========================================
 
     const val ROOT_CARGO_WIDGET = 943
-    const val COMPONENT_CARGO_SPACE = 5
+    const val COMPONENT_CARGO_SPACE = 4
     const val COMPONENT_DEPOSIT_SALVAGE = 14
     const val COMPONENT_WITHDRAW = 10
     const val INDEX_FIRST_SLOT = 0
