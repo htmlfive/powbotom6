@@ -38,6 +38,92 @@ fun clickWidget(root: Int, component: Int, index: Int, action: String? = null): 
 }
 
 /**
+ * Clicks a widget with retry logic.
+ * @param root The root widget index
+ * @param component The component index within the root widget
+ * @param action Optional action to perform
+ * @param maxAttempts Maximum number of attempts (default: 3)
+ * @param retryDelayMs Delay between retries in milliseconds (default: 600)
+ * @param logPrefix Optional prefix for logging (if null, no logging)
+ * @param script Optional script instance for logging
+ * @return true if the widget was clicked successfully within maxAttempts
+ */
+fun clickWidgetWithRetry(
+    root: Int,
+    component: Int,
+    action: String? = null,
+    maxAttempts: Int = 3,
+    retryDelayMs: Int = 600,
+    logPrefix: String? = null,
+    script: SalvageSorter? = null
+): Boolean {
+    for (attempt in 1..maxAttempts) {
+        if (clickWidget(root, component, action)) {
+            if (logPrefix != null && script != null && attempt > 1) {
+                script.logger.info("$logPrefix: Click succeeded on attempt $attempt/$maxAttempts")
+            }
+            return true
+        }
+        
+        if (attempt < maxAttempts) {
+            if (logPrefix != null && script != null) {
+                script.logger.warn("$logPrefix: Click failed on attempt $attempt/$maxAttempts, retrying...")
+            }
+            Condition.sleep(retryDelayMs)
+        }
+    }
+    
+    if (logPrefix != null && script != null) {
+        script.logger.warn("$logPrefix: Click failed after $maxAttempts attempts")
+    }
+    return false
+}
+
+/**
+ * Clicks a widget with sub-index and retry logic.
+ * @param root The root widget index
+ * @param component The component index within the root widget
+ * @param index The sub-component index
+ * @param action Optional action to perform
+ * @param maxAttempts Maximum number of attempts (default: 3)
+ * @param retryDelayMs Delay between retries in milliseconds (default: 600)
+ * @param logPrefix Optional prefix for logging (if null, no logging)
+ * @param script Optional script instance for logging
+ * @return true if the widget was clicked successfully within maxAttempts
+ */
+fun clickWidgetWithRetry(
+    root: Int,
+    component: Int,
+    index: Int,
+    action: String? = null,
+    maxAttempts: Int = 3,
+    retryDelayMs: Int = 600,
+    logPrefix: String? = null,
+    script: SalvageSorter? = null
+): Boolean {
+    for (attempt in 1..maxAttempts) {
+        if (clickWidget(root, component, index, action)) {
+            if (logPrefix != null && script != null && attempt > 1) {
+                script.logger.info("$logPrefix: Click succeeded on attempt $attempt/$maxAttempts")
+            }
+            return true
+        }
+        
+        if (attempt < maxAttempts) {
+            if (logPrefix != null && script != null) {
+                script.logger.warn("$logPrefix: Click failed on attempt $attempt/$maxAttempts, retrying...")
+            }
+            Condition.sleep(retryDelayMs)
+        }
+    }
+    
+    if (logPrefix != null && script != null) {
+        script.logger.warn("$logPrefix: Click failed after $maxAttempts attempts")
+    }
+    return false
+}
+
+/**
  * Clicks a widget and waits for a condition.
  * @param root The root widget index
  * @param component The component index
@@ -140,11 +226,11 @@ fun tapWithSleep(x: Int, y: Int, offsetRange: Int = 3, sleepMin: Int, sleepMax: 
 
 /**
  * Ensures inventory tab is open.
- * @param sleepMin Minimum sleep time in milliseconds after opening (default: 200)
- * @param sleepMax Maximum sleep time in milliseconds after opening (default: 400)
+ * @param sleepMin Minimum sleep time in milliseconds after opening (default: 100)
+ * @param sleepMax Maximum sleep time in milliseconds after opening (default: 200)
  * @return true if inventory is open or was successfully opened
  */
-fun ensureInventoryOpen(sleepMin: Int = 200, sleepMax: Int = 400): Boolean {
+fun ensureInventoryOpen(sleepMin: Int = 100, sleepMax: Int = 200): Boolean {
     if (Inventory.opened()) return true
     if (Inventory.open()) {
         Condition.sleep(Random.nextInt(sleepMin, sleepMax))
@@ -215,7 +301,7 @@ fun setupAssignment(script: SalvageSorter, mainWaitMin: Int = 900, mainWaitMax: 
     }
 
     Condition.sleep(mainWait)
-    closeTabWithSleep(mainWait, mainWait)
+    closeTabWithSleep(100, 200)
 
     return mainWait
 }

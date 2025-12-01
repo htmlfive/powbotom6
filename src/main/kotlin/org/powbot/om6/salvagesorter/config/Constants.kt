@@ -61,8 +61,10 @@ object Constants {
 
     const val ASSIGNMENT_MAIN_WAIT_MIN = 1200
     const val ASSIGNMENT_MAIN_WAIT_MAX = 1800
-    const val ASSIGNMENT_INV_OPEN_MIN = 600
-    const val ASSIGNMENT_INV_OPEN_MAX = 900
+    const val ASSIGNMENT_INV_OPEN_MIN = 100
+    const val ASSIGNMENT_INV_OPEN_MAX = 200
+    const val ASSIGNMENT_TAB_CLOSE_MIN = 100
+    const val ASSIGNMENT_TAB_CLOSE_MAX = 200
 
     // ========================================
     // WALK SLEEP TIMINGS
@@ -77,10 +79,6 @@ object Constants {
 
     const val HOOK_MAIN_WAIT_MIN = 900
     const val HOOK_MAIN_WAIT_MAX = 1200
-    const val HOOK_TAB_CLOSE_MIN = 600
-    const val HOOK_TAB_CLOSE_MAX = 1200
-    const val HOOK_TAB_OPEN_MIN = 200
-    const val HOOK_TAB_OPEN_MAX = 400
     const val HOOK_WAIT_LOOP_MIN = 1000
     const val HOOK_WAIT_LOOP_MAX = 3000
 
@@ -97,12 +95,8 @@ object Constants {
     // CARGO WITHDRAW SLEEP TIMINGS
     // ========================================
 
-    const val CARGO_MAIN_WAIT_MIN = 600
-    const val CARGO_MAIN_WAIT_MAX = 900
-    const val CARGO_TAP1_WAIT_MIN = 1800
-    const val CARGO_TAP1_WAIT_MAX = 2400
-    const val CARGO_TAP4_WAIT_MIN = 1800
-    const val CARGO_TAP4_WAIT_MAX = 2400
+    const val CARGO_WALKBACK_WAIT_MIN = 1800
+    const val CARGO_WALKBACK_WAIT_MAX = 2400
 
     // ========================================
     // SORT SLEEP TIMINGS
@@ -142,65 +136,62 @@ object Constants {
     const val WALKTOSORT_WALK_MAX = 2400
 
     // ========================================
-    // CARGO TAP COORDINATES
+    // WIDGET INTERACTION SLEEP TIMINGS
     // ========================================
 
-    const val CARGO_TAP_1_X = 584
-    const val CARGO_TAP_1_Y = 148
-    const val CARGO_TAP_2_X = 143
-    const val CARGO_TAP_2_Y = 237
-    const val CARGO_TAP_3_X = 571
-    const val CARGO_TAP_3_Y = 159
-    const val CARGO_TAP_4_X = 432
-    const val CARGO_TAP_4_Y = 490
+    /** Standard sleep between widget clicks/interactions */
+    const val WIDGET_INTERACTION_MIN = 600
+    const val WIDGET_INTERACTION_MAX = 900
 
     // ========================================
-    // ASSIGNMENT TAP COORDINATES
+    // CARGO HOLD COORDINATES (Withdraw)
     // ========================================
 
-    const val ASSIGN_BOTH_1_X = 818  // OPEN TAB
-    const val ASSIGN_BOTH_1_Y = 394
-    const val ASSIGN_BOTH_2_X = 747  // FIRST SLOT
-    const val ASSIGN_BOTH_2_Y = 435
-    const val ASSIGN_BOTH_3_X = 690  // SIAD
-    const val ASSIGN_BOTH_3_Y = 403
-    const val ASSIGN_BOTH_4_X = 747  // SECOND SLOT
-    const val ASSIGN_BOTH_4_Y = 469
-    const val ASSIGN_BOTH_5_X = 684  // GHOST
-    const val ASSIGN_BOTH_5_Y = 370
-    const val ASSIGN_CANNON_X = 748  // CANNON SELECT
-    const val ASSIGN_CANNON_Y = 401
-    const val ASSIGN_BOTH_SCROLL_X = 773  // SCROLL (CLICK X3)
-    const val ASSIGN_BOTH_SCROLL_Y = 477
+    /** X coordinate for opening cargo hold interface at sorting location */
+    const val CARGO_OPEN_X = 584
+    /** Y coordinate for opening cargo hold interface at sorting location */
+    const val CARGO_OPEN_Y = 148
+
+    /** X coordinate for walking back to sorting position after withdrawing */
+    const val CARGO_WALKBACK_X = 432
+    /** Y coordinate for walking back to sorting position after withdrawing */
+    const val CARGO_WALKBACK_Y = 490
 
     // ========================================
-    // SORT TAP COORDINATES
+    // SALVAGE HOOK COORDINATES
     // ========================================
 
+    /** X coordinate for tapping the salvage hook to deploy it */
+    const val HOOK_DEPLOY_X = 525
+    /** Y coordinate for tapping the salvage hook to deploy it */
+    const val HOOK_DEPLOY_Y = 406
+
+    /** X coordinate for opening cargo hold at hook location (for depositing) */
+    const val HOOK_CARGO_OPEN_X = 337
+    /** Y coordinate for opening cargo hold at hook location (for depositing) */
+    const val HOOK_CARGO_OPEN_Y = 350
+
+    /** X coordinate for walking to hook location from spawn */
+    const val HOOK_WALK_TO_X = 791
+    /** Y coordinate for walking to hook location from spawn */
+    const val HOOK_WALK_TO_Y = 63
+
+    // ========================================
+    // SORTING COORDINATES
+    // ========================================
+
+    /** X coordinate for tapping the sort button on salvage */
     const val SORT_BUTTON_X = 574
+    /** Y coordinate for tapping the sort button on salvage */
     const val SORT_BUTTON_Y = 359
+    /** Tolerance for sort button X coordinate (for click validation) */
     const val SORT_BUTTON_TOLERANCE_X = 10
+    /** Tolerance for sort button Y coordinate (for click validation) */
     const val SORT_BUTTON_TOLERANCE_Y = 10
 
-    // ========================================
-    // HOOK/SALVAGE TAP COORDINATES
-    // ========================================
+    /** X coordinate for walking to sorting location from hook */
+    const val SORT_WALK_TO_X = 580
+    /** Y coordinate for walking to sorting location from hook */
+    const val SORT_WALK_TO_Y = 482
 
-    const val HOOK_SALVAGE_1_X = 525 // TAP HOOK
-    const val HOOK_SALVAGE_1_Y = 406 // TAP HOOK
-    const val HOOK_SALVAGE_2_X = 337 // TAP CARGO
-    const val HOOK_SALVAGE_2_Y = 350 // TAP CARGO
-    const val HOOK_SALVAGE_3_X = 551
-    const val HOOK_SALVAGE_3_Y = 308
-    const val HOOK_SALVAGE_4_X = 570
-    const val HOOK_SALVAGE_4_Y = 165
-    const val HOOK_SALVAGE_6_X = 791 // TAP WALK TO HOOK
-    const val HOOK_SALVAGE_6_Y = 63 // TAP WALK TO HOOK
-
-    // ========================================
-    // WALK TO SORT TAP COORDINATES
-    // ========================================
-
-    const val WALKTOSORT_TAP_X = 580
-    const val WALKTOSORT_TAP_Y = 482
 }

@@ -2,7 +2,6 @@ package org.powbot.om6.salvagesorter.tasks
 
 import org.powbot.api.Condition
 import org.powbot.api.Random
-import org.powbot.api.rt4.Components
 import org.powbot.api.rt4.Inventory
 import org.powbot.om6.salvagesorter.SalvageSorter
 import org.powbot.om6.salvagesorter.config.Constants
@@ -114,54 +113,76 @@ class WithdrawCargoTask(script: SalvageSorter) : Task(script) {
     }
 
     /**
-     * Executes the 4-tap cargo withdrawal sequence.
+     * Executes the 4-step cargo withdrawal sequence.
      * @return Cooldown time in ms (0L = failed, -1L = cargo depleted, >0L = success)
      */
     private fun executeWithdrawCargo(): Long {
-        val mainWait = Random.nextInt(Constants.CARGO_MAIN_WAIT_MIN, Constants.CARGO_MAIN_WAIT_MAX)
         CameraSnapper.snapCameraToDirection(script.requiredTapDirection, script)
-        script.logger.info("CARGO: Starting 4-tap cargo withdrawal sequence.")
+        script.logger.info("WITHDRAW: Starting 4-step cargo withdrawal sequence.")
 
         val invCountBefore = Inventory.stream().count()
         val salvageCountBefore = Inventory.stream().name(script.SALVAGE_NAME).count()
 
-        // Tap 1: Open cargo
-        if (!tapWithSleep(Constants.CARGO_TAP_1_X, Constants.CARGO_TAP_1_Y, 3, 600, 1200)) {
-            script.logger.warn("CARGO: Failed at tap 1")
+        // Step 1: Open cargo interface
+        script.logger.info("WITHDRAW: Step 1 - Opening cargo interface")
+        if (!tapWithSleep(Constants.CARGO_OPEN_X, Constants.CARGO_OPEN_Y, 3, Constants.WIDGET_INTERACTION_MIN, Constants.WIDGET_INTERACTION_MAX * 2)) {
+            script.logger.warn("WITHDRAW: Failed to tap cargo interface")
             return 0L
         }
-        script.logger.info("CARGO TAP 1 (Open): Complete")
-        Condition.wait{isWidgetVisible(Constants.ROOT_CARGO_WIDGET,Constants.COMPONENT_WITHDRAW,Constants.INDEX_FIRST_SLOT)}
+        script.logger.info("WITHDRAW: Step 1 - Cargo tap successful")
 
-        // Tap 2: Withdraw
-        if (!clickWidget(Constants.ROOT_CARGO_WIDGET,Constants.COMPONENT_WITHDRAW,Constants.INDEX_FIRST_SLOT)) {
-            script.logger.warn("CARGO: Failed at tap 2")
+        if (!Condition.wait({ isWidgetVisible(Constants.ROOT_CARGO_WIDGET, Constants.COMPONENT_WITHDRAW, Constants.INDEX_FIRST_SLOT) }, 100, 30)) {
+            script.logger.warn("WITHDRAW: Withdraw widget did not become visible")
             return 0L
         }
+        script.logger.info("WITHDRAW: Step 1 - Withdraw widget confirmed visible")
+
+        // Step 2: Click withdraw button
+        script.logger.info("WITHDRAW: Step 2 - Clicking withdraw salvage button")
+        if (!clickWidgetWithRetry(Constants.ROOT_CARGO_WIDGET, Constants.COMPONENT_WITHDRAW, Constants.INDEX_FIRST_SLOT, logPrefix = "WITHDRAW: Step 2", script = script)) {
+            script.logger.warn("WITHDRAW: Failed to click withdraw button after retries")
+            return 0L
+        }
+        script.logger.info("WITHDRAW: Step 2 - Withdraw button clicked successfully")
+
         Condition.sleep(600)
-        Condition.wait{Inventory.stream().name(script.SALVAGE_NAME).isNotEmpty()}
-        script.logger.info("CARGO TAP 2 (Withdraw): Complete")
 
-        // Tap 3: Close
-        if (!clickWidget(Constants.ROOT_CARGO_WIDGET,Constants.COMPONENT_CLOSE,Constants.INDEX_CLOSE)) {
-            script.logger.warn("CARGO: Failed at tap 3")
+        if (!Condition.wait({ Inventory.stream().name(script.SALVAGE_NAME).isNotEmpty() }, 100, 30)) {
+            script.logger.warn("WITHDRAW: No salvage appeared in inventory after withdraw")
+            // Don't return yet - continue to close the interface
+        } else {
+            script.logger.info("WITHDRAW: Step 2 - Salvage confirmed in inventory")
+        }
+
+        // Step 3: Close cargo interface
+        script.logger.info("WITHDRAW: Step 3 - Closing cargo interface")
+        if (!clickWidgetWithRetry(Constants.ROOT_CARGO_WIDGET, Constants.COMPONENT_CLOSE, Constants.INDEX_CLOSE, logPrefix = "WITHDRAW: Step 3", script = script)) {
+            script.logger.warn("WITHDRAW: Failed to click close button after retries")
             return 0L
         }
+        script.logger.info("WITHDRAW: Step 3 - Close button clicked successfully")
+
         Condition.sleep(600)
-        Condition.wait{!isWidgetVisible(Constants.ROOT_CARGO_WIDGET,Constants.COMPONENT_WITHDRAW,Constants.INDEX_FIRST_SLOT)}
 
-        script.logger.info("CARGO TAP 3 (Close): Complete")
-
-        // Tap 4: Walk back
-        if (!tapWithSleep(Constants.CARGO_TAP_4_X, Constants.CARGO_TAP_4_Y, 3, Constants.CARGO_TAP4_WAIT_MIN, Constants.CARGO_TAP4_WAIT_MAX)) {
-            script.logger.warn("CARGO: Failed at tap 4")
+        if (!Condition.wait({ !isWidgetVisible(Constants.ROOT_CARGO_WIDGET, Constants.COMPONENT_WITHDRAW, Constants.INDEX_FIRST_SLOT) }, 100, 30)) {
+            script.logger.warn("WITHDRAW: Cargo widget did not close properly")
             return 0L
         }
-        script.logger.info("CARGO TAP 4 (Walk back): Complete")
+        script.logger.info("WITHDRAW: Step 3 - Cargo widget confirmed closed")
+
+        // Step 4: Walk back to sorting position
+        script.logger.info("WITHDRAW: Step 4 - Walking back to sorting position")
+        if (!tapWithSleep(Constants.CARGO_WALKBACK_X, Constants.CARGO_WALKBACK_Y, 3, Constants.CARGO_WALKBACK_WAIT_MIN, Constants.CARGO_WALKBACK_WAIT_MAX)) {
+            script.logger.warn("WITHDRAW: Failed to tap walk back position")
+            return 0L
+        }
+        script.logger.info("WITHDRAW: Step 4 - Walk back tap successful")
+
+        // Validate withdrawal results
         val hasSalvage = Inventory.stream().name(script.SALVAGE_NAME).isNotEmpty()
 
         if (!hasSalvage) {
-            script.logger.warn("CARGO: Withdrawal failed - no salvage obtained.")
+            script.logger.warn("WITHDRAW: Withdrawal failed - no salvage obtained.")
             script.cargoHoldFull = false
             return 0L
         }
@@ -172,7 +193,7 @@ class WithdrawCargoTask(script: SalvageSorter) : Task(script) {
         val salvageWithdrawn = (salvageCountAfter - salvageCountBefore).toInt()
 
         if (!inventoryFull) {
-            script.logger.warn("CARGO: Inventory not full ($invCountAfter/28). Cargo depleted.")
+            script.logger.warn("WITHDRAW: Inventory not full ($invCountAfter/28). Cargo depleted.")
             script.xpMessageCount = 0
             script.cargoHoldFull = false
             return -1L
@@ -180,7 +201,8 @@ class WithdrawCargoTask(script: SalvageSorter) : Task(script) {
 
         val baseCooldownMs = script.randomWithdrawCooldownMs
         script.xpMessageCount -= salvageWithdrawn // Track actual withdrawal
-        script.logger.info("CARGO: Inventory full. Withdrew $salvageWithdrawn items. Cargo count now: ${script.xpMessageCount}. Cooldown: ${baseCooldownMs / 1000}s.")
+        script.logger.info("WITHDRAW: Inventory full. Withdrew $salvageWithdrawn items. Cargo count now: ${script.xpMessageCount}. Cooldown: ${baseCooldownMs / 1000}s.")
+        script.logger.info("WITHDRAW: Withdrawal sequence complete - all steps validated successfully")
         return baseCooldownMs
     }
 }

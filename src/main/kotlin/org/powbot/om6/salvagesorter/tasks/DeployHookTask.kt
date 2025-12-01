@@ -117,13 +117,17 @@ class DeployHookTask(script: SalvageSorter) : Task(script) {
         // Try tapping hook up to 3 times before giving up
         var messageFound = false
         for (attempt in 1..3) {
-            script.logger.info("HOOK: Tapping hook (Attempt $attempt/3).")
-            tapWithOffset(Constants.HOOK_SALVAGE_1_X, Constants.HOOK_SALVAGE_1_Y, 3)
+            script.logger.info("HOOK: Attempt $attempt/3 - Tapping hook")
+            if (!tapWithOffset(Constants.HOOK_DEPLOY_X, Constants.HOOK_DEPLOY_Y, 3)) {
+                script.logger.warn("HOOK: Failed to execute tap on attempt $attempt")
+                continue
+            }
+            script.logger.info("HOOK: Attempt $attempt/3 - Tap executed, waiting for cast message")
 
             messageFound = Condition.wait({ script.hookCastMessageFound }, 30, 120)
 
             if (messageFound) {
-                script.logger.info("HOOK: Cast message confirmed on attempt $attempt.")
+                script.logger.info("HOOK: Cast message confirmed on attempt $attempt")
                 break
             }
 
@@ -180,7 +184,7 @@ class DeployHookTask(script: SalvageSorter) : Task(script) {
                 script.currentPhase = SalvagePhase.SETUP_SORTING
                 return true
             } else {
-                script.logger.error("HOOK: No confirmation. Stopping.")
+                script.logger.error("HOOK: No confirmation after 3 attempts. Stopping.")
                 ScriptManager.stop()
                 return false
             }
@@ -188,7 +192,7 @@ class DeployHookTask(script: SalvageSorter) : Task(script) {
     }
 
     /**
-     * Deposits salvage to the cargo hold.
+     * Deposits salvage to the cargo hold (embedded in DeployHookTask for normal mode).
      * @return true if deposit was successful
      */
     private fun depositSalvage(): Boolean {
@@ -196,23 +200,49 @@ class DeployHookTask(script: SalvageSorter) : Task(script) {
         Condition.sleep(Random.nextInt(Constants.DEPOSIT_PRE_WAIT_MIN, Constants.DEPOSIT_PRE_WAIT_MAX))
 
         val initialSalvageCount = Inventory.stream().name(script.SALVAGE_NAME).count()
-        script.logger.info("DEPOSIT: Initial count: $initialSalvageCount")
+        script.logger.info("DEPOSIT: Starting 3-step deposit sequence. Initial salvage count: $initialSalvageCount")
 
         Condition.sleep(Random.nextInt(Constants.DEPOSIT_BETWEEN_TAPS_MIN, Constants.DEPOSIT_BETWEEN_TAPS_MAX))
 
+        // Step 1: Open cargo interface
+        script.logger.info("DEPOSIT: Step 1 - Opening cargo interface")
+        if (!tapWithSleep(Constants.HOOK_CARGO_OPEN_X, Constants.HOOK_CARGO_OPEN_Y, 3, Constants.WIDGET_INTERACTION_MIN, Constants.WIDGET_INTERACTION_MAX)) {
+            script.logger.warn("DEPOSIT: Failed to tap cargo interface")
+            return false
+        }
+        script.logger.info("DEPOSIT: Step 1 - Cargo tap successful")
 
-        // Tap 1: Open
-        tapWithSleep(Constants.HOOK_SALVAGE_2_X, Constants.HOOK_SALVAGE_2_Y,3,600,900)
-        Condition.wait{isWidgetVisible(Constants.ROOT_CARGO_WIDGET,Constants.COMPONENT_DEPOSIT_SALVAGE)}
+        if (!Condition.wait({ isWidgetVisible(Constants.ROOT_CARGO_WIDGET, Constants.COMPONENT_DEPOSIT_SALVAGE) }, 100, 30)) {
+            script.logger.warn("DEPOSIT: Deposit widget did not become visible")
+            return false
+        }
+        script.logger.info("DEPOSIT: Step 1 - Deposit widget confirmed visible")
 
-        // Tap 2: Deposit
-        clickWidget(Constants.ROOT_CARGO_WIDGET,Constants.COMPONENT_DEPOSIT_SALVAGE)
-        Condition.sleep(Random.nextInt(600,900))
+        // Step 2: Click deposit button
+        script.logger.info("DEPOSIT: Step 2 - Clicking deposit salvage button")
+        if (!clickWidgetWithRetry(Constants.ROOT_CARGO_WIDGET, Constants.COMPONENT_DEPOSIT_SALVAGE, logPrefix = "DEPOSIT: Step 2", script = script)) {
+            script.logger.warn("DEPOSIT: Failed to click deposit button after retries")
+            return false
+        }
+        script.logger.info("DEPOSIT: Step 2 - Deposit button clicked successfully")
 
-        // Tap 3: Close
-        clickWidget(Constants.ROOT_CARGO_WIDGET,Constants.COMPONENT_CLOSE,Constants.INDEX_CLOSE)
+        Condition.sleep(Random.nextInt(Constants.WIDGET_INTERACTION_MIN, Constants.WIDGET_INTERACTION_MAX))
+
+        // Step 3: Close cargo interface
+        script.logger.info("DEPOSIT: Step 3 - Closing cargo interface")
+        if (!clickWidgetWithRetry(Constants.ROOT_CARGO_WIDGET, Constants.COMPONENT_CLOSE, Constants.INDEX_CLOSE, logPrefix = "DEPOSIT: Step 3", script = script)) {
+            script.logger.warn("DEPOSIT: Failed to click close button after retries")
+            return false
+        }
+        script.logger.info("DEPOSIT: Step 3 - Close button clicked successfully")
+
         Condition.sleep(600)
-        Condition.wait{!isWidgetVisible(Constants.ROOT_CARGO_WIDGET,Constants.COMPONENT_WITHDRAW,Constants.INDEX_FIRST_SLOT)}
+
+        if (!Condition.wait({ !isWidgetVisible(Constants.ROOT_CARGO_WIDGET, Constants.COMPONENT_WITHDRAW, Constants.INDEX_FIRST_SLOT) }, 100, 30)) {
+            script.logger.warn("DEPOSIT: Cargo widget did not close properly")
+            return false
+        }
+        script.logger.info("DEPOSIT: Step 3 - Cargo widget confirmed closed")
 
         val finalSalvageCount = Inventory.stream().name(script.SALVAGE_NAME).count()
         val depositedCount = (initialSalvageCount - finalSalvageCount).toInt()
@@ -223,16 +253,17 @@ class DeployHookTask(script: SalvageSorter) : Task(script) {
             // Flag cargo as full if within 20 of max capacity for earlier transition
             if (script.xpMessageCount >= (script.maxCargoSpace.toLong() - 20L)) {
                 script.cargoHoldFull = true
-                script.logger.info("DEPOSIT: SUCCESS - Deposited $depositedCount. Cargo count: ${script.xpMessageCount}. Near capacity (within 20), flagging as full.")
+                script.logger.info("DEPOSIT: SUCCESS - Deposited $depositedCount items. Cargo count: ${script.xpMessageCount}. Near capacity (within 20), flagging as full.")
             } else {
                 script.cargoHoldFull = false
-                script.logger.info("DEPOSIT: SUCCESS - Deposited $depositedCount. Cargo count: ${script.xpMessageCount}")
+                script.logger.info("DEPOSIT: SUCCESS - Deposited $depositedCount items. Cargo count: ${script.xpMessageCount}")
             }
+            script.logger.info("DEPOSIT: Deposit sequence complete - all steps validated successfully")
             return true
         } else {
             script.cargoHoldFull = true
             script.xpMessageCount = script.maxCargoSpace.toInt()
-            script.logger.warn("DEPOSIT: FAILED - Cargo FULL. Set count to ${script.maxCargoSpace}.")
+            script.logger.warn("DEPOSIT: FAILED - Cargo FULL (no items deposited). Set count to ${script.maxCargoSpace}.")
             return false
         }
     }
