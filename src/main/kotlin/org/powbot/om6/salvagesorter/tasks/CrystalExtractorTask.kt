@@ -1,10 +1,8 @@
 package org.powbot.om6.salvagesorter.tasks
 
 import org.powbot.api.Condition
-import org.powbot.api.Input
 import org.powbot.api.Random
 import org.powbot.om6.salvagesorter.SalvageSorter
-import org.powbot.om6.salvagesorter.config.CardinalDirection
 import org.powbot.om6.salvagesorter.config.SalvagePhase
 
 class CrystalExtractorTask(script: SalvageSorter) : Task(script) {
@@ -58,7 +56,7 @@ class CrystalExtractorTask(script: SalvageSorter) : Task(script) {
             val x = 307
             val y = 231
 
-            CameraSnapper.snapCameraToDirection(script.requiredTapDirection, script)
+            CameraSnapper.snapCameraToDirection(script.cameraDirection, script)
 
             val randomOffsetX = Random.nextInt(-6, 7)
             val randomOffsetY = Random.nextInt(-5, 6)

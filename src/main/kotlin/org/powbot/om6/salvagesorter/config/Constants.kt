@@ -65,9 +65,9 @@ object Constants {
     const val SORT_BUTTON_TOLERANCE_Y = 10
 
     /** X coordinate for walking to sorting location from hook */
-    const val SORT_WALK_TO_X = 580
+    const val SORT_WALK_TO_X = 579
     /** Y coordinate for walking to sorting location from hook */
-    const val SORT_WALK_TO_Y = 482
+    const val SORT_WALK_TO_Y = 490
 
     const val SORT_WALK_TO_MENUOPTION = "Walk here"
 

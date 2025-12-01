@@ -26,9 +26,6 @@ class SetupSortingTask(script: SalvageSorter) : Task(script) {
         if (success) {
             script.logger.info("SETUP: Setup complete. Transitioning to WITHDRAWING.")
             script.currentPhase = SalvagePhase.WITHDRAWING
-            // Set initial cooldown to 0 so withdrawal happens immediately
-            script.currentWithdrawCooldownMs = 0L
-            script.lastWithdrawOrCleanupTime = 0L
         } else {
             script.logger.warn("SETUP: Setup failed. Will retry.")
             Condition.sleep(1000)
@@ -51,8 +48,7 @@ class SetupSortingTask(script: SalvageSorter) : Task(script) {
             script.logger.warn("WALK_SORT: Failed to assign crew.")
             return false
         }
-
-        CameraSnapper.snapCameraToDirection(script.requiredTapDirection, script)
+        CameraSnapper.snapCameraToDirection(script.cameraDirection, script)
         Condition.sleep(Random.nextInt(Constants.WALKTOSORT_CAMERA_MIN, Constants.WALKTOSORT_CAMERA_MAX))
 
         script.logger.info("WALK_SORT: Tapping walk point.")

@@ -306,7 +306,7 @@ fun handleMultipleDialogues(maxAttempts: Int = 2, sleepMin: Int = 500, sleepMax:
  */
 fun setupAssignment(script: SalvageSorter, mainWaitMin: Int = 900, mainWaitMax: Int = 1200): Int {
     val mainWait = Random.nextInt(mainWaitMin, mainWaitMax)
-    CameraSnapper.snapCameraToDirection(script.requiredTapDirection, script)
+    CameraSnapper.snapCameraToDirection(script.cameraDirection, script)
 
     if (!ensureInventoryOpen()) {
         script.logger.warn("ASSIGNMENT: Failed to open inventory")
@@ -359,11 +359,12 @@ fun clickAtCoordinates(
     action: String,
 
 ): Boolean {
-    val randomX = screenX + Random.nextInt(-8, 8)
-    val randomY = screenY + Random.nextInt(-8, 8)
+    val randomX = screenX + Random.nextInt(-5, 5)
+    val randomY = screenY + Random.nextInt(-5, 5)
     val point = Point(randomX, randomY)
-    Game.setSingleTapToggle(true)
 
+    Game.setSingleTapToggle(true)
+    Condition.sleep(Random.nextInt(60,80))
     Input.tap(point)
 
 

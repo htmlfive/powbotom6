@@ -47,7 +47,7 @@ class DepositCargoTask(script: SalvageSorter) : Task(script) {
      */
     private fun depositSalvage(): Boolean
     {
-        CameraSnapper.snapCameraToDirection(script.requiredTapDirection, script)
+        CameraSnapper.snapCameraToDirection(script.cameraDirection, script)
         Condition.sleep(Random.nextInt(Constants.DEPOSIT_PRE_WAIT_MIN, Constants.DEPOSIT_PRE_WAIT_MAX))
 
         val initialSalvageCount = Inventory.stream().name(script.SALVAGE_NAME).count()
@@ -97,21 +97,21 @@ class DepositCargoTask(script: SalvageSorter) : Task(script) {
         val depositedCount = (initialSalvageCount - finalSalvageCount).toInt()
 
         if (finalSalvageCount < initialSalvageCount) {
-            script.xpMessageCount += depositedCount
+            script.cargoHoldCount += depositedCount
 
             // Flag cargo as full if within 30 of max capacity for earlier transition
-            if (script.xpMessageCount >= (script.maxCargoSpace.toLong() - 30L)) {
+            if (script.cargoHoldCount >= (script.maxCargoSpace.toLong() - 30L)) {
                 script.cargoHoldFull = true
-                script.logger.info("DEPOSIT: SUCCESS - Deposited $depositedCount items. Cargo count: ${script.xpMessageCount}. Near capacity (within 30), flagging as full.")
+                script.logger.info("DEPOSIT: SUCCESS - Deposited $depositedCount items. Cargo count: ${script.cargoHoldCount}. Near capacity (within 30), flagging as full.")
             } else {
                 script.cargoHoldFull = false
-                script.logger.info("DEPOSIT: SUCCESS - Deposited $depositedCount items. Cargo count: ${script.xpMessageCount}")
+                script.logger.info("DEPOSIT: SUCCESS - Deposited $depositedCount items. Cargo count: ${script.cargoHoldCount}")
             }
             script.logger.info("DEPOSIT: Deposit sequence complete - all steps validated successfully")
             return true
         } else {
             script.cargoHoldFull = true
-            script.xpMessageCount = script.maxCargoSpace.toInt()
+            script.cargoHoldCount = script.maxCargoSpace.toInt()
             script.logger.warn("DEPOSIT: FAILED - Cargo FULL (no items deposited). Set count to ${script.maxCargoSpace}.")
             return false
         }

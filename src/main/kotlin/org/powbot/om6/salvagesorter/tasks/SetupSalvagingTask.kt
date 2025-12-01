@@ -2,7 +2,6 @@ package org.powbot.om6.salvagesorter.tasks
 
 import org.powbot.api.Condition
 import org.powbot.api.Random
-import org.powbot.api.rt4.Game
 import org.powbot.api.rt4.ScrollHelper
 import org.powbot.api.rt4.Widgets
 import org.powbot.om6.salvagesorter.SalvageSorter
@@ -66,7 +65,7 @@ class SetupSalvagingTask(script: SalvageSorter) : Task(script) {
 
         val waitTime = Random.nextInt(Constants.WALK_WAIT_MIN, Constants.WALK_WAIT_MAX)
         Condition.sleep(waitTime)
-        CameraSnapper.snapCameraToDirection(script.requiredTapDirection, script)
+        CameraSnapper.snapCameraToDirection(script.cameraDirection, script)
 
         script.logger.info("WALK: Tapping walk-to-hook.")
 

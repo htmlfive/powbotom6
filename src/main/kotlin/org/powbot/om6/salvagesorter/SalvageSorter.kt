@@ -60,32 +60,11 @@ import kotlin.random.Random
             defaultValue = "210"
         ),
         ScriptConfiguration(
-            "Min Withdraw Cooldown (s)",
-            "The minimum random time (in seconds) the script waits after cleanup/withdraw before trying again.",
-            optionType = OptionType.STRING,
-            defaultValue = "1",
-            visible = false
-        ),
-        ScriptConfiguration(
-            "Max Withdraw Cooldown (s)",
-            "The maximum random time (in seconds) the script waits after cleanup/withdraw before trying again.",
-            optionType = OptionType.STRING,
-            defaultValue = "1",
-            visible = false
-        ),
-        ScriptConfiguration(
-            "Extractor Tap Direction",
-            "The camera direction required for fixed-screen tap locations during the extractor tap.",
-            optionType = OptionType.STRING, defaultValue = "North",
-            allowedValues = ["North", "East", "South", "West"]
-        ),
-        ScriptConfiguration(
-            "Drop Salvage Direction",
-            "The camera direction required for fixed-screen tap locations during the sort phase. Req. Camera Vertical Setting in OSRS Settings. Set zoom to max all the way in",
+            "Camera Direction",
+            "The camera direction required for fixed-screen tap locations during salvaging, sorting, and extractor tapping. Req. Camera Vertical Setting in OSRS Settings. Set zoom to max all the way in",
             optionType = OptionType.STRING, defaultValue = "North",
             allowedValues = ["North", "East", "South", "West"]
         )
-
     ]
 )
 class SalvageSorter : AbstractScript() {
@@ -96,26 +75,22 @@ class SalvageSorter : AbstractScript() {
     var atSortLocation = false
     val extractorTask = CrystalExtractorTask(this)
     val tapToDrop: Boolean get() = getOption<Boolean>("Tap-to-drop")
-    val requiredDropDirectionStr: String get() = getOption<String>("Drop Salvage Direction")
     val SALVAGE_NAME: String get() = getOption<String>("Salvage Item Name")
-    val requiredDropDirection: CardinalDirection get() = CardinalDirection.valueOf(requiredDropDirectionStr)
     var hookingSalvageBool = false
     val startSorting: Boolean get() = getOption<Boolean>("Start Sorting")
 
     val enableExtractor: Boolean get() = getOption<Boolean>("Enable Extractor")
     val extractorInterval: Long = 64000L
-    val requiredTapDirectionStr: String get() = getOption<String>("Extractor Tap Direction")
-    val requiredTapDirection: CardinalDirection get() = CardinalDirection.valueOf(requiredTapDirectionStr)
+    val cameraDirectionStr: String get() = getOption<String>("Camera Direction")
+    val cameraDirection: CardinalDirection get() = CardinalDirection.valueOf(cameraDirectionStr)
 
-    private val MIN_COOLDOWN_SECONDS: Int get() = getOption<String>("Min Withdraw Cooldown (s)").toInt()
-    private val MAX_COOLDOWN_SECONDS: Int get() = getOption<String>("Max Withdraw Cooldown (s)").toInt()
     @Volatile var cargoMessageFound: Boolean = false
     @Volatile var harvesterMessageFound: Boolean = false
     @Volatile var hookCastMessageFound = false
     @Volatile var extractorTimer: Long = 0L
     @Volatile var currentPhase: SalvagePhase = SalvagePhase.IDLE
     @Volatile var phaseStartTime: Long = 0L
-    @Volatile var xpMessageCount: Int = 0
+    @Volatile var cargoHoldCount: Int = 0
     @Volatile var initialCoinCount: Long = 0L
     @Volatile var cargoHoldFull: Boolean = true
 
@@ -124,16 +99,6 @@ class SalvageSorter : AbstractScript() {
             val invCoins = Inventory.stream().id(Constants.COINS_ID).firstOrNull()?.stackSize() ?: 0
             return invCoins.toLong()
         }
-
-    val randomWithdrawCooldownMs: Long
-        get() {
-            val min = MIN_COOLDOWN_SECONDS.toLong()
-            val max = MAX_COOLDOWN_SECONDS.toLong()
-            return Random.nextLong(min, max + 1) * 1000L
-        }
-
-    @Volatile var currentWithdrawCooldownMs: Long = 0L
-    @Volatile var lastWithdrawOrCleanupTime: Long = 0L
 
     private val allTasks: kotlin.collections.List<Task> by lazy {
         logger.info("INIT: Comprehensive Task list initialized.")
@@ -191,15 +156,15 @@ class SalvageSorter : AbstractScript() {
         }
         if (change.messageType == MessageType.Spam) {
             if (change.message.contains("You gain some experience by watching your crew work.")) {
-                xpMessageCount++
-                logger.debug("EVENT: XP message (SPAM) detected! Current count: $xpMessageCount")
+                cargoHoldCount++
+                logger.debug("EVENT: XP message (SPAM) detected! Current count: $cargoHoldCount")
             }
         }
     }
 
     override fun onStart() {
         logger.info("SCRIPT START: Initializing Shipwreck Sorter...")
-
+        Condition.sleep(Random.nextInt(600, 1200))
         // Set zoom to target level if needed
         if (Camera.zoom != Constants.TARGET_ZOOM_LEVEL) {
             logger.info("INIT: Setting camera zoom to ${Constants.TARGET_ZOOM_LEVEL}")
@@ -210,7 +175,7 @@ class SalvageSorter : AbstractScript() {
 
         initialCoinCount = currentCoinCount
         logger.info("INIT: Tracking coins. Initial total GP (Inventory Only): $initialCoinCount")
-        extractorTimer = 0L
+        extractorTimer = 5L
         phaseStartTime = System.currentTimeMillis()
         currentPhase = SalvagePhase.IDLE
 
@@ -249,7 +214,7 @@ class SalvageSorter : AbstractScript() {
                 val gain = currentCoinCount - initialCoinCount
                 String.format("%,d GP", gain)
             }
-            .addString("Salvage in Cargo (Approx)") { xpMessageCount.toString() }
+            .addString("Salvage in Cargo (Approx)") { cargoHoldCount.toString() }
             .build()
         addPaint(paint)
     }

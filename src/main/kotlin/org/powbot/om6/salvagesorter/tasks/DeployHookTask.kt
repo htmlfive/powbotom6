@@ -3,12 +3,9 @@ package org.powbot.om6.salvagesorter.tasks
 import org.powbot.api.Condition
 import org.powbot.api.Random
 import org.powbot.api.rt4.Chat
-import org.powbot.api.rt4.Game
 import org.powbot.api.rt4.Inventory
-import org.powbot.api.rt4.Menu
 import org.powbot.mobile.script.ScriptManager
 import org.powbot.om6.salvagesorter.SalvageSorter
-import org.powbot.om6.salvagesorter.config.CardinalDirection
 import org.powbot.om6.salvagesorter.config.Constants
 import org.powbot.om6.salvagesorter.config.SalvagePhase
 
@@ -110,7 +107,7 @@ class DeployHookTask(script: SalvageSorter) : Task(script) {
             script.logger.debug("HOOK: Power Salvage Mode - Skipping deposit logic.")
         }
 
-        CameraSnapper.snapCameraToDirection(script.requiredTapDirection, script)
+        CameraSnapper.snapCameraToDirection(script.cameraDirection, script)
         val mainWait = Random.nextInt(Constants.HOOK_MAIN_WAIT_MIN, Constants.HOOK_MAIN_WAIT_MAX)
         Condition.sleep(mainWait)
 
@@ -199,7 +196,7 @@ class DeployHookTask(script: SalvageSorter) : Task(script) {
      * @return true if deposit was successful
      */
     private fun depositSalvage(): Boolean {
-        CameraSnapper.snapCameraToDirection(script.requiredTapDirection, script)
+        CameraSnapper.snapCameraToDirection(script.cameraDirection, script)
         Condition.sleep(Random.nextInt(Constants.DEPOSIT_PRE_WAIT_MIN, Constants.DEPOSIT_PRE_WAIT_MAX))
 
         val initialSalvageCount = Inventory.stream().name(script.SALVAGE_NAME).count()
@@ -251,21 +248,27 @@ class DeployHookTask(script: SalvageSorter) : Task(script) {
         val depositedCount = (initialSalvageCount - finalSalvageCount).toInt()
 
         if (finalSalvageCount < initialSalvageCount) {
-            script.xpMessageCount += depositedCount
+            script.cargoHoldCount += depositedCount
 
-            // Flag cargo as full if within 20 of max capacity for earlier transition
-            if (script.xpMessageCount >= (script.maxCargoSpace.toLong() - 20L)) {
+            // Check if we still have salvage left in inventory after deposit (partial deposit = cargo full)
+            if (finalSalvageCount > 0) {
                 script.cargoHoldFull = true
-                script.logger.info("DEPOSIT: SUCCESS - Deposited $depositedCount items. Cargo count: ${script.xpMessageCount}. Near capacity (within 20), flagging as full.")
+                script.cargoHoldCount = script.maxCargoSpace.toInt()
+                script.logger.info("DEPOSIT: PARTIAL - Deposited $depositedCount items, but $finalSalvageCount remain. Cargo is FULL. Set count to ${script.maxCargoSpace}.")
+            }
+            // Flag cargo as full if within 20 of max capacity for earlier transition
+            else if (script.cargoHoldCount >= (script.maxCargoSpace.toLong() - 20L)) {
+                script.cargoHoldFull = true
+                script.logger.info("DEPOSIT: SUCCESS - Deposited $depositedCount items. Cargo count: ${script.cargoHoldCount}. Near capacity (within 20), flagging as full.")
             } else {
                 script.cargoHoldFull = false
-                script.logger.info("DEPOSIT: SUCCESS - Deposited $depositedCount items. Cargo count: ${script.xpMessageCount}")
+                script.logger.info("DEPOSIT: SUCCESS - Deposited $depositedCount items. Cargo count: ${script.cargoHoldCount}")
             }
             script.logger.info("DEPOSIT: Deposit sequence complete - all steps validated successfully")
             return true
         } else {
             script.cargoHoldFull = true
-            script.xpMessageCount = script.maxCargoSpace.toInt()
+            script.cargoHoldCount = script.maxCargoSpace.toInt()
             script.logger.warn("DEPOSIT: FAILED - Cargo FULL (no items deposited). Set count to ${script.maxCargoSpace}.")
             return false
         }
