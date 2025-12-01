@@ -10,40 +10,40 @@ object Constants {
     // ========================================
 
     /** X coordinate for opening cargo hold interface at sorting location */
-    const val CARGO_OPEN_X = 584
+    const val CARGO_OPEN_X = 573
     /** Y coordinate for opening cargo hold interface at sorting location */
-    const val CARGO_OPEN_Y = 148
+    const val CARGO_OPEN_Y = 161
 
     const val CARGO_OPEN_MENUOPTION = "Open"
 
     /** X coordinate for walking back to sorting position after withdrawing */
-    const val CARGO_WALKBACK_X = 432
+    const val CARGO_WALKBACK_X = 573
     /** Y coordinate for walking back to sorting position after withdrawing */
-    const val CARGO_WALKBACK_Y = 490
+    const val CARGO_WALKBACK_Y = 482
 
-    const val CARGO_WALKBACK_MENUOPTION = "Walk here"
+    const val CARGO_WALKBACK_MENUOPTION = "Sort-salvage"
     // ========================================
     // SALVAGE HOOK COORDINATES
     // ========================================
 
     /** X coordinate for tapping the salvage hook to deploy it */
-    const val HOOK_DEPLOY_X = 525
+    const val HOOK_DEPLOY_X = 379
     /** Y coordinate for tapping the salvage hook to deploy it */
-    const val HOOK_DEPLOY_Y = 406
+    const val HOOK_DEPLOY_Y = 218
 
     const val HOOK_DEPLOY_MENUOPTION = "Deploy"
 
     /** X coordinate for opening cargo hold at hook location (for depositing) */
-    const val HOOK_CARGO_OPEN_X = 337
+    const val HOOK_CARGO_OPEN_X = 544
     /** Y coordinate for opening cargo hold at hook location (for depositing) */
-    const val HOOK_CARGO_OPEN_Y = 350
+    const val HOOK_CARGO_OPEN_Y = 280
 
     const val HOOK_CARGO_MENUOPTION = "Open"
 
     /** X coordinate for walking to hook location from sorting */
-    const val HOOK_WALK_TO_X = 791 //791
+    const val HOOK_WALK_TO_X = 389 //791
     /** Y coordinate for walking to hook location from sorting */
-    const val HOOK_WALK_TO_Y = 63 //63
+    const val HOOK_WALK_TO_Y = 100 //63
 
     const val HOOK_WALK_TO_MENUOPTION = "Walk here" //
 

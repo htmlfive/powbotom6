@@ -2,6 +2,7 @@ package org.powbot.om6.salvagesorter.tasks
 
 import org.powbot.api.Condition
 import org.powbot.api.Random
+import org.powbot.api.rt4.Game
 import org.powbot.api.rt4.Inventory
 import org.powbot.om6.salvagesorter.SalvageSorter
 import org.powbot.om6.salvagesorter.config.CardinalDirection
@@ -44,8 +45,9 @@ class DepositCargoTask(script: SalvageSorter) : Task(script) {
      * Deposits salvage to the cargo hold.
      * @return true if deposit was successful
      */
-    private fun depositSalvage(): Boolean {
-        CameraSnapper.snapCameraToDirection(CardinalDirection.South, script)
+    private fun depositSalvage(): Boolean
+    {
+        CameraSnapper.snapCameraToDirection(script.requiredTapDirection, script)
         Condition.sleep(Random.nextInt(Constants.DEPOSIT_PRE_WAIT_MIN, Constants.DEPOSIT_PRE_WAIT_MAX))
 
         val initialSalvageCount = Inventory.stream().name(script.SALVAGE_NAME).count()
@@ -53,7 +55,7 @@ class DepositCargoTask(script: SalvageSorter) : Task(script) {
 
         // Step 1: Open cargo interface
         script.logger.info("DEPOSIT: Step 1 - Opening cargo interface")
-        if (!tapWithSleep(Constants.HOOK_CARGO_OPEN_X, Constants.HOOK_CARGO_OPEN_Y, 3, Constants.WIDGET_INTERACTION_MIN, Constants.WIDGET_INTERACTION_MAX)) {
+        if (!clickAtCoordinates(Constants.HOOK_CARGO_OPEN_X, Constants.HOOK_CARGO_OPEN_Y, Constants.HOOK_CARGO_MENUOPTION)) {
             script.logger.warn("DEPOSIT: Failed to tap cargo interface")
             return false
         }

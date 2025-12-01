@@ -15,7 +15,6 @@ object CameraSnapper {
     private const val PITCH_MAX = 41
 
     fun snapCameraToDirection(direction: CardinalDirection, script: SalvageSorter) {
-        Game.setSingleTapToggle(false)
         val yawNeeded = direction.yaw
         val COMPASS_ACTION = direction.action
         script.logger.info("LOGIC: Attempting to snap camera to ${direction.name} (Yaw: $yawNeeded). Current Yaw: ${Camera.yaw()}, Current Pitch: ${Camera.pitch()}")

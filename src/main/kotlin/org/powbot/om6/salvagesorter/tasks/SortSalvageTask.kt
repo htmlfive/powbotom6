@@ -41,7 +41,6 @@ class SortSalvageTask(script: SalvageSorter) : Task(script) {
      * @return true if sorting completed successfully
      */
     private fun executeTapSortSalvage(): Boolean {
-        Game.setSingleTapToggle(false)
 
         val salvageItemName = script.SALVAGE_NAME
         CameraSnapper.snapCameraToDirection(script.requiredDropDirection, script)
@@ -60,7 +59,7 @@ class SortSalvageTask(script: SalvageSorter) : Task(script) {
         script.logger.info("ACTION: Tapping Sort Salvage at X=$finalX, Y=$finalY. Count: $salvageCountBefore.")
         closeTabWithSleep(Constants.SORT_TAB_CLOSE_MIN, Constants.SORT_TAB_CLOSE_MAX)
 
-        if (tapWithOffset(finalX, finalY, 0)) {
+        if (clickAtCoordinates(finalX, finalY, Constants.SORT_BUTTON_MENUOPTION)) {
             var elapsed = 0L
             var currentSalvageCount = salvageCountBefore
             var lastSalvageCount = salvageCountBefore
@@ -92,7 +91,7 @@ class SortSalvageTask(script: SalvageSorter) : Task(script) {
                     }
 
                     script.logger.warn("RETAP: Count unchanged. Retapping (Attempt $retapFailureCount).")
-                    if (tapWithOffset(finalX, finalY, 0)) {
+                    if (clickAtCoordinates(finalX, finalY, Constants.SORT_BUTTON_MENUOPTION)) {
                         Condition.sleep(Random.nextInt(Constants.SORT_RETAP_MIN, Constants.SORT_RETAP_MAX))
                         lastSalvageCount = currentSalvageCount
                     }

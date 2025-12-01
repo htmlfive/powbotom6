@@ -54,7 +54,7 @@ class CleanupInventoryTask(script: SalvageSorter) : Task(script) {
      * Executes cleanup of loot items (alching and dropping).
      * @return true if any items were successfully cleaned up
      */
-    private fun executeCleanupLoot(): Boolean {
+     private fun executeCleanupLoot(): Boolean {
         Game.setSingleTapToggle(false)
         var successfullyCleaned = false
         CameraSnapper.snapCameraToDirection(script.requiredTapDirection, script)
@@ -93,12 +93,14 @@ class CleanupInventoryTask(script: SalvageSorter) : Task(script) {
             .shuffled(KotlinRandom)
 
         script.logger.info("CLEANUP: Dropping ${shuffledDroppableItems.size} items.")
-        Game.setSingleTapToggle(false)
+
         shuffledDroppableItems.forEach { itemToDrop ->
             if (itemToDrop.valid()) {
                 if (!script.tapToDrop) {
+                    Game.setSingleTapToggle(false)
                     itemToDrop.interact("Drop")
                 } else {
+                    Game.setSingleTapToggle(false)
                     itemToDrop.click()
                 }
                 Condition.sleep(Random.nextInt(Constants.CLEANUP_DROP_MIN, Constants.CLEANUP_DROP_MAX))

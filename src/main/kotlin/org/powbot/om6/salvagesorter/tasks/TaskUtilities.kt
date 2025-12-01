@@ -19,6 +19,7 @@ import org.powbot.om6.salvagesorter.SalvageSorter
  * @return true if the widget was valid and clicked successfully
  */
 fun clickWidget(root: Int, component: Int, action: String? = null): Boolean {
+    Game.setSingleTapToggle(false)
     val widget = Widgets.widget(root).component(component)
     if (!widget.valid()) return false
     return if (action != null) widget.interact(action) else widget.click()
@@ -33,6 +34,7 @@ fun clickWidget(root: Int, component: Int, action: String? = null): Boolean {
  * @return true if the widget was valid and clicked successfully
  */
 fun clickWidget(root: Int, component: Int, index: Int, action: String? = null): Boolean {
+    Game.setSingleTapToggle(false)
     val widget = Widgets.widget(root).component(component).component(index)
     if (!widget.valid()) return false
     return if (action != null) widget.interact(action) else widget.click()
@@ -58,6 +60,7 @@ fun clickWidgetWithRetry(
     logPrefix: String? = null,
     script: SalvageSorter? = null
 ): Boolean {
+    Game.setSingleTapToggle(false)
     for (attempt in 1..maxAttempts) {
         if (clickWidget(root, component, action)) {
             if (logPrefix != null && script != null && attempt > 1) {
@@ -102,6 +105,7 @@ fun clickWidgetWithRetry(
     logPrefix: String? = null,
     script: SalvageSorter? = null
 ): Boolean {
+    Game.setSingleTapToggle(false)
     for (attempt in 1..maxAttempts) {
         if (clickWidget(root, component, index, action)) {
             if (logPrefix != null && script != null && attempt > 1) {
@@ -140,6 +144,7 @@ fun clickWidgetAndWait(
     timeout: Int = 2400,
     action: String? = null
 ): Boolean {
+    Game.setSingleTapToggle(false)
     if (!clickWidget(root, component, action)) return false
     return Condition.wait(condition, 100, timeout / 100)
 }
@@ -162,6 +167,7 @@ fun clickWidgetAndWait(
     timeout: Int = 2400,
     action: String? = null
 ): Boolean {
+    Game.setSingleTapToggle(false)
     if (!clickWidget(root, component, index, action)) return false
     return Condition.wait(condition, 100, timeout / 100)
 }
@@ -173,6 +179,7 @@ fun clickWidgetAndWait(
  * @return true if the widget is valid and visible
  */
 fun isWidgetVisible(root: Int, component: Int): Boolean {
+    Game.setSingleTapToggle(false)
     val widget = Widgets.widget(root).component(component)
     return widget.valid() && widget.visible()
 }
@@ -185,6 +192,7 @@ fun isWidgetVisible(root: Int, component: Int): Boolean {
  * @return true if the widget is valid and visible
  */
 fun isWidgetVisible(root: Int, component: Int, index: Int): Boolean {
+    Game.setSingleTapToggle(false)
     val widget = Widgets.widget(root).component(component).component(index)
     return widget.valid() && widget.visible()
 }
@@ -201,6 +209,7 @@ fun isWidgetVisible(root: Int, component: Int, index: Int): Boolean {
  * @return true if the tap was successful
  */
 fun tapWithOffset(x: Int, y: Int, offsetRange: Int = 3): Boolean {
+    Game.setSingleTapToggle(false)
     val finalX = x + Random.nextInt(-offsetRange, offsetRange + 1)
     val finalY = y + Random.nextInt(-offsetRange, offsetRange + 1)
     return Input.tap(finalX, finalY)
@@ -216,6 +225,7 @@ fun tapWithOffset(x: Int, y: Int, offsetRange: Int = 3): Boolean {
  * @return true if the tap was successful
  */
 fun tapWithSleep(x: Int, y: Int, offsetRange: Int = 3, sleepMin: Int, sleepMax: Int): Boolean {
+    Game.setSingleTapToggle(false)
     if (!tapWithOffset(x, y, offsetRange)) return false
     Condition.sleep(Random.nextInt(sleepMin, sleepMax))
     return true
@@ -232,6 +242,7 @@ fun tapWithSleep(x: Int, y: Int, offsetRange: Int = 3, sleepMin: Int, sleepMax: 
  * @return true if inventory is open or was successfully opened
  */
 fun ensureInventoryOpen(sleepMin: Int = 100, sleepMax: Int = 200): Boolean {
+    Game.setSingleTapToggle(false)
     if (Inventory.opened()) return true
     if (Inventory.open()) {
         Condition.sleep(Random.nextInt(sleepMin, sleepMax))
@@ -348,8 +359,8 @@ fun clickAtCoordinates(
     action: String,
 
 ): Boolean {
-    val randomX = screenX + Random.nextInt(-3, 4)
-    val randomY = screenY + Random.nextInt(-3, 4)
+    val randomX = screenX + Random.nextInt(-8, 8)
+    val randomY = screenY + Random.nextInt(-8, 8)
     val point = Point(randomX, randomY)
     Game.setSingleTapToggle(true)
 
@@ -365,6 +376,6 @@ fun clickAtCoordinates(
     val success = Menu.click { cmd ->
         cmd.action.contains(action, ignoreCase = true)
     }
-    Game.setSingleTapToggle(false)
+    //Game.setSingleTapToggle(false)
     return success
 }

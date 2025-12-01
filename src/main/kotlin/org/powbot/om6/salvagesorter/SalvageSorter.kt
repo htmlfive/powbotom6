@@ -257,7 +257,6 @@ class SalvageSorter : AbstractScript() {
     override fun poll() {
         try {
             logger.debug("POLL START: phase=$currentPhase, cargoHoldFull=$cargoHoldFull, atSortLocation=$atSortLocation, atHookLocation=$atHookLocation")
-            Game.setSingleTapToggle(false)
 
             // --- 1. HIGHEST PRIORITY INTERRUPTS ---
 

@@ -55,20 +55,10 @@ class CrystalExtractorTask(script: SalvageSorter) : Task(script) {
 
     fun executeExtractorTap(): Boolean {
         try {
-            val x: Int
-            val y: Int
+            val x = 307
+            val y = 231
 
-            if (!script.hookingSalvageBool || !script.atHookLocation) {
-                // Not hooking: Use regular tap coordinates and camera
-                x = 307
-                y = 231
-                CameraSnapper.snapCameraToDirection(script.requiredTapDirection, script)
-            } else {
-                // Currently hooking: Use interrupt tap coordinates and camera
-                x = 612
-                y = 201
-                CameraSnapper.snapCameraToDirection(CardinalDirection.South, script)
-            }
+            CameraSnapper.snapCameraToDirection(script.requiredTapDirection, script)
 
             val randomOffsetX = Random.nextInt(-6, 7)
             val randomOffsetY = Random.nextInt(-5, 6)

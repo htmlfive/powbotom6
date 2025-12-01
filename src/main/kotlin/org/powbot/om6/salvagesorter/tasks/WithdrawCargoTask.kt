@@ -125,9 +125,9 @@ class WithdrawCargoTask(script: SalvageSorter) : Task(script) {
 
         // Step 1: Open cargo interface
         script.logger.info("WITHDRAW: Step 1 - Opening cargo interface")
-        if (!tapWithSleep(Constants.CARGO_OPEN_X, Constants.CARGO_OPEN_Y, 3, Constants.WIDGET_INTERACTION_MIN, Constants.WIDGET_INTERACTION_MAX * 2)) {
+        if (!clickAtCoordinates(Constants.CARGO_OPEN_X, Constants.CARGO_OPEN_Y, Constants.CARGO_OPEN_MENUOPTION)) {
             script.logger.warn("WITHDRAW: Failed to tap cargo interface")
-            return 0L
+
         }
         script.logger.info("WITHDRAW: Step 1 - Cargo tap successful")
 
@@ -172,7 +172,7 @@ class WithdrawCargoTask(script: SalvageSorter) : Task(script) {
 
         // Step 4: Walk back to sorting position
         script.logger.info("WITHDRAW: Step 4 - Walking back to sorting position")
-        if (!tapWithSleep(Constants.CARGO_WALKBACK_X, Constants.CARGO_WALKBACK_Y, 3, Constants.CARGO_WALKBACK_WAIT_MIN, Constants.CARGO_WALKBACK_WAIT_MAX)) {
+        if (!clickAtCoordinates(Constants.CARGO_WALKBACK_X, Constants.CARGO_WALKBACK_Y, Constants.CARGO_WALKBACK_MENUOPTION)) {
             script.logger.warn("WITHDRAW: Failed to tap walk back position")
             return 0L
         }

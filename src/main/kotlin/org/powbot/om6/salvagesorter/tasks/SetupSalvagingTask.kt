@@ -2,6 +2,7 @@ package org.powbot.om6.salvagesorter.tasks
 
 import org.powbot.api.Condition
 import org.powbot.api.Random
+import org.powbot.api.rt4.Game
 import org.powbot.api.rt4.ScrollHelper
 import org.powbot.api.rt4.Widgets
 import org.powbot.om6.salvagesorter.SalvageSorter
@@ -9,6 +10,8 @@ import org.powbot.om6.salvagesorter.config.Constants
 import org.powbot.om6.salvagesorter.config.SalvagePhase
 
 class SetupSalvagingTask(script: SalvageSorter) : Task(script) {
+    private val cleanupTask = CleanupInventoryTask(script)
+
     override fun activate(): Boolean {
         return script.currentPhase == SalvagePhase.SETUP_SALVAGING
     }
@@ -19,6 +22,12 @@ class SetupSalvagingTask(script: SalvageSorter) : Task(script) {
         // CRITICAL: Reset the sort location flag when entering salvaging mode
         script.atSortLocation = false
         script.logger.info("SETUP: Reset atSortLocation flag to false.")
+
+        // Clean up inventory before walking to hook
+        if (cleanupTask.activate()) {
+            script.logger.info("SETUP: Cleaning up inventory before moving to hook.")
+            cleanupTask.execute()
+        }
 
         // Walk to salvaging spot (this will also set atHookLocation = true)
         val success = walkToHook()
@@ -61,7 +70,7 @@ class SetupSalvagingTask(script: SalvageSorter) : Task(script) {
 
         script.logger.info("WALK: Tapping walk-to-hook.")
 
-        if (!tapWithSleep(Constants.HOOK_WALK_TO_X, Constants.HOOK_WALK_TO_Y, 3, waitTime, waitTime)) {
+        if (!clickAtCoordinates(Constants.HOOK_WALK_TO_X, Constants.HOOK_WALK_TO_Y, Constants.HOOK_DEPLOY_MENUOPTION)) {
             script.logger.warn("WALK: Failed to tap walk point.")
             return false
         }
@@ -86,9 +95,9 @@ class SetupSalvagingTask(script: SalvageSorter) : Task(script) {
             return false
         }
         script.logger.info("ASSIGNMENTS: Step 1 - Sailing tab clicked successfully")
-        
+
         Condition.sleep(Random.nextInt(Constants.WIDGET_INTERACTION_MIN, Constants.WIDGET_INTERACTION_MAX))
-        
+
         if (!Condition.wait({ isWidgetVisible(Constants.ROOT_ASSIGN_WIDGET, Constants.COMPONENT_ASSIGN_WIDGET) }, 100, 30)) {
             script.logger.warn("ASSIGNMENTS: Assign widget did not become visible after opening tab")
             return false
@@ -111,9 +120,9 @@ class SetupSalvagingTask(script: SalvageSorter) : Task(script) {
             return false
         }
         script.logger.info("ASSIGNMENTS: Step 3 - Ghost slot clicked successfully")
-        
+
         Condition.sleep(Random.nextInt(Constants.WIDGET_INTERACTION_MIN, Constants.WIDGET_INTERACTION_MAX))
-        
+
         if (!Condition.wait({ isWidgetVisible(Constants.ROOT_ASSIGN_WIDGET, Constants.COMPONENT_ASSIGN_WIDGETCONFIRM) }, 100, 30)) {
             script.logger.warn("ASSIGNMENTS: Confirm widget did not become visible after clicking Ghost slot")
             return false
@@ -127,9 +136,9 @@ class SetupSalvagingTask(script: SalvageSorter) : Task(script) {
             return false
         }
         script.logger.info("ASSIGNMENTS: Step 4 - Ghost assignment confirmed successfully")
-        
+
         Condition.sleep(Random.nextInt(Constants.WIDGET_INTERACTION_MIN, Constants.WIDGET_INTERACTION_MAX))
-        
+
         if (!Condition.wait({ isWidgetVisible(Constants.ROOT_ASSIGN_WIDGET, Constants.COMPONENT_ASSIGN_WIDGET) }, 100, 30)) {
             script.logger.warn("ASSIGNMENTS: Assign widget did not reappear after Ghost confirmation")
             return false
@@ -143,9 +152,9 @@ class SetupSalvagingTask(script: SalvageSorter) : Task(script) {
             return false
         }
         script.logger.info("ASSIGNMENTS: Step 5 - Cannon slot clicked successfully")
-        
+
         Condition.sleep(Random.nextInt(Constants.WIDGET_INTERACTION_MIN, Constants.WIDGET_INTERACTION_MAX))
-        
+
         if (!Condition.wait({ isWidgetVisible(Constants.ROOT_ASSIGN_WIDGET, Constants.COMPONENT_ASSIGN_WIDGETCONFIRM) }, 100, 30)) {
             script.logger.warn("ASSIGNMENTS: Confirm widget did not become visible after clicking Cannon slot")
             return false
@@ -159,9 +168,9 @@ class SetupSalvagingTask(script: SalvageSorter) : Task(script) {
             return false
         }
         script.logger.info("ASSIGNMENTS: Step 6 - Cannon assignment confirmed successfully")
-        
+
         Condition.sleep(Random.nextInt(Constants.WIDGET_INTERACTION_MIN, Constants.WIDGET_INTERACTION_MAX))
-        
+
         if (!Condition.wait({ isWidgetVisible(Constants.ROOT_ASSIGN_WIDGET, Constants.COMPONENT_ASSIGN_WIDGET) }, 100, 30)) {
             script.logger.warn("ASSIGNMENTS: Assign widget did not reappear after Cannon confirmation")
             return false

@@ -110,7 +110,7 @@ class DeployHookTask(script: SalvageSorter) : Task(script) {
             script.logger.debug("HOOK: Power Salvage Mode - Skipping deposit logic.")
         }
 
-        CameraSnapper.snapCameraToDirection(CardinalDirection.South, script)
+        CameraSnapper.snapCameraToDirection(script.requiredTapDirection, script)
         val mainWait = Random.nextInt(Constants.HOOK_MAIN_WAIT_MIN, Constants.HOOK_MAIN_WAIT_MAX)
         Condition.sleep(mainWait)
 
@@ -121,7 +121,7 @@ class DeployHookTask(script: SalvageSorter) : Task(script) {
         for (attempt in 1..3) {
             script.logger.info("HOOK: Attempt $attempt/3 - Tapping hook")
 
-            if (!clickAtCoordinates(Constants.HOOK_DEPLOY_X, Constants.HOOK_DEPLOY_Y, "Deploy")) {
+            if (!clickAtCoordinates(Constants.HOOK_DEPLOY_X, Constants.HOOK_DEPLOY_Y, Constants.HOOK_DEPLOY_MENUOPTION)) {
                 script.logger.warn("HOOK: Failed to execute tap on attempt $attempt")
                 continue
             }
@@ -199,7 +199,7 @@ class DeployHookTask(script: SalvageSorter) : Task(script) {
      * @return true if deposit was successful
      */
     private fun depositSalvage(): Boolean {
-        CameraSnapper.snapCameraToDirection(CardinalDirection.South, script)
+        CameraSnapper.snapCameraToDirection(script.requiredTapDirection, script)
         Condition.sleep(Random.nextInt(Constants.DEPOSIT_PRE_WAIT_MIN, Constants.DEPOSIT_PRE_WAIT_MAX))
 
         val initialSalvageCount = Inventory.stream().name(script.SALVAGE_NAME).count()
@@ -209,7 +209,7 @@ class DeployHookTask(script: SalvageSorter) : Task(script) {
 
         // Step 1: Open cargo interface
         script.logger.info("DEPOSIT: Step 1 - Opening cargo interface")
-        if (!tapWithSleep(Constants.HOOK_CARGO_OPEN_X, Constants.HOOK_CARGO_OPEN_Y, 3, Constants.WIDGET_INTERACTION_MIN, Constants.WIDGET_INTERACTION_MAX)) {
+        if (!clickAtCoordinates(Constants.HOOK_CARGO_OPEN_X, Constants.HOOK_CARGO_OPEN_Y, Constants.HOOK_CARGO_MENUOPTION)) {
             script.logger.warn("DEPOSIT: Failed to tap cargo interface")
             return false
         }

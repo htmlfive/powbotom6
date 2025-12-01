@@ -43,14 +43,16 @@ class DropSalvageTask(script: SalvageSorter) : Task(script) {
         }
 
         script.logger.info("POWER SALVAGE: Dropping ${salvageItems.size} salvage items.")
-        Game.setSingleTapToggle(false)
+
         // Drop each item with a short delay between drops
         salvageItems.forEach { item ->
             if (item.valid()) {
                 if (!script.tapToDrop) {
+                    Game.setSingleTapToggle(false)
                     item.interact("Drop")
                     Condition.sleep(Random.nextInt(300, 500))
                 } else {
+                    Game.setSingleTapToggle(false)
                     item.click()
                     Condition.sleep(Random.nextInt(300, 500))
                 }

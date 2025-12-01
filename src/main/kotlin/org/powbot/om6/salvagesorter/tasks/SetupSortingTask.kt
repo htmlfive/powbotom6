@@ -57,7 +57,7 @@ class SetupSortingTask(script: SalvageSorter) : Task(script) {
 
         script.logger.info("WALK_SORT: Tapping walk point.")
 
-        if (!tapWithSleep(Constants.SORT_WALK_TO_X, Constants.SORT_WALK_TO_Y, 3, Constants.WALKTOSORT_WALK_MIN, Constants.WALKTOSORT_WALK_MAX)) {
+        if (!clickAtCoordinates(Constants.SORT_WALK_TO_X, Constants.SORT_WALK_TO_Y, Constants.SORT_BUTTON_MENUOPTION)) {
             script.logger.warn("WALK_SORT: Failed to tap.")
             return false
         }
