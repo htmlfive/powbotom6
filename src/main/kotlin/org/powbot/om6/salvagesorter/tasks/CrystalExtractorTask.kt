@@ -5,6 +5,7 @@ import org.powbot.api.Notifications
 import org.powbot.api.Random
 import org.powbot.mobile.script.ScriptManager
 import org.powbot.om6.salvagesorter.SalvageSorter
+import org.powbot.om6.salvagesorter.config.Constants
 import org.powbot.om6.salvagesorter.config.SalvagePhase
 
 class CrystalExtractorTask(script: SalvageSorter) : Task(script) {
@@ -82,20 +83,18 @@ class CrystalExtractorTask(script: SalvageSorter) : Task(script) {
         while (attempt < maxRetries) {
             attempt++
             try {
-                val x = 297
-                val y = 274
 
                 CameraSnapper.snapCameraToDirection(script.cameraDirection, script)
 
                 val randomOffsetX = Random.nextInt(-6, 6)
                 val randomOffsetY = Random.nextInt(-6, 6)
-                val finalX = x + randomOffsetX
-                val finalY = y + randomOffsetY
+                val finalX = Constants.EXTRACTOR_X + randomOffsetX
+                val finalY = Constants.EXTRACTOR_Y + randomOffsetY
                 script.harvesterMessageFound = false
 
                 script.logger.info("ACTION: Executing extractor tap at X=$finalX, Y=$finalY (Offset: $randomOffsetX, $randomOffsetY). [Attempt $attempt/$maxRetries]")
 
-                if (clickAtCoordinates(x, y, "Harvest")) {
+                if (clickAtCoordinates(finalX, finalY, "Harvest")) {
                     val waitTime = Random.nextInt(2400, 3000)
                     script.logger.info("WAIT: Extractor tap successful. Waiting $waitTime ms.")
                     Condition.sleep(waitTime)

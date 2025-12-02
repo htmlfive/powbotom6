@@ -343,11 +343,17 @@ fun waitForInventoryClear(
 
     while (attempts < maxAttempts) {
         if (extractorTask.checkAndExecuteInterrupt(script)) {
-            script.logger.warn("INTERRUPT: Extractor ran. Re-tapping Sort.")
-            if (tapWithOffset(tapX, tapY, 0)) {
-                Condition.sleep(postInterruptWaitMs.toInt())
-                attempts = 0
-                continue
+            // Check if we still have salvage before retrying
+            val hasSalvage = Inventory.stream().name(salvageItemName).isNotEmpty()
+            if (hasSalvage) {
+                script.logger.warn("INTERRUPT: Extractor ran. Re-tapping Sort.")
+                if (clickAtCoordinates(tapX, tapY, "Sort-salvage")) {
+                    Condition.sleep(postInterruptWaitMs.toInt())
+                    attempts = 0
+                    continue
+                }
+            } else {
+                script.logger.info("INTERRUPT: Extractor ran but no salvage remains. Skipping re-tap.")
             }
         }
 

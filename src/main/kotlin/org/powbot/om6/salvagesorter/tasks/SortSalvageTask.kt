@@ -21,6 +21,13 @@ class SortSalvageTask(script: SalvageSorter) : Task(script) {
         script.atWithdrawSpot = false
         if (extractorTask.checkAndExecuteInterrupt(script)) return
 
+        // Double-check we still have salvage after any interrupts
+        val hasSalvage = Inventory.stream().name(script.SALVAGE_NAME).isNotEmpty()
+        if (!hasSalvage) {
+            script.logger.info("SORT: No salvage found after interrupt check. Skipping sort.")
+            return
+        }
+
         val success = executeTapSortSalvage()
 
         if (extractorTask.checkAndExecuteInterrupt(script)) return
@@ -50,6 +57,12 @@ class SortSalvageTask(script: SalvageSorter) : Task(script) {
         val finalY = Constants.SORT_BUTTON_Y + randomOffsetY
 
         val salvageCountBefore = Inventory.stream().name(salvageItemName).count()
+        
+        // Safety check: If no salvage exists, return success (nothing to sort)
+        if (salvageCountBefore == 0L) {
+            script.logger.info("SORT: No salvage in inventory. Nothing to sort.")
+            return true
+        }
 
         // Prepare inventory tab
         ensureInventoryOpen(Constants.SORT_TAB_OPEN_MIN, Constants.SORT_TAB_OPEN_MAX)

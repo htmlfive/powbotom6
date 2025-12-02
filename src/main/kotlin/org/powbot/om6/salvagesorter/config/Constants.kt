@@ -67,7 +67,8 @@ object Constants {
     /** Y coordinate for walking to sorting location from hook */
     const val SORT_WALK_TO_Y = 490
 
-
+    const val EXTRACTOR_X = 297
+    const val EXTRACTOR_Y = 274
 
     // ========================================
     // CAMERA SETTINGS
@@ -118,6 +119,11 @@ object Constants {
     const val COMPONENT_ASSIGN_WIDGETCONFIRM = 20
     const val INDEX_ASSIGNCONFIRM_SLOT1 = 1
     const val INDEX_ASSIGNCONFIRM_SLOT2 = 2
+
+
+    const val COMPONENT_ASSIGN_WIDGETBACKBUTTON = 29
+    const val INDEX_ASSIGNCONFIRM_BACKBUTTON = 1
+
 
     // ========================================
     // ASSIGNMENT SLEEP TIMINGS

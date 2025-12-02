@@ -86,6 +86,8 @@ class SetupSortingTask(script: SalvageSorter) : Task(script) {
         
         if (!Condition.wait({ isWidgetVisible(Constants.ROOT_ASSIGN_WIDGET, Constants.COMPONENT_ASSIGN_WIDGET) }, 100, 30)) {
             script.logger.warn("ASSIGNMENTS: Assign widget did not become visible after opening tab")
+            clickWidget(Constants.ROOT_ASSIGN_WIDGET, Constants.COMPONENT_ASSIGN_WIDGETBACKBUTTON, Constants.INDEX_ASSIGNCONFIRM_BACKBUTTON)
+            Condition.sleep(600)
             return false
         }
         script.logger.info("ASSIGNMENTS: Step 1 - Assign widget confirmed visible")
