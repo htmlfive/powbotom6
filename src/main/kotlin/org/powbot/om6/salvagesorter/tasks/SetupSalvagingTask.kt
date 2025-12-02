@@ -145,38 +145,38 @@ class SetupSalvagingTask(script: SalvageSorter) : Task(script) {
             return false
         }
         script.logger.info("ASSIGNMENTS: Step 4 - Assign widget reappeared")
-
-        // Step 5: Click Cannon slot
-        script.logger.info("ASSIGNMENTS: Step 5 - Clicking Cannon slot")
-        if (!clickWidgetWithRetry(Constants.ROOT_ASSIGN_WIDGET, Constants.COMPONENT_ASSIGN_WIDGET, Constants.INDEX_ASSIGN_CANNON, logPrefix = "ASSIGNMENTS: Step 5", script = script)) {
-            script.logger.warn("ASSIGNMENTS: Failed to click Cannon slot after retries")
-            return false
-        }
-        script.logger.info("ASSIGNMENTS: Step 5 - Cannon slot clicked successfully")
-
-        Condition.sleep(Random.nextInt(Constants.WIDGET_INTERACTION_MIN, Constants.WIDGET_INTERACTION_MAX))
-
-        if (!Condition.wait({ isWidgetVisible(Constants.ROOT_ASSIGN_WIDGET, Constants.COMPONENT_ASSIGN_WIDGETCONFIRM) }, 100, 30)) {
-            script.logger.warn("ASSIGNMENTS: Confirm widget did not become visible after clicking Cannon slot")
-            return false
-        }
-        script.logger.info("ASSIGNMENTS: Step 5 - Confirm widget confirmed visible")
-
-        // Step 6: Confirm Cannon assignment
-        script.logger.info("ASSIGNMENTS: Step 6 - Confirming Cannon assignment")
-        if (!clickWidgetWithRetry(Constants.ROOT_ASSIGN_WIDGET, Constants.COMPONENT_ASSIGN_WIDGETCONFIRM, Constants.INDEX_ASSIGNCONFIRM_SLOT2, logPrefix = "ASSIGNMENTS: Step 6", script = script)) {
-            script.logger.warn("ASSIGNMENTS: Failed to click Cannon confirm after retries")
-            return false
-        }
-        script.logger.info("ASSIGNMENTS: Step 6 - Cannon assignment confirmed successfully")
-
-        Condition.sleep(Random.nextInt(Constants.WIDGET_INTERACTION_MIN, Constants.WIDGET_INTERACTION_MAX))
-
-        if (!Condition.wait({ isWidgetVisible(Constants.ROOT_ASSIGN_WIDGET, Constants.COMPONENT_ASSIGN_WIDGET) }, 100, 30)) {
-            script.logger.warn("ASSIGNMENTS: Assign widget did not reappear after Cannon confirmation")
-            return false
-        }
-        script.logger.info("ASSIGNMENTS: Step 6 - Assign widget reappeared")
+//
+//        // Step 5: Click Cannon slot
+//        script.logger.info("ASSIGNMENTS: Step 5 - Clicking Cannon slot")
+//        if (!clickWidgetWithRetry(Constants.ROOT_ASSIGN_WIDGET, Constants.COMPONENT_ASSIGN_WIDGET, Constants.INDEX_ASSIGN_CANNON, logPrefix = "ASSIGNMENTS: Step 5", script = script)) {
+//            script.logger.warn("ASSIGNMENTS: Failed to click Cannon slot after retries")
+//            return false
+//        }
+//        script.logger.info("ASSIGNMENTS: Step 5 - Cannon slot clicked successfully")
+//
+//        Condition.sleep(Random.nextInt(Constants.WIDGET_INTERACTION_MIN, Constants.WIDGET_INTERACTION_MAX))
+//
+//        if (!Condition.wait({ isWidgetVisible(Constants.ROOT_ASSIGN_WIDGET, Constants.COMPONENT_ASSIGN_WIDGETCONFIRM) }, 100, 30)) {
+//            script.logger.warn("ASSIGNMENTS: Confirm widget did not become visible after clicking Cannon slot")
+//            return false
+//        }
+//        script.logger.info("ASSIGNMENTS: Step 5 - Confirm widget confirmed visible")
+//
+//        // Step 6: Confirm Cannon assignment
+//        script.logger.info("ASSIGNMENTS: Step 6 - Confirming Cannon assignment")
+//        if (!clickWidgetWithRetry(Constants.ROOT_ASSIGN_WIDGET, Constants.COMPONENT_ASSIGN_WIDGETCONFIRM, Constants.INDEX_ASSIGNCONFIRM_SLOT2, logPrefix = "ASSIGNMENTS: Step 6", script = script)) {
+//            script.logger.warn("ASSIGNMENTS: Failed to click Cannon confirm after retries")
+//            return false
+//        }
+//        script.logger.info("ASSIGNMENTS: Step 6 - Cannon assignment confirmed successfully")
+//
+//        Condition.sleep(Random.nextInt(Constants.WIDGET_INTERACTION_MIN, Constants.WIDGET_INTERACTION_MAX))
+//
+//        if (!Condition.wait({ isWidgetVisible(Constants.ROOT_ASSIGN_WIDGET, Constants.COMPONENT_ASSIGN_WIDGET) }, 100, 30)) {
+//            script.logger.warn("ASSIGNMENTS: Assign widget did not reappear after Cannon confirmation")
+//            return false
+//        }
+//        script.logger.info("ASSIGNMENTS: Step 6 - Assign widget reappeared")
 
         script.logger.info("ASSIGNMENTS: Ghost assignment sequence complete - all steps validated successfully")
         return true

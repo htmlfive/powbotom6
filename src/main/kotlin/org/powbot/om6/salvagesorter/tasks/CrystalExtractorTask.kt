@@ -28,8 +28,8 @@ class CrystalExtractorTask(script: SalvageSorter) : Task(script) {
             return false
         }
 
-        // Don't activate if at salvaing spot during but not confirmed salvgaing phase
-        if (script.currentPhase == SalvagePhase.SALVAGING && !script.hookingSalvageBool) {
+        // Don't activate if at salvaging spot during but not confirmed salvgaing phase
+        if (script.currentPhase == SalvagePhase.SALVAGING && !script.hookingSalvageBool && !script.atWithdrawSpot ) {
             script.logger.debug("ACTIVATE: Skipping extractor - at withdraw spot, need to walk back first.")
             return false
         }
@@ -76,7 +76,7 @@ class CrystalExtractorTask(script: SalvageSorter) : Task(script) {
     }
 
     fun executeExtractorTap(): Boolean {
-        val maxRetries = Random.nextInt(2,5)
+        val maxRetries = Random.nextInt(5,7)
         var attempt = 0
 
         while (attempt < maxRetries) {
@@ -87,8 +87,8 @@ class CrystalExtractorTask(script: SalvageSorter) : Task(script) {
 
                 CameraSnapper.snapCameraToDirection(script.cameraDirection, script)
 
-                val randomOffsetX = Random.nextInt(-3, 3)
-                val randomOffsetY = Random.nextInt(-3, 3)
+                val randomOffsetX = Random.nextInt(-6, 6)
+                val randomOffsetY = Random.nextInt(-6, 6)
                 val finalX = x + randomOffsetX
                 val finalY = y + randomOffsetY
                 script.harvesterMessageFound = false
