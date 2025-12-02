@@ -86,7 +86,7 @@ class SetupSalvagingTask(script: SalvageSorter) : Task(script) {
      * Assigns crew to Ghost position.
      * @return true if assignment was successful
      */
-    private fun assignGhost(): Boolean {
+    fun assignGhost(): Boolean {
         script.logger.info("ASSIGNMENTS: Starting Ghost assignment sequence.")
 
         // Step 1: Open Sailing Tab

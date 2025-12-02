@@ -15,6 +15,7 @@ import org.powbot.om6.salvagesorter.config.SalvagePhase
 
 class DeployHookTask(script: SalvageSorter) : Task(script) {
     private val extractorTask = CrystalExtractorTask(script)
+    private val setupTask = SetupSalvagingTask(script)
 
     override fun activate(): Boolean {
         // In Power Salvage mode, only activate when:
@@ -199,96 +200,67 @@ class DeployHookTask(script: SalvageSorter) : Task(script) {
      */
     private fun handleDepletedShipwreck(): Boolean {
         script.logger.warn("HOOK: Dialogue detected. Shipwreck depleted.")
-        handleMultipleDialogues(2, Constants.SORT_RETAP_MIN, Constants.SORT_RETAP_MAX)
+        
+        // Step 1: Handle dialogues
+        val dialoguesHandled = handleMultipleDialogues(2, Constants.SORT_RETAP_MIN, Constants.SORT_RETAP_MAX)
+        script.logger.info("DEPLETED: Handled $dialoguesHandled dialogue(s)")
         
         if (script.hopWorlds) {
-            script.hopToRandomWorld()
-            Condition.sleep(Random.nextInt(600,900))
-            tapWithOffset(Constants.HOP_X, Constants.HOP_Y, 4)
-            Condition.sleep(Random.nextInt(600,900))
+            script.logger.info("DEPLETED: Starting world hop sequence")
+            
+            // Step 2: Hop to random world
+            hopToRandomWorld(script)
+            if (!Condition.wait({ Game.loggedIn() }, 1500, 10)) {
+                script.logger.error("DEPLETED: Failed to verify login after world hop")
+                return false
+            }
+            script.logger.info("DEPLETED: World hop successful, logged in confirmed")
+
+            // Step 3: Walk to Hook
+            script.logger.info("DEPLETED: Walking to hook location")
+            if (!tapWithOffset(Constants.HOP_X, Constants.HOP_Y, 4)) {
+                script.logger.warn("DEPLETED: Failed to tap walk-to-hook location")
+                return false
+            }
+            script.logger.info("DEPLETED: Walk tap successful")
+            
+
+            // Step 4: Enable tap-to-drop if configured
             if (script.tapToDrop) {
                 Game.setMouseActionToggled(true)
+                script.logger.info("DEPLETED: Tap-to-drop enabled")
             }
-            // Assign Ghost
-            script.logger.info("ASSIGNMENTS: Starting Ghost assignment sequence.")
-
-            // Step 1: Open Sailing Tab
-            script.logger.info("ASSIGNMENTS: Step 1 - Opening sailing tab")
-            if (!clickWidgetWithRetry(Constants.ROOT_SAILINGTAB, Constants.COMPONENT_SAILINGTAB, logPrefix = "ASSIGNMENTS: Step 1", script = script)) {
-                script.logger.warn("ASSIGNMENTS: Failed to click sailing tab after retries")
+            
+            // Step 5: Assign Ghost
+            script.logger.info("DEPLETED: Assigning Ghost")
+            if (!setupTask.assignGhost()) {
+                script.logger.warn("DEPLETED: Failed to assign Ghost after world hop")
                 return false
             }
-            script.logger.info("ASSIGNMENTS: Step 1 - Sailing tab clicked successfully")
-
-            Condition.sleep(Random.nextInt(Constants.WIDGET_INTERACTION_MIN, Constants.WIDGET_INTERACTION_MAX))
-
-
-            if (!Condition.wait({ isWidgetVisible(Constants.ROOT_ASSIGN_WIDGET, Constants.COMPONENT_ASSIGN_WIDGET) }, 100, 30)) {
-                script.logger.warn("ASSIGNMENTS: Assign widget did not become visible after opening tab")
-                clickWidget(Constants.ROOT_ASSIGN_WIDGET, Constants.COMPONENT_ASSIGN_WIDGETBACKBUTTON, Constants.INDEX_ASSIGNCONFIRM_BACKBUTTON)
-                Condition.sleep(600)
-                return false
-            }
-            script.logger.info("ASSIGNMENTS: Step 1 - Assign widget confirmed visible")
-
-            // Step 2: Scroll to Ghost position
-            script.logger.info("ASSIGNMENTS: Step 2 - Scrolling to Ghost position")
-            ScrollHelper.scrollTo(
-                getItem = { Widgets.component(937, 25, 47) },
-                getPane = { Widgets.component(937, 23) },
-                getScrollComp = { Widgets.component(937, 32) }
-            )
-            script.logger.info("ASSIGNMENTS: Step 2 - Scroll complete")
-
-            // Step 3: Click Ghost slot (Slot 1)
-            script.logger.info("ASSIGNMENTS: Step 3 - Clicking Ghost slot (Slot 1)")
-            if (!clickWidgetWithRetry(Constants.ROOT_ASSIGN_WIDGET, Constants.COMPONENT_ASSIGN_WIDGET, Constants.INDEX_ASSIGN_SLOT1, logPrefix = "ASSIGNMENTS: Step 3", script = script)) {
-                script.logger.warn("ASSIGNMENTS: Failed to click Ghost slot after retries")
-                return false
-            }
-            script.logger.info("ASSIGNMENTS: Step 3 - Ghost slot clicked successfully")
-
-            Condition.sleep(Random.nextInt(Constants.WIDGET_INTERACTION_MIN, Constants.WIDGET_INTERACTION_MAX))
-
-            if (!Condition.wait({ isWidgetVisible(Constants.ROOT_ASSIGN_WIDGET, Constants.COMPONENT_ASSIGN_WIDGETCONFIRM) }, 100, 30)) {
-                script.logger.warn("ASSIGNMENTS: Confirm widget did not become visible after clicking Ghost slot")
-                return false
-            }
-            script.logger.info("ASSIGNMENTS: Step 3 - Confirm widget confirmed visible")
-
-            // Step 4: Confirm Ghost assignment
-            script.logger.info("ASSIGNMENTS: Step 4 - Confirming Ghost assignment")
-            if (!clickWidgetWithRetry(Constants.ROOT_ASSIGN_WIDGET, Constants.COMPONENT_ASSIGN_WIDGETCONFIRM, Constants.INDEX_ASSIGNCONFIRM_SLOT1, logPrefix = "ASSIGNMENTS: Step 4", script = script)) {
-                script.logger.warn("ASSIGNMENTS: Failed to click Ghost confirm after retries")
-                return false
-            }
-            script.logger.info("ASSIGNMENTS: Step 4 - Ghost assignment confirmed successfully")
-
-            Condition.sleep(Random.nextInt(Constants.WIDGET_INTERACTION_MIN, Constants.WIDGET_INTERACTION_MAX))
-
-            if (!Condition.wait({ isWidgetVisible(Constants.ROOT_ASSIGN_WIDGET, Constants.COMPONENT_ASSIGN_WIDGET) }, 100, 30)) {
-                script.logger.warn("ASSIGNMENTS: Assign widget did not reappear after Ghost confirmation")
-                return false
-            }
-            script.logger.info("ASSIGNMENTS: Step 4 - Assign widget reappeared")
-            //
-
-
+            script.logger.info("DEPLETED: Ghost assignment successful")
+            
+            // Step 6: Activate Extractor (if enabled)
             if (script.enableExtractor) {
+                script.logger.info("DEPLETED: Activating extractor")
                 if (clickAtCoordinates(Constants.hopEXTRACTORX, Constants.hopEXTRACTORY, "Harvest", "Activate")) {
                     val waitTime = Random.nextInt(2400, 3000)
-                    script.logger.info("WAIT: Extractor tap successful. Waiting $waitTime ms.")
+                    script.logger.info("DEPLETED: Extractor activated. Waiting $waitTime ms")
                     Condition.sleep(waitTime)
+                } else {
+                    script.logger.warn("DEPLETED: Failed to activate extractor, continuing anyway")
                 }
             }
 
-            script.logger.info("HOOK: Hopped worlds.")
+            // Step 7: Set phase and flags
+            script.logger.info("DEPLETED: World hop sequence complete")
             script.currentPhase = SalvagePhase.SALVAGING
             script.hookingSalvageBool = false
+            script.atHookLocation = true
             return true
         }
         
-        script.logger.info("HOOK: Hop worlds disabled. Transitioning to SORTING.")
+        // No world hopping - transition to sorting
+        script.logger.info("DEPLETED: Hop worlds disabled. Transitioning to SORTING")
         script.cargoHoldFull = true
         script.currentPhase = SalvagePhase.SETUP_SORTING
         script.hookingSalvageBool = false

@@ -31,45 +31,45 @@ import org.powbot.api.script.ScriptConfiguration.List as ConfigList
     [
         ScriptConfiguration(
             "Power Salvage Mode",
-            "If true, skips sorting entirely and simply drops all salvage when inventory is full. Useful for Raft/Skiff salvaging below level 50 without Salvaging station.",
+            "Power Salvage Mode: If true, skips sorting entirely and simply drops all salvage when inventory is full. Useful for Raft/Skiff salvaging below level 50 without Salvaging station.",
             optionType = OptionType.BOOLEAN, defaultValue = "false"
         ),
         ScriptConfiguration(
             "Enable Extractor",
-            "If true, enables the automatic tapping of the Crystal Extractor every ~64 seconds.",
+            "Enable Extractor: If true, enables the automatic tapping of the Crystal Extractor every ~64 seconds.",
             optionType = OptionType.BOOLEAN, defaultValue = "true"
         ),
         ScriptConfiguration(
             "Hop Worlds",
-            "If true, enables the hopping of worlds if salvaging depleted",
+            "Hop Worlds: If true, enables the hopping of worlds if salvaging depleted",
             optionType = OptionType.BOOLEAN, defaultValue = "true"
         ),
         ScriptConfiguration(
             "Salvage Item Name",
-            "The exact name of the item dropped after salvaging the shipwreck.",
+            "Salvage Item Name: The exact name of the item dropped after salvaging the shipwreck.",
             optionType = OptionType.STRING,
             defaultValue = "Opulent salvage",
             allowedValues = ["Small salvage", "Fishy salvage", "Barracuda salvage", "Large salvage", "Plundered salvage", "Martial salvage", "Fremennik salvage", "Opulent salvage"]
         ),
         ScriptConfiguration(
             "Start Sorting",
-            "If true, starts sorting instead of salvaging.",
+            "Start Sorting: If true, starts sorting instead of salvaging.",
             optionType = OptionType.BOOLEAN, defaultValue = "false"
         ),
         ScriptConfiguration(
             "Tap-to-drop",
-            "If true, enabled tap-to-drop before starting",
+            "Tap-to-drop: If true, enabled tap-to-drop before starting",
             optionType = OptionType.BOOLEAN, defaultValue = "true"
         ),
         ScriptConfiguration(
             "Max Cargo Space",
-            "The maximum cargo space you can hold.",
+            "Max Cargo Space: The maximum cargo space you can hold.",
             optionType = OptionType.STRING,
             defaultValue = "210"
         ),
         ScriptConfiguration(
             "Camera Direction",
-            "The camera direction required for fixed-screen tap locations during salvaging, sorting, and extractor tapping. Req. Camera Vertical Setting in OSRS Settings. Set zoom to max all the way in",
+            "Camera Direction: The camera direction required for fixed-screen tap locations during salvaging, sorting, and extractor tapping. Req. Camera Vertical Setting in OSRS Settings. Set zoom to max all the way in",
             optionType = OptionType.STRING, defaultValue = "North",
             allowedValues = ["North", "East", "South", "West"]
         )
@@ -102,52 +102,6 @@ class SalvageSorter : AbstractScript() {
     @Volatile var cargoHoldCount: Int = 0
     @Volatile var initialCoinCount: Long = 0L
     @Volatile var cargoHoldFull: Boolean = true
-
-    fun hopToRandomWorld() {
-        ensureInventoryOpen()
-        Condition.sleep(600)
-        val currentWorld = Worlds.current()
-        logger.info("Current world: ${currentWorld.id()}")
-
-        val validWorlds = Worlds.stream()
-            .filtered {
-                it.type() == World.Type.MEMBERS && it.population >= 1000 &&
-                        it.specialty() != World.Specialty.BOUNTY_HUNTER &&
-                        it.specialty() != World.Specialty.PVP &&
-                        it.specialty() != World.Specialty.TARGET_WORLD &&
-                        it.specialty() != World.Specialty.PVP_ARENA &&
-                        it.specialty() != World.Specialty.DEAD_MAN &&
-                        it.specialty() != World.Specialty.BETA &&
-                        it.specialty() != World.Specialty.HIGH_RISK &&
-                        it.specialty() != World.Specialty.LEAGUE &&
-                        it.specialty() != World.Specialty.SKILL_REQUIREMENT &&
-                        it.specialty() != World.Specialty.SPEEDRUNNING &&
-                        it.specialty() != World.Specialty.FRESH_START &&
-                        it.specialty() != World.Specialty.TRADE
-            }
-            .toList()
-            .shuffled()
-
-        if (validWorlds.isEmpty()) {
-            logger.warn("No valid worlds found to hop to")
-            Condition.sleep(600)
-            return
-        }
-
-        for (world in validWorlds.take(10)) {
-            logger.info("Attempting to hop to world: ${world.id()}")
-            if (world.hop()) {
-                if (Condition.wait({ Worlds.current() != currentWorld }, 1500, 10)) {
-                    logger.info("Successfully hopped to world: ${Worlds.current().id()}")
-                    return
-                }
-            }
-            logger.warn("Failed to hop to world: ${world.id()}, trying next...")
-            Condition.sleep(300)
-        }
-
-        logger.warn("Failed to hop after 10 attempts")
-    }
 
     private val currentCoinCount: Long
         get() {

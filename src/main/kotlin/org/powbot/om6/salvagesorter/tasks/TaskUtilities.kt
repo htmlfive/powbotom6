@@ -167,29 +167,6 @@ fun clickAtCoordinates(screenX: Int, screenY: Int, vararg actions: String): Bool
 }
 
 
-//fun fullHop(){
-//    //Hopping logic
-//    script.logger.warn("HOOK: Dialogue detected. Shipwreck depleted.")
-//    handleMultipleDialogues(2, org.powbot.om6.salvagesorter.config.Constants.SORT_RETAP_MIN, org.powbot.om6.salvagesorter.config.Constants.SORT_RETAP_MAX)
-//    hopToRandomWorld()
-//
-//    Condition.sleep(3000)
-//    tapWithOffset(org.powbot.om6.salvagesorter.config.Constants.HOP_X, Constants.HOP_Y,4)
-//    Condition.sleep(3000)
-//    Condition.sleep(3000)
-//
-//    if (script.enableExtractor) {
-//        if (clickAtCoordinates(311, 379, "Harvest", "Activate")) {
-//            val waitTime = Random.nextInt(2400, 3000)
-//            script.logger.info("WAIT: Extractor tap successful. Waiting $waitTime ms.")
-//            Condition.sleep(waitTime)
-//            return true
-//        }
-//    }
-//    script.currentPhase = SalvagePhase.SETUP_SALVAGING
-//    script.hookingSalvageBool = false
-//    return false
-//}
 // ========================================
 // INVENTORY UTILITY FUNCTIONS
 // ========================================
@@ -408,5 +385,59 @@ fun retryAction(maxRetries: Int, delayMs: Int, action: () -> Boolean): Boolean {
         }
     }
     return false
+}
+
+// ========================================
+// WORLD HOPPING UTILITY FUNCTIONS
+// ========================================
+
+/**
+ * Hops to a random valid world.
+ * @param script The SalvageSorter script instance
+ */
+fun hopToRandomWorld(script: SalvageSorter) {
+    ensureInventoryOpen()
+    Condition.sleep(600)
+    val currentWorld = Worlds.current()
+    script.logger.info("Current world: ${currentWorld.id()}")
+
+    val validWorlds = Worlds.stream()
+        .filtered {
+            it.type() == World.Type.MEMBERS && it.population >= 1000 &&
+                    it.specialty() != World.Specialty.BOUNTY_HUNTER &&
+                    it.specialty() != World.Specialty.PVP &&
+                    it.specialty() != World.Specialty.TARGET_WORLD &&
+                    it.specialty() != World.Specialty.PVP_ARENA &&
+                    it.specialty() != World.Specialty.DEAD_MAN &&
+                    it.specialty() != World.Specialty.BETA &&
+                    it.specialty() != World.Specialty.HIGH_RISK &&
+                    it.specialty() != World.Specialty.LEAGUE &&
+                    it.specialty() != World.Specialty.SKILL_REQUIREMENT &&
+                    it.specialty() != World.Specialty.SPEEDRUNNING &&
+                    it.specialty() != World.Specialty.FRESH_START &&
+                    it.specialty() != World.Specialty.TRADE
+        }
+        .toList()
+        .shuffled()
+
+    if (validWorlds.isEmpty()) {
+        script.logger.warn("No valid worlds found to hop to")
+        Condition.sleep(600)
+        return
+    }
+
+    for (world in validWorlds.take(10)) {
+        script.logger.info("Attempting to hop to world: ${world.id()}")
+        if (world.hop()) {
+            if (Condition.wait({ Worlds.current() != currentWorld }, 1500, 10)) {
+                script.logger.info("Successfully hopped to world: ${Worlds.current().id()}")
+                return
+            }
+        }
+        script.logger.warn("Failed to hop to world: ${world.id()}, trying next...")
+        Condition.sleep(300)
+    }
+
+    script.logger.warn("Failed to hop after 10 attempts")
 }
 
