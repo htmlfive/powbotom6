@@ -252,7 +252,7 @@ class DeployHookTask(script: SalvageSorter) : Task(script) {
                     val waitTime = Random.nextInt(2400, 3000)
                     script.logger.info("DEPLETED: Extractor activated. Waiting $waitTime ms")
                     Condition.sleep(waitTime)
-                    script.extractorTimer = 64L
+                    script.extractorTimer = System.currentTimeMillis()
                 } else {
                     script.logger.warn("DEPLETED: Failed to activate extractor, continuing anyway")
                 }

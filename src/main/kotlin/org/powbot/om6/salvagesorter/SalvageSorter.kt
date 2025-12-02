@@ -238,7 +238,7 @@ class SalvageSorter : AbstractScript() {
                 val waitTime = org.powbot.api.Random.nextInt(2400, 3000)
                 logger.info("WAIT: Extractor tap successful. Waiting $waitTime ms.")
                 Condition.sleep(waitTime)
-                extractorTimer = 64L
+                extractorTimer = System.currentTimeMillis()
             }
         }
     }
