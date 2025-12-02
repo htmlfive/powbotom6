@@ -94,7 +94,7 @@ class CrystalExtractorTask(script: SalvageSorter) : Task(script) {
 
                 script.logger.info("ACTION: Executing extractor tap at X=$finalX, Y=$finalY (Offset: $randomOffsetX, $randomOffsetY). [Attempt $attempt/$maxRetries]")
 
-                if (clickAtCoordinates(finalX, finalY, "Harvest")) {
+                if (clickAtCoordinates(finalX, finalY, "Harvest", "Activate")) {
                     val waitTime = Random.nextInt(2400, 3000)
                     script.logger.info("WAIT: Extractor tap successful. Waiting $waitTime ms.")
                     Condition.sleep(waitTime)

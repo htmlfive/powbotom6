@@ -1,5 +1,6 @@
 package org.powbot.om6.salvagesorter.tasks
 
+import org.powbot.api.AppManager.logger
 import org.powbot.api.Condition
 import org.powbot.api.Input
 import org.powbot.api.Notifications
@@ -7,7 +8,10 @@ import org.powbot.api.Point
 import org.powbot.api.Random
 import org.powbot.api.rt4.*
 import org.powbot.mobile.script.ScriptManager
-import org.powbot.om6.salvagesorter.SalvageSorter
+import org.powbot.mobile.script.ScriptManager.script
+import org.powbot.om6.salvagesorter.*
+import org.powbot.om6.salvagesorter.config.Constants
+import org.powbot.om6.salvagesorter.config.SalvagePhase
 
 // ========================================
 // LOGGING UTILITY FUNCTIONS
@@ -139,10 +143,10 @@ fun tapWithOffset(x: Int, y: Int, offsetRange: Int = 3): Boolean {
  * Clicks an object at specific screen coordinates and selects a menu action
  * @param screenX X coordinate on screen
  * @param screenY Y coordinate on screen
- * @param action The menu action to select (e.g., "Deploy", "Take", "Use")
+ * @param actions The menu actions to try (e.g., "Deploy", "Take", "Use")
  * @return true if successful, false otherwise
  */
-fun clickAtCoordinates(screenX: Int, screenY: Int, action: String): Boolean {
+fun clickAtCoordinates(screenX: Int, screenY: Int, vararg actions: String): Boolean {
     val randomX = screenX + Random.nextInt(-5, 5)
     val randomY = screenY + Random.nextInt(-5, 5)
     val point = Point(randomX, randomY)
@@ -158,10 +162,34 @@ fun clickAtCoordinates(screenX: Int, screenY: Int, action: String): Boolean {
 
     // Click the menu action
     return Menu.click { cmd ->
-        cmd.action.contains(action, ignoreCase = true)
+        actions.any { action -> cmd.action.contains(action, ignoreCase = true) }
     }
 }
 
+
+//fun fullHop(){
+//    //Hopping logic
+//    script.logger.warn("HOOK: Dialogue detected. Shipwreck depleted.")
+//    handleMultipleDialogues(2, org.powbot.om6.salvagesorter.config.Constants.SORT_RETAP_MIN, org.powbot.om6.salvagesorter.config.Constants.SORT_RETAP_MAX)
+//    hopToRandomWorld()
+//
+//    Condition.sleep(3000)
+//    tapWithOffset(org.powbot.om6.salvagesorter.config.Constants.HOP_X, Constants.HOP_Y,4)
+//    Condition.sleep(3000)
+//    Condition.sleep(3000)
+//
+//    if (script.enableExtractor) {
+//        if (clickAtCoordinates(311, 379, "Harvest", "Activate")) {
+//            val waitTime = Random.nextInt(2400, 3000)
+//            script.logger.info("WAIT: Extractor tap successful. Waiting $waitTime ms.")
+//            Condition.sleep(waitTime)
+//            return true
+//        }
+//    }
+//    script.currentPhase = SalvagePhase.SETUP_SALVAGING
+//    script.hookingSalvageBool = false
+//    return false
+//}
 // ========================================
 // INVENTORY UTILITY FUNCTIONS
 // ========================================

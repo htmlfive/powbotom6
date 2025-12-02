@@ -4,7 +4,10 @@ import org.powbot.api.Condition
 import org.powbot.api.Notifications
 import org.powbot.api.Random
 import org.powbot.api.rt4.Chat
+import org.powbot.api.rt4.Game
 import org.powbot.api.rt4.Inventory
+import org.powbot.api.rt4.ScrollHelper
+import org.powbot.api.rt4.Widgets
 import org.powbot.mobile.script.ScriptManager
 import org.powbot.om6.salvagesorter.SalvageSorter
 import org.powbot.om6.salvagesorter.config.Constants
@@ -136,6 +139,9 @@ class DeployHookTask(script: SalvageSorter) : Task(script) {
                 break
             }
 
+            if (Chat.canContinue()) {
+                return handleDepletedShipwreck()
+            }
             if (attempt < 3) {
                 script.logger.warn("HOOK: No confirmation on attempt $attempt. Retrying...")
                 Condition.sleep(Random.nextInt(1200, 1800))
@@ -158,13 +164,7 @@ class DeployHookTask(script: SalvageSorter) : Task(script) {
                 }
 
                 if (Chat.canContinue()) {
-                    script.logger.warn("HOOK: Dialogue detected. Shipwreck depleted.")
-                    handleMultipleDialogues(2, Constants.SORT_RETAP_MIN, Constants.SORT_RETAP_MAX)
-                    script.logger.info("HOOK: Transitioning to SORTING.")
-                    script.cargoHoldFull = true
-                    script.currentPhase = SalvagePhase.SETUP_SORTING
-                    script.hookingSalvageBool = false
-                    return true
+                    return handleDepletedShipwreck()
                 }
 
                 if (extractorTask.checkAndExecuteInterrupt(script)) {
@@ -183,12 +183,7 @@ class DeployHookTask(script: SalvageSorter) : Task(script) {
             script.hookingSalvageBool = false
 
             if (Chat.canContinue()) {
-                script.logger.warn("HOOK: Dialogue before confirmation.")
-                handleMultipleDialogues(2, Constants.SORT_RETAP_MIN, Constants.SORT_RETAP_MAX)
-                script.logger.info("HOOK: Transitioning to SORTING.")
-                script.cargoHoldFull = true
-                script.currentPhase = SalvagePhase.SETUP_SORTING
-                return true
+                return handleDepletedShipwreck()
             } else {
                 script.logger.error("HOOK: No confirmation after 3 attempts. Stopping.")
                 Notifications.showNotification("HOOK: No confirmation after 3 attempts. Stopping.")
@@ -196,6 +191,105 @@ class DeployHookTask(script: SalvageSorter) : Task(script) {
                 return false
             }
         }
+    }
+
+    /**
+     * Handles depleted shipwreck dialogue and world hopping logic.
+     * @return true after handling
+     */
+    private fun handleDepletedShipwreck(): Boolean {
+        script.logger.warn("HOOK: Dialogue detected. Shipwreck depleted.")
+        handleMultipleDialogues(2, Constants.SORT_RETAP_MIN, Constants.SORT_RETAP_MAX)
+        
+        if (script.hopWorlds) {
+            script.hopToRandomWorld()
+            Condition.sleep(Random.nextInt(600,900))
+            tapWithOffset(Constants.HOP_X, Constants.HOP_Y, 4)
+            Condition.sleep(Random.nextInt(600,900))
+            // Assign Ghost
+            script.logger.info("ASSIGNMENTS: Starting Ghost assignment sequence.")
+
+            // Step 1: Open Sailing Tab
+            script.logger.info("ASSIGNMENTS: Step 1 - Opening sailing tab")
+            if (!clickWidgetWithRetry(Constants.ROOT_SAILINGTAB, Constants.COMPONENT_SAILINGTAB, logPrefix = "ASSIGNMENTS: Step 1", script = script)) {
+                script.logger.warn("ASSIGNMENTS: Failed to click sailing tab after retries")
+                return false
+            }
+            script.logger.info("ASSIGNMENTS: Step 1 - Sailing tab clicked successfully")
+
+            Condition.sleep(Random.nextInt(Constants.WIDGET_INTERACTION_MIN, Constants.WIDGET_INTERACTION_MAX))
+
+
+            if (!Condition.wait({ isWidgetVisible(Constants.ROOT_ASSIGN_WIDGET, Constants.COMPONENT_ASSIGN_WIDGET) }, 100, 30)) {
+                script.logger.warn("ASSIGNMENTS: Assign widget did not become visible after opening tab")
+                clickWidget(Constants.ROOT_ASSIGN_WIDGET, Constants.COMPONENT_ASSIGN_WIDGETBACKBUTTON, Constants.INDEX_ASSIGNCONFIRM_BACKBUTTON)
+                Condition.sleep(600)
+                return false
+            }
+            script.logger.info("ASSIGNMENTS: Step 1 - Assign widget confirmed visible")
+
+            // Step 2: Scroll to Ghost position
+            script.logger.info("ASSIGNMENTS: Step 2 - Scrolling to Ghost position")
+            ScrollHelper.scrollTo(
+                getItem = { Widgets.component(937, 25, 47) },
+                getPane = { Widgets.component(937, 23) },
+                getScrollComp = { Widgets.component(937, 32) }
+            )
+            script.logger.info("ASSIGNMENTS: Step 2 - Scroll complete")
+
+            // Step 3: Click Ghost slot (Slot 1)
+            script.logger.info("ASSIGNMENTS: Step 3 - Clicking Ghost slot (Slot 1)")
+            if (!clickWidgetWithRetry(Constants.ROOT_ASSIGN_WIDGET, Constants.COMPONENT_ASSIGN_WIDGET, Constants.INDEX_ASSIGN_SLOT1, logPrefix = "ASSIGNMENTS: Step 3", script = script)) {
+                script.logger.warn("ASSIGNMENTS: Failed to click Ghost slot after retries")
+                return false
+            }
+            script.logger.info("ASSIGNMENTS: Step 3 - Ghost slot clicked successfully")
+
+            Condition.sleep(Random.nextInt(Constants.WIDGET_INTERACTION_MIN, Constants.WIDGET_INTERACTION_MAX))
+
+            if (!Condition.wait({ isWidgetVisible(Constants.ROOT_ASSIGN_WIDGET, Constants.COMPONENT_ASSIGN_WIDGETCONFIRM) }, 100, 30)) {
+                script.logger.warn("ASSIGNMENTS: Confirm widget did not become visible after clicking Ghost slot")
+                return false
+            }
+            script.logger.info("ASSIGNMENTS: Step 3 - Confirm widget confirmed visible")
+
+            // Step 4: Confirm Ghost assignment
+            script.logger.info("ASSIGNMENTS: Step 4 - Confirming Ghost assignment")
+            if (!clickWidgetWithRetry(Constants.ROOT_ASSIGN_WIDGET, Constants.COMPONENT_ASSIGN_WIDGETCONFIRM, Constants.INDEX_ASSIGNCONFIRM_SLOT1, logPrefix = "ASSIGNMENTS: Step 4", script = script)) {
+                script.logger.warn("ASSIGNMENTS: Failed to click Ghost confirm after retries")
+                return false
+            }
+            script.logger.info("ASSIGNMENTS: Step 4 - Ghost assignment confirmed successfully")
+
+            Condition.sleep(Random.nextInt(Constants.WIDGET_INTERACTION_MIN, Constants.WIDGET_INTERACTION_MAX))
+
+            if (!Condition.wait({ isWidgetVisible(Constants.ROOT_ASSIGN_WIDGET, Constants.COMPONENT_ASSIGN_WIDGET) }, 100, 30)) {
+                script.logger.warn("ASSIGNMENTS: Assign widget did not reappear after Ghost confirmation")
+                return false
+            }
+            script.logger.info("ASSIGNMENTS: Step 4 - Assign widget reappeared")
+            //
+
+
+            if (script.enableExtractor) {
+                if (clickAtCoordinates(311, 379, "Harvest", "Activate")) {
+                    val waitTime = Random.nextInt(2400, 3000)
+                    script.logger.info("WAIT: Extractor tap successful. Waiting $waitTime ms.")
+                    Condition.sleep(waitTime)
+                }
+            }
+
+            script.logger.info("HOOK: Hopped worlds. Transitioning to SETUP_SALVAGING.")
+            script.currentPhase = SalvagePhase.SALVAGING
+            script.hookingSalvageBool = false
+            return true
+        }
+        
+        script.logger.info("HOOK: Hop worlds disabled. Transitioning to SORTING.")
+        script.cargoHoldFull = true
+        script.currentPhase = SalvagePhase.SETUP_SORTING
+        script.hookingSalvageBool = false
+        return true
     }
 
     /**

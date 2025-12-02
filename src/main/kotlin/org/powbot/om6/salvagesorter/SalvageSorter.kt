@@ -8,6 +8,8 @@ import org.powbot.api.event.MessageType
 import org.powbot.api.rt4.Camera
 import org.powbot.api.rt4.Game
 import org.powbot.api.rt4.Inventory
+import org.powbot.api.rt4.World
+import org.powbot.api.rt4.Worlds
 import org.powbot.api.script.*
 import org.powbot.api.script.paint.PaintBuilder
 import org.powbot.mobile.script.ScriptManager
@@ -35,6 +37,11 @@ import org.powbot.api.script.ScriptConfiguration.List as ConfigList
         ScriptConfiguration(
             "Enable Extractor",
             "If true, enables the automatic tapping of the Crystal Extractor every ~64 seconds.",
+            optionType = OptionType.BOOLEAN, defaultValue = "true"
+        ),
+        ScriptConfiguration(
+            "Hop Worlds",
+            "If true, enables the hopping of worlds if salvaging depleted",
             optionType = OptionType.BOOLEAN, defaultValue = "true"
         ),
         ScriptConfiguration(
@@ -75,6 +82,7 @@ class SalvageSorter : AbstractScript() {
     var atHookLocation = false
     var atSortLocation = false
     var atWithdrawSpot = false
+    val hopWorlds: Boolean get() = getOption<Boolean>("Hop Worlds")
     val tapToDrop: Boolean get() = getOption<Boolean>("Tap-to-drop")
     val SALVAGE_NAME: String get() = getOption<String>("Salvage Item Name")
     var hookingSalvageBool = false
@@ -94,6 +102,52 @@ class SalvageSorter : AbstractScript() {
     @Volatile var cargoHoldCount: Int = 0
     @Volatile var initialCoinCount: Long = 0L
     @Volatile var cargoHoldFull: Boolean = true
+
+    fun hopToRandomWorld() {
+        ensureInventoryOpen()
+        Condition.sleep(600)
+        val currentWorld = Worlds.current()
+        logger.info("Current world: ${currentWorld.id()}")
+
+        val validWorlds = Worlds.stream()
+            .filtered {
+                it.type() == World.Type.MEMBERS && it.population >= 1000 &&
+                        it.specialty() != World.Specialty.BOUNTY_HUNTER &&
+                        it.specialty() != World.Specialty.PVP &&
+                        it.specialty() != World.Specialty.TARGET_WORLD &&
+                        it.specialty() != World.Specialty.PVP_ARENA &&
+                        it.specialty() != World.Specialty.DEAD_MAN &&
+                        it.specialty() != World.Specialty.BETA &&
+                        it.specialty() != World.Specialty.HIGH_RISK &&
+                        it.specialty() != World.Specialty.LEAGUE &&
+                        it.specialty() != World.Specialty.SKILL_REQUIREMENT &&
+                        it.specialty() != World.Specialty.SPEEDRUNNING &&
+                        it.specialty() != World.Specialty.FRESH_START &&
+                        it.specialty() != World.Specialty.TRADE
+            }
+            .toList()
+            .shuffled()
+
+        if (validWorlds.isEmpty()) {
+            logger.warn("No valid worlds found to hop to")
+            Condition.sleep(600)
+            return
+        }
+
+        for (world in validWorlds.take(10)) {
+            logger.info("Attempting to hop to world: ${world.id()}")
+            if (world.hop()) {
+                if (Condition.wait({ Worlds.current() != currentWorld }, 1500, 10)) {
+                    logger.info("Successfully hopped to world: ${Worlds.current().id()}")
+                    return
+                }
+            }
+            logger.warn("Failed to hop to world: ${world.id()}, trying next...")
+            Condition.sleep(300)
+        }
+
+        logger.warn("Failed to hop after 10 attempts")
+    }
 
     private val currentCoinCount: Long
         get() {
