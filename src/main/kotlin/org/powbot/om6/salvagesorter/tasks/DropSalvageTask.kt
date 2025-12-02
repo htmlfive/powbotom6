@@ -12,7 +12,7 @@ class DropSalvageTask(script: SalvageSorter) : Task(script) {
         // Only activate in Power Salvage mode when inventory is full
         if (!script.powerSalvageMode) return false
 
-        val hasSalvage = Inventory.stream().name(script.SALVAGE_NAME).isNotEmpty()
+        val hasSalvage = Inventory.stream().name(script.salvageName).isNotEmpty()
         val inventoryFull = Inventory.isFull()
 
         return hasSalvage && inventoryFull
@@ -35,7 +35,7 @@ class DropSalvageTask(script: SalvageSorter) : Task(script) {
     }
 
     private fun dropAllSalvage(script: SalvageSorter): Boolean {
-        val salvageItems = Inventory.stream().name(script.SALVAGE_NAME).toList()
+        val salvageItems = Inventory.stream().name(script.salvageName).toList()
 
         if (salvageItems.isEmpty()) {
             script.logger.info("POWER SALVAGE: No salvage to drop.")
@@ -63,7 +63,7 @@ class DropSalvageTask(script: SalvageSorter) : Task(script) {
         Condition.sleep(Random.nextInt(300, 500))
 
         // Verify all salvage was dropped
-        val remainingSalvage = Inventory.stream().name(script.SALVAGE_NAME).count()
+        val remainingSalvage = Inventory.stream().name(script.salvageName).count()
 
         return remainingSalvage == 0L
     }

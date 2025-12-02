@@ -3,7 +3,6 @@ package org.powbot.om6.salvagesorter.tasks
 import org.powbot.api.Condition
 import org.powbot.api.Random
 import org.powbot.api.rt4.Inventory
-import org.powbot.api.rt4.Widgets
 import org.powbot.om6.salvagesorter.SalvageSorter
 import org.powbot.om6.salvagesorter.config.Constants
 import org.powbot.om6.salvagesorter.config.SalvagePhase
@@ -13,7 +12,7 @@ class DepositCargoTask(script: SalvageSorter) : Task(script) {
 
     override fun activate(): Boolean {
         // Activate when in SALVAGING phase and inventory has salvage
-        val hasSalvage = Inventory.stream().name(script.SALVAGE_NAME).isNotEmpty()
+        val hasSalvage = Inventory.stream().name(script.salvageName).isNotEmpty()
         return script.currentPhase == SalvagePhase.DEPOSITING && hasSalvage
     }
 
@@ -50,7 +49,7 @@ class DepositCargoTask(script: SalvageSorter) : Task(script) {
         CameraSnapper.snapCameraToDirection(script.cameraDirection, script)
         Condition.sleep(Random.nextInt(Constants.DEPOSIT_PRE_WAIT_MIN, Constants.DEPOSIT_PRE_WAIT_MAX))
 
-        val initialSalvageCount = Inventory.stream().name(script.SALVAGE_NAME).count()
+        val initialSalvageCount = Inventory.stream().name(script.salvageName).count()
         script.logger.info("DEPOSIT: Starting 3-step deposit sequence. Initial salvage count: $initialSalvageCount")
 
         // Step 1: Open cargo interface
@@ -97,7 +96,7 @@ class DepositCargoTask(script: SalvageSorter) : Task(script) {
         }
         script.logger.info("DEPOSIT: Step 3 - Cargo widget confirmed closed")
 
-        val finalSalvageCount = Inventory.stream().name(script.SALVAGE_NAME).count()
+        val finalSalvageCount = Inventory.stream().name(script.salvageName).count()
 
         if (finalSalvageCount < initialSalvageCount) {
             // Update cargo count to actual value from widget

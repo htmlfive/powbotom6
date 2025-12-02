@@ -16,7 +16,7 @@ class WithdrawCargoTask(script: SalvageSorter) : Task(script) {
         if (script.currentPhase != SalvagePhase.WITHDRAWING) return false
 
         // Don't activate if we have salvage or junk in inventory
-        val hasSalvage = Inventory.stream().name(script.SALVAGE_NAME).isNotEmpty()
+        val hasSalvage = Inventory.stream().name(script.salvageName).isNotEmpty()
         val hasJunk = Inventory.stream().name(*LootConfig.DISCARD_OR_ALCH_LIST).isNotEmpty()
 
         if (hasSalvage || hasJunk) return false
@@ -48,7 +48,7 @@ class WithdrawCargoTask(script: SalvageSorter) : Task(script) {
                 script.logger.info("WITHDRAW: Cargo depleted (inventory not full). Finishing current sorting then switching to salvaging.")
 
                 // Check if we still have salvage to sort
-                val hasSalvageInInventory = Inventory.stream().name(script.SALVAGE_NAME).isNotEmpty()
+                val hasSalvageInInventory = Inventory.stream().name(script.salvageName).isNotEmpty()
 
                 if (hasSalvageInInventory) {
                     // Still have salvage to sort - go back to sorting what we have
@@ -78,7 +78,7 @@ class WithdrawCargoTask(script: SalvageSorter) : Task(script) {
                 script.logger.warn("WITHDRAW: Withdrawal failed. Cargo hold is empty.")
 
                 // Check if we still have salvage to sort
-                val hasSalvageInInventory = Inventory.stream().name(script.SALVAGE_NAME).isNotEmpty()
+                val hasSalvageInInventory = Inventory.stream().name(script.salvageName).isNotEmpty()
 
                 if (hasSalvageInInventory) {
                     // Still have salvage to sort - stay in sorting mode
@@ -136,7 +136,7 @@ class WithdrawCargoTask(script: SalvageSorter) : Task(script) {
 
         Condition.sleep(600)
 
-        if (!Condition.wait({ Inventory.stream().name(script.SALVAGE_NAME).isNotEmpty() }, 100, 30)) {
+        if (!Condition.wait({ Inventory.stream().name(script.salvageName).isNotEmpty() }, 100, 30)) {
             script.logger.warn("WITHDRAW: No salvage appeared in inventory after withdraw")
             // Don't return yet - continue to close the interface
         } else {
@@ -177,7 +177,7 @@ class WithdrawCargoTask(script: SalvageSorter) : Task(script) {
         Condition.sleep(Random.nextInt(1400,1800))
 
         // Validate withdrawal results
-        val hasSalvage = Inventory.stream().name(script.SALVAGE_NAME).isNotEmpty()
+        val hasSalvage = Inventory.stream().name(script.salvageName).isNotEmpty()
 
         if (!hasSalvage) {
             script.logger.warn("WITHDRAW: Withdrawal failed - no salvage obtained.")

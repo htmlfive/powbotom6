@@ -6,8 +6,6 @@ import org.powbot.api.Random
 import org.powbot.api.rt4.Chat
 import org.powbot.api.rt4.Game
 import org.powbot.api.rt4.Inventory
-import org.powbot.api.rt4.ScrollHelper
-import org.powbot.api.rt4.Widgets
 import org.powbot.mobile.script.ScriptManager
 import org.powbot.om6.salvagesorter.SalvageSorter
 import org.powbot.om6.salvagesorter.config.Constants
@@ -36,7 +34,7 @@ class DeployHookTask(script: SalvageSorter) : Task(script) {
         // 1. Cargo is not full (otherwise we should be in sorting mode)
         // 2. Inventory is not full (when full, DepositCargoTask takes over)
 
-        val hasSalvage = Inventory.stream().name(script.SALVAGE_NAME).isNotEmpty()
+        val hasSalvage = Inventory.stream().name(script.salvageName).isNotEmpty()
         val inventoryFull = Inventory.isFull()
 
         // KEY CHANGE: We should keep deploying hook even if we have some salvage,
@@ -215,16 +213,23 @@ class DeployHookTask(script: SalvageSorter) : Task(script) {
                 return false
             }
             script.logger.info("DEPLETED: World hop successful, logged in confirmed")
-            Condition.sleep(Random.nextInt(1200,1800))
-
+            Condition.sleep(Random.nextInt(600,900))
+            // Check Camera
+            CameraSnapper.snapCameraToDirection(script.cameraDirection, script)
             // Step 3: Walk to Hook
+            Condition.sleep(Random.nextInt(180,300))
             script.logger.info("DEPLETED: Walking to hook location")
-            if (!tapWithOffset(Constants.HOP_X, Constants.HOP_Y, 4)) {
+            if (!tapWithOffset(Constants.HOP_X, Constants.HOP_Y, 3)) {
+                script.logger.warn("DEPLETED: Failed to tap walk-to-hook location")
+                return false
+            }
+            Condition.sleep(Random.nextInt(80,120))
+            if (!tapWithOffset(Constants.HOP_X, Constants.HOP_Y, 3)) {
                 script.logger.warn("DEPLETED: Failed to tap walk-to-hook location")
                 return false
             }
             script.logger.info("DEPLETED: Walk tap successful")
-            
+
 
             // Step 4: Enable tap-to-drop if configured
             if (script.tapToDrop) {
@@ -239,7 +244,7 @@ class DeployHookTask(script: SalvageSorter) : Task(script) {
                 return false
             }
             script.logger.info("DEPLETED: Ghost assignment successful")
-            
+            Condition.sleep(Random.nextInt(600,900))
             // Step 6: Activate Extractor (if enabled)
             if (script.enableExtractor) {
                 script.logger.info("DEPLETED: Activating extractor")
@@ -247,6 +252,7 @@ class DeployHookTask(script: SalvageSorter) : Task(script) {
                     val waitTime = Random.nextInt(2400, 3000)
                     script.logger.info("DEPLETED: Extractor activated. Waiting $waitTime ms")
                     Condition.sleep(waitTime)
+                    script.extractorTimer = 64L
                 } else {
                     script.logger.warn("DEPLETED: Failed to activate extractor, continuing anyway")
                 }
@@ -276,7 +282,7 @@ class DeployHookTask(script: SalvageSorter) : Task(script) {
         CameraSnapper.snapCameraToDirection(script.cameraDirection, script)
         Condition.sleep(Random.nextInt(Constants.DEPOSIT_PRE_WAIT_MIN, Constants.DEPOSIT_PRE_WAIT_MAX))
 
-        val initialSalvageCount = Inventory.stream().name(script.SALVAGE_NAME).count()
+        val initialSalvageCount = Inventory.stream().name(script.salvageName).count()
         script.logger.info("DEPOSIT: Starting 3-step deposit sequence. Initial salvage count: $initialSalvageCount")
 
         Condition.sleep(Random.nextInt(Constants.DEPOSIT_BETWEEN_TAPS_MIN, Constants.DEPOSIT_BETWEEN_TAPS_MAX))
@@ -321,7 +327,7 @@ class DeployHookTask(script: SalvageSorter) : Task(script) {
         }
         script.logger.info("DEPOSIT: Step 3 - Cargo widget confirmed closed")
 
-        val finalSalvageCount = Inventory.stream().name(script.SALVAGE_NAME).count()
+        val finalSalvageCount = Inventory.stream().name(script.salvageName).count()
         val depositedCount = (initialSalvageCount - finalSalvageCount).toInt()
 
         if (finalSalvageCount < initialSalvageCount) {

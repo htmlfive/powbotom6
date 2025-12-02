@@ -15,7 +15,7 @@ class CleanupInventoryTask(script: SalvageSorter) : Task(script) {
     private val extractorTask = CrystalExtractorTask(script)
 
     override fun activate(): Boolean {
-        val hasSalvage = Inventory.stream().name(script.SALVAGE_NAME).isNotEmpty()
+        val hasSalvage = Inventory.stream().name(script.salvageName).isNotEmpty()
 
         // In Power Salvage mode, NEVER clean up salvage here (DropSalvageTask handles it)
         // Only clean up other junk items

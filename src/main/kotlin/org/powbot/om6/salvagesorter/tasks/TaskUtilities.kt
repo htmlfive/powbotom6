@@ -1,17 +1,9 @@
 package org.powbot.om6.salvagesorter.tasks
 
-import org.powbot.api.AppManager.logger
-import org.powbot.api.Condition
-import org.powbot.api.Input
-import org.powbot.api.Notifications
-import org.powbot.api.Point
-import org.powbot.api.Random
+import org.powbot.api.*
 import org.powbot.api.rt4.*
 import org.powbot.mobile.script.ScriptManager
-import org.powbot.mobile.script.ScriptManager.script
-import org.powbot.om6.salvagesorter.*
-import org.powbot.om6.salvagesorter.config.Constants
-import org.powbot.om6.salvagesorter.config.SalvagePhase
+import org.powbot.om6.salvagesorter.SalvageSorter
 
 // ========================================
 // LOGGING UTILITY FUNCTIONS
@@ -403,7 +395,7 @@ fun hopToRandomWorld(script: SalvageSorter) {
 
     val validWorlds = Worlds.stream()
         .filtered {
-            it.type() == World.Type.MEMBERS && it.population >= 1000 &&
+            it.type() == World.Type.MEMBERS && it.population < 1000 &&
                     it.specialty() != World.Specialty.BOUNTY_HUNTER &&
                     it.specialty() != World.Specialty.PVP &&
                     it.specialty() != World.Specialty.TARGET_WORLD &&
@@ -431,6 +423,7 @@ fun hopToRandomWorld(script: SalvageSorter) {
         if (world.hop()) {
             if (Condition.wait({ Worlds.current() != currentWorld }, 1500, 10)) {
                 script.logger.info("Successfully hopped to world: ${Worlds.current().id()}")
+                script.hops++
                 return
             }
         }

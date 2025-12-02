@@ -12,7 +12,7 @@ class SortSalvageTask(script: SalvageSorter) : Task(script) {
 
     override fun activate(): Boolean {
         // Activate when in SORTING phase and we have salvage to sort
-        val hasSalvage = Inventory.stream().name(script.SALVAGE_NAME).isNotEmpty()
+        val hasSalvage = Inventory.stream().name(script.salvageName).isNotEmpty()
         return script.currentPhase == SalvagePhase.SORTING_LOOT && hasSalvage && script.cargoHoldFull
     }
 
@@ -22,7 +22,7 @@ class SortSalvageTask(script: SalvageSorter) : Task(script) {
         if (extractorTask.checkAndExecuteInterrupt(script)) return
 
         // Double-check we still have salvage after any interrupts
-        val hasSalvage = Inventory.stream().name(script.SALVAGE_NAME).isNotEmpty()
+        val hasSalvage = Inventory.stream().name(script.salvageName).isNotEmpty()
         if (!hasSalvage) {
             script.logger.info("SORT: No salvage found after interrupt check. Skipping sort.")
             return
@@ -44,7 +44,7 @@ class SortSalvageTask(script: SalvageSorter) : Task(script) {
      * @return true if sorting completed successfully
      */
     private fun executeTapSortSalvage(): Boolean {
-        val salvageItemName = script.SALVAGE_NAME
+        val salvageItemName = script.salvageName
 
         // Setup camera and initial wait
         CameraSnapper.snapCameraToDirection(script.cameraDirection, script)

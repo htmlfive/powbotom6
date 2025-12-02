@@ -8,8 +8,6 @@ import org.powbot.api.event.MessageType
 import org.powbot.api.rt4.Camera
 import org.powbot.api.rt4.Game
 import org.powbot.api.rt4.Inventory
-import org.powbot.api.rt4.World
-import org.powbot.api.rt4.Worlds
 import org.powbot.api.script.*
 import org.powbot.api.script.paint.PaintBuilder
 import org.powbot.mobile.script.ScriptManager
@@ -78,20 +76,21 @@ import org.powbot.api.script.ScriptConfiguration.List as ConfigList
 class SalvageSorter : AbstractScript() {
     val maxCargoSpace: String get() = getOption<String>("Max Cargo Space")
     val powerSalvageMode: Boolean get() = getOption<Boolean>("Power Salvage Mode")
-    var salvageMessageFound = false
-    var atHookLocation = false
-    var atSortLocation = false
-    var atWithdrawSpot = false
     val hopWorlds: Boolean get() = getOption<Boolean>("Hop Worlds")
     val tapToDrop: Boolean get() = getOption<Boolean>("Tap-to-drop")
-    val SALVAGE_NAME: String get() = getOption<String>("Salvage Item Name")
-    var hookingSalvageBool = false
+    val salvageName: String get() = getOption<String>("Salvage Item Name")
     val startSorting: Boolean get() = getOption<Boolean>("Start Sorting")
-
     val enableExtractor: Boolean get() = getOption<Boolean>("Enable Extractor")
     val extractorInterval: Long = 64000L
     val cameraDirectionStr: String get() = getOption<String>("Camera Direction")
     val cameraDirection: CardinalDirection get() = CardinalDirection.valueOf(cameraDirectionStr)
+
+    var hookingSalvageBool = false
+    var salvageMessageFound = false
+    var atHookLocation = false
+    var atSortLocation = false
+    var atWithdrawSpot = false
+    var hops = 0
 
     @Volatile var cargoMessageFound: Boolean = false
     @Volatile var harvesterMessageFound: Boolean = false
@@ -173,28 +172,16 @@ class SalvageSorter : AbstractScript() {
 
     override fun onStart() {
         logger.info("SCRIPT START: Initializing Shipwreck Sorter...")
+
         Condition.sleep(Random.nextInt(600, 1200))
-        // Set zoom to target level if needed
-        if (Camera.zoom != Constants.TARGET_ZOOM_LEVEL) {
-            logger.info("INIT: Setting camera zoom to ${Constants.TARGET_ZOOM_LEVEL}")
-            Camera.moveZoomSlider(Constants.TARGET_ZOOM_LEVEL.toDouble())
-            Condition.wait({ Camera.zoom == Constants.TARGET_ZOOM_LEVEL }, 100, 20)
-            Condition.sleep(Random.nextInt(600, 1200))
-        }
-        if (tapToDrop){Game.setMouseActionToggled(true)} else {Game.setMouseActionToggled(false)}
-            initialCoinCount = currentCoinCount
+
+        initialCoinCount = currentCoinCount
         logger.info("INIT: Tracking coins. Initial total GP (Inventory Only): $initialCoinCount")
         extractorTimer = 5L
         phaseStartTime = System.currentTimeMillis()
         currentPhase = SalvagePhase.IDLE
 
-        if (enableExtractor) {
-            if (clickAtCoordinates(Constants.INITEXTRACTORX, Constants.INITEXTRACTORY, "Harvest", "Activate")) {
-                val waitTime = org.powbot.api.Random.nextInt(2400, 3000)
-                logger.info("WAIT: Extractor tap successful. Waiting $waitTime ms.")
-                Condition.sleep(waitTime)
-            }
-        }
+
         // Check if the user wants to start in SORTING mode (or if inventory is full)
         val startInSortingMode = startSorting
 
@@ -231,9 +218,29 @@ class SalvageSorter : AbstractScript() {
                 String.format("%,d GP", gain)
             }
             .addString("Salvage in Cargo (Approx)") { cargoHoldCount.toString() }
-            .addString("At Withdraw Spot") { if (atWithdrawSpot) "YES" else "NO" }
+            .addString("Hops") { hops.toString() }
             .build()
         addPaint(paint)
+
+        // Set zoom to target level if needed
+        if (Camera.zoom != Constants.TARGET_ZOOM_LEVEL) {
+            logger.info("INIT: Setting camera zoom to ${Constants.TARGET_ZOOM_LEVEL}")
+            Camera.moveZoomSlider(Constants.TARGET_ZOOM_LEVEL.toDouble())
+            Condition.wait({ Camera.zoom == Constants.TARGET_ZOOM_LEVEL }, 100, 20)
+            Condition.sleep(Random.nextInt(600, 1200))
+        }
+        //Enable Tap to Drop on Start
+        if (tapToDrop){Game.setMouseActionToggled(true)} else {Game.setMouseActionToggled(false)}
+
+        //Activate Extractor on Start
+        if (enableExtractor) {
+            if (clickAtCoordinates(Constants.INITEXTRACTORX, Constants.INITEXTRACTORY, "Harvest", "Activate")) {
+                val waitTime = org.powbot.api.Random.nextInt(2400, 3000)
+                logger.info("WAIT: Extractor tap successful. Waiting $waitTime ms.")
+                Condition.sleep(waitTime)
+                extractorTimer = 64L
+            }
+        }
     }
 
     override fun poll() {
@@ -249,6 +256,8 @@ class SalvageSorter : AbstractScript() {
                 zoomTask.execute()
                 return
             }
+
+            //Enable Tap to Drop on Start
             if (tapToDrop){Game.setMouseActionToggled(true)} else {Game.setMouseActionToggled(false)}
 
             // Extractor Check (Always highest priority)
@@ -300,7 +309,7 @@ class SalvageSorter : AbstractScript() {
 
             // --- 2. DETERMINE CURRENT STATE AND SELECT TASK ---
 
-            val hasSalvageInInventory = Inventory.stream().name(SALVAGE_NAME).isNotEmpty()
+            val hasSalvageInInventory = Inventory.stream().name(salvageName).isNotEmpty()
             val inventoryFull = Inventory.isFull()
 
             logger.info("POLL: State Check - cargoFull=$cargoHoldFull, hasSalvage=$hasSalvageInInventory, invFull=$inventoryFull, phase=$currentPhase")

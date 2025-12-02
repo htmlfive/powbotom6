@@ -50,8 +50,8 @@ object Constants {
     const val INITEXTRACTORX = 314
     const val INITEXTRACTORY = 238
 
-    const val hopEXTRACTORX = 314
-    const val hopEXTRACTORY = 238
+    const val hopEXTRACTORX = 306
+    const val hopEXTRACTORY = 377
     // ========================================
     // SORTING COORDINATES
     // ========================================
