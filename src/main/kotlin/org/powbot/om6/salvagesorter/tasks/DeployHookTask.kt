@@ -215,6 +215,7 @@ class DeployHookTask(script: SalvageSorter) : Task(script) {
                 return false
             }
             script.logger.info("DEPLETED: World hop successful, logged in confirmed")
+            Condition.sleep(Random.nextInt(1200,1800))
 
             // Step 3: Walk to Hook
             script.logger.info("DEPLETED: Walking to hook location")
