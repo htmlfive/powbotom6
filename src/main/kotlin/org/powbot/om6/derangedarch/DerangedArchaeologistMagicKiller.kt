@@ -14,6 +14,7 @@ import org.powbot.om6.derangedarch.utils.ScriptUtils
     description = "Must have ring of dueling in inventory to start.",
     version = "2.4.2",
     author = "0m6",
+    scriptId = "8ef6deaa-5064-4456-b6ab-504360bf3b9b",
     category = ScriptCategory.Combat
 )
 @ScriptConfiguration.List(

@@ -22,8 +22,11 @@ import org.powbot.webwalk.tasks.WalkTask
     description = Constants.SCRIPT_DESCRIPTION,
     version = Constants.SCRIPT_VERSION,
     author = Constants.SCRIPT_AUTHOR,
+    scriptId = "0198cd7c-1d7f-4f94-8b2c-d3e1bdc976bc",
     category = ScriptCategory.Other
-)
+
+
+    )
 @ScriptConfiguration.List(
     [
         ScriptConfiguration(

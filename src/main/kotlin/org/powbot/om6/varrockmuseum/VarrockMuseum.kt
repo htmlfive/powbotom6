@@ -41,6 +41,7 @@ import org.powbot.om6.varrockmuseum.VarrockMuseumUtils.waitUntil
     description = "Collects and cleans finds at the Varrock Museum. Requires Specimen Brush, Rock pick, Trowel in INV and Leather boots & gloves equipped. Start in the area. Make sure the deposit in crate dialogue is set to Don't ask again.",
     version = "1.0.0",
     author = "0m6",
+    scriptId = "2067b5fa-a81a-41c8-844d-37eb7f41b65d",
     category = ScriptCategory.Minigame
 )
 @ScriptConfiguration.List(

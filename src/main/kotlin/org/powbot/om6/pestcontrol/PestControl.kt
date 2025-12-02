@@ -37,6 +37,7 @@ import org.powbot.om6.pestcontrol.task.*
     name = "0m6 PestControl",
     description = "Plays the pest control minigame, start geared up",
     version = "1.0.0",
+    scriptId = "5a74316f-e6c0-4c23-abad-4c9c89258a68",
     category = ScriptCategory.Minigame,
     markdownFileName = "pestcontrol.md"
 )

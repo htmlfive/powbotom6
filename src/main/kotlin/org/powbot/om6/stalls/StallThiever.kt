@@ -38,6 +38,7 @@ data class StallThieverConfig(
     description = Constants.Script.DESCRIPTION,
     version = Constants.Script.VERSION,
     author = Constants.Script.AUTHOR,
+    scriptId = "5a9626a1-3db0-4270-b447-c2d1dc98af66",
     category = ScriptCategory.Thieving
 )
 @ScriptConfiguration.List(
