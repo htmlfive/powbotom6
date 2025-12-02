@@ -10,6 +10,27 @@ import org.powbot.mobile.script.ScriptManager
 import org.powbot.om6.salvagesorter.SalvageSorter
 
 // ========================================
+// LOGGING UTILITY FUNCTIONS
+// ========================================
+
+/**
+ * Logs a message at the specified level and shows a notification.
+ * @param script The SalvageSorter script instance
+ * @param level The log level (e.g., "info", "warn", "error")
+ * @param message The message to log and display
+ */
+fun log(script: SalvageSorter, level: String, message: String) {
+    when (level.lowercase()) {
+        "info" -> script.logger.info(message)
+        "warn" -> script.logger.warn(message)
+        "error" -> script.logger.error(message)
+        "debug" -> script.logger.debug(message)
+        else -> script.logger.info(message)
+    }
+    Notifications.showNotification(message)
+}
+
+// ========================================
 // WIDGET UTILITY FUNCTIONS
 // ========================================
 
@@ -354,3 +375,4 @@ fun retryAction(maxRetries: Int, delayMs: Int, action: () -> Boolean): Boolean {
     }
     return false
 }
+

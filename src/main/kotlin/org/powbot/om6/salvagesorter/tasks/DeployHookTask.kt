@@ -91,6 +91,7 @@ class DeployHookTask(script: SalvageSorter) : Task(script) {
      * @return true if hook was deployed successfully
      */
     private fun hookSalvage(): Boolean {
+
         // Skip deposit logic in Power Salvage Mode - DropSalvageTask handles it
         if (!script.powerSalvageMode) {
             if (Inventory.isFull() && !script.cargoHoldFull) {
@@ -130,6 +131,7 @@ class DeployHookTask(script: SalvageSorter) : Task(script) {
             messageFound = Condition.wait({ script.hookCastMessageFound }, 30, 120)
 
             if (messageFound) {
+                script.atWithdrawSpot = true
                 script.logger.info("HOOK: Cast message confirmed on attempt $attempt")
                 break
             }
@@ -143,6 +145,7 @@ class DeployHookTask(script: SalvageSorter) : Task(script) {
         if (messageFound) {
             script.logger.info("HOOK: Success. Waiting for inventory to fill...")
             script.hookingSalvageBool = true
+            script.atWithdrawSpot = true
             script.salvageMessageFound = false
 
             while (!Inventory.isFull()) {

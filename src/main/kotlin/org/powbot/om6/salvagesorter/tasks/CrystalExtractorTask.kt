@@ -28,6 +28,12 @@ class CrystalExtractorTask(script: SalvageSorter) : Task(script) {
             return false
         }
 
+        // Don't activate if at salvaing spot during but not confirmed salvgaing phase
+        if (script.currentPhase == SalvagePhase.SALVAGING && !script.hookingSalvageBool) {
+            script.logger.debug("ACTIVATE: Skipping extractor - at withdraw spot, need to walk back first.")
+            return false
+        }
+
         // High Priority: Chat Message Override
         if (script.harvesterMessageFound) {
             script.logger.debug("ACTIVATE: Active due to Harvester message override during ${script.currentPhase.name}.")
@@ -76,8 +82,8 @@ class CrystalExtractorTask(script: SalvageSorter) : Task(script) {
         while (attempt < maxRetries) {
             attempt++
             try {
-                val x = 307
-                val y = 231
+                val x = 297
+                val y = 274
 
                 CameraSnapper.snapCameraToDirection(script.cameraDirection, script)
 
