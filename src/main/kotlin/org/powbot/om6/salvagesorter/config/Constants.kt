@@ -47,7 +47,11 @@ object Constants {
 
     const val HOP_X = 791
     const val HOP_Y = 63
+    const val INITEXTRACTORX = 314
+    const val INITEXTRACTORY = 238
 
+    const val hopEXTRACTORX = 314
+    const val hopEXTRACTORY = 238
     // ========================================
     // SORTING COORDINATES
     // ========================================

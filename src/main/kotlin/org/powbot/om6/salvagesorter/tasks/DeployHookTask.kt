@@ -275,7 +275,7 @@ class DeployHookTask(script: SalvageSorter) : Task(script) {
 
 
             if (script.enableExtractor) {
-                if (clickAtCoordinates(311, 379, "Harvest", "Activate")) {
+                if (clickAtCoordinates(Constants.hopEXTRACTORX, Constants.hopEXTRACTORY, "Harvest", "Activate")) {
                     val waitTime = Random.nextInt(2400, 3000)
                     script.logger.info("WAIT: Extractor tap successful. Waiting $waitTime ms.")
                     Condition.sleep(waitTime)
