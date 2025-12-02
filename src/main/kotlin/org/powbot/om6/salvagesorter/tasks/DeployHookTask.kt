@@ -206,6 +206,11 @@ class DeployHookTask(script: SalvageSorter) : Task(script) {
             Condition.sleep(Random.nextInt(600,900))
             tapWithOffset(Constants.HOP_X, Constants.HOP_Y, 4)
             Condition.sleep(Random.nextInt(600,900))
+            if (script.tapToDrop) {
+                Condition.sleep(Random.nextInt(50,90))
+                tapWithOffset(41, 283, 4)
+                Condition.sleep(Random.nextInt(50,90))
+            }
             // Assign Ghost
             script.logger.info("ASSIGNMENTS: Starting Ghost assignment sequence.")
 
@@ -279,7 +284,7 @@ class DeployHookTask(script: SalvageSorter) : Task(script) {
                 }
             }
 
-            script.logger.info("HOOK: Hopped worlds. Transitioning to SETUP_SALVAGING.")
+            script.logger.info("HOOK: Hopped worlds.")
             script.currentPhase = SalvagePhase.SALVAGING
             script.hookingSalvageBool = false
             return true
