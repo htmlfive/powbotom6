@@ -207,9 +207,7 @@ class DeployHookTask(script: SalvageSorter) : Task(script) {
             tapWithOffset(Constants.HOP_X, Constants.HOP_Y, 4)
             Condition.sleep(Random.nextInt(600,900))
             if (script.tapToDrop) {
-                Condition.sleep(Random.nextInt(50,90))
-                tapWithOffset(41, 283, 4)
-                Condition.sleep(Random.nextInt(50,90))
+                Game.setMouseActionToggled(true)
             }
             // Assign Ghost
             script.logger.info("ASSIGNMENTS: Starting Ghost assignment sequence.")

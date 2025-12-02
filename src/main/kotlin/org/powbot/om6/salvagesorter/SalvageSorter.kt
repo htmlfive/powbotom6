@@ -227,12 +227,20 @@ class SalvageSorter : AbstractScript() {
             Condition.wait({ Camera.zoom == Constants.TARGET_ZOOM_LEVEL }, 100, 20)
             Condition.sleep(Random.nextInt(600, 1200))
         }
-
-        initialCoinCount = currentCoinCount
+        if (tapToDrop){Game.setMouseActionToggled(true)} else {Game.setMouseActionToggled(false)}
+            initialCoinCount = currentCoinCount
         logger.info("INIT: Tracking coins. Initial total GP (Inventory Only): $initialCoinCount")
         extractorTimer = 5L
         phaseStartTime = System.currentTimeMillis()
         currentPhase = SalvagePhase.IDLE
+
+        if (enableExtractor) {
+            if (clickAtCoordinates(314, 238, "Harvest", "Activate")) {
+                val waitTime = org.powbot.api.Random.nextInt(2400, 3000)
+                logger.info("WAIT: Extractor tap successful. Waiting $waitTime ms.")
+                Condition.sleep(waitTime)
+            }
+        }
 
         // Check if the user wants to start in SORTING mode (or if inventory is full)
         val startInSortingMode = startSorting
@@ -288,6 +296,7 @@ class SalvageSorter : AbstractScript() {
                 zoomTask.execute()
                 return
             }
+            if (tapToDrop){Game.setMouseActionToggled(true)} else {Game.setMouseActionToggled(false)}
 
             // Extractor Check (Always highest priority)
             val extractorTask = allTasks.firstOrNull { it is CrystalExtractorTask && it.activate() }
