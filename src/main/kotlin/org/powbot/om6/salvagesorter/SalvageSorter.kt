@@ -235,13 +235,12 @@ class SalvageSorter : AbstractScript() {
         currentPhase = SalvagePhase.IDLE
 
         if (enableExtractor) {
-            if (clickAtCoordinates(314, 238, "Harvest", "Activate")) {
+            if (clickAtCoordinates(Constants.INITEXTRACTORX, Constants.INITEXTRACTORY, "Harvest", "Activate")) {
                 val waitTime = org.powbot.api.Random.nextInt(2400, 3000)
                 logger.info("WAIT: Extractor tap successful. Waiting $waitTime ms.")
                 Condition.sleep(waitTime)
             }
         }
-
         // Check if the user wants to start in SORTING mode (or if inventory is full)
         val startInSortingMode = startSorting
 
