@@ -43,7 +43,7 @@ object VarrockMuseumConstants {
         "Ranged" to 4,
         "Magic" to 5,
         "Defense" to 6,
-        //"Sailing" to 7,
+        "Sailing" to 7,
         "Hitpoints" to 8,
         "Prayer" to 9,
         "Agility" to 10,
@@ -71,7 +71,7 @@ object VarrockMuseumConstants {
         "Ranged" to Skill.Ranged,
         "Magic" to Skill.Magic,
         "Defense" to Skill.Defence,
-        //"Sailing" to Skill.Sailing,
+        "Sailing" to Skill.Overall, //Change to Sailing when fixed
         "Hitpoints" to Skill.Hitpoints,
         "Prayer" to Skill.Prayer,
         "Agility" to Skill.Agility,
