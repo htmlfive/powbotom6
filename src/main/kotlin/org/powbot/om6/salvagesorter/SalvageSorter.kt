@@ -43,7 +43,7 @@ import org.powbot.api.script.ScriptConfiguration.List as ConfigList
         ScriptConfiguration(
             "Hop Worlds",
             "Hop Worlds: If true, enables the hopping of worlds if salvaging depleted",
-            optionType = OptionType.BOOLEAN, defaultValue = "true"
+            optionType = OptionType.BOOLEAN, defaultValue = "false"
         ),
         ScriptConfiguration(
             "Cargo Hopper",
@@ -240,7 +240,8 @@ class SalvageSorter : AbstractScript() {
                 String.format("%,d GP", gain)
             }
             .addString("Salvage in Cargo (Approx)") { cargoHoldCount.toString() }
-            .addString("Hops") { hops.toString() }
+            .addString("Hops") { if(hopWorlds){hops.toString() } else "DISABLED"}
+            .addString("At Withdraw Spot") { if (atWithdrawSpot) "YES" else "NO" }
             .build()
         addPaint(paint)
 

@@ -139,8 +139,8 @@ fun tapWithOffset(x: Int, y: Int, offsetRange: Int = 3): Boolean {
  * @return true if successful, false otherwise
  */
 fun clickAtCoordinates(screenX: Int, screenY: Int, vararg actions: String): Boolean {
-    val randomX = screenX + Random.nextInt(-5, 5)
-    val randomY = screenY + Random.nextInt(-5, 5)
+    val randomX = screenX + Random.nextInt(-3, 3)
+    val randomY = screenY + Random.nextInt(-3, 3)
     val point = Point(randomX, randomY)
 
     Game.setSingleTapToggle(true)

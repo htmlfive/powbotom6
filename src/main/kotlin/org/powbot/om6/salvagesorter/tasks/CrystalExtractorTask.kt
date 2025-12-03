@@ -85,26 +85,25 @@ class CrystalExtractorTask(script: SalvageSorter) : Task(script) {
             attempt++
             try {
                 val (x, y) = if (script.atWithdrawSpot) {
-                    Constants.EXTRACTOR_HOOK_X to Constants.EXTRACTOR_HOOK_Y
+                    //Constants.EXTRACTOR_HOOK_X to Constants.EXTRACTOR_HOOK_Y
+                    Constants.EXTRACTOR_genX to Constants.EXTRACTOR_genY
                 } else {
-                    Constants.EXTRACTOR_SORT_X to Constants.EXTRACTOR_SORT_Y
+                    //Constants.EXTRACTOR_SORT_X to Constants.EXTRACTOR_SORT_Y
+                    Constants.EXTRACTOR_genX to Constants.EXTRACTOR_genY
                 }
-                val randomOffsetX = Random.nextInt(-6, 6)
-                val randomOffsetY = Random.nextInt(-6, 6)
-                val finalX = x + randomOffsetX
-                val finalY = y + randomOffsetY
+
                 script.harvesterMessageFound = false
 
-                script.logger.info("ACTION: Executing extractor tap at X=$finalX, Y=$finalY (Offset: $randomOffsetX, $randomOffsetY). [Attempt $attempt/$maxRetries]")
+                script.logger.info("ACTION: Executing extractor tap at X=$x, Y=$y. [Attempt $attempt/$maxRetries]")
 
-                if (clickAtCoordinates(finalX, finalY, "Harvest", "Activate")) {
+                if (clickAtCoordinates(x, y, "Harvest", "Activate")) {
                     val waitTime = Random.nextInt(2400, 3000)
                     script.logger.info("WAIT: Extractor tap successful. Waiting $waitTime ms.")
                     Condition.sleep(waitTime)
                     return true
                 }
 
-                script.logger.warn("FAIL: Failed to execute Input.tap() at ($finalX, $finalY). [Attempt $attempt/$maxRetries]")
+                script.logger.warn("FAIL: Failed to execute Input.tap() at ($x, $y). [Attempt $attempt/$maxRetries]")
 
                 if (attempt < maxRetries) {
                     val retryDelay = Random.nextInt(800, 1200)

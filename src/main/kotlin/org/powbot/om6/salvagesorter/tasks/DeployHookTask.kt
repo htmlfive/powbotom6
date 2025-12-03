@@ -130,7 +130,7 @@ class DeployHookTask(script: SalvageSorter) : Task(script) {
             }
             script.logger.info("HOOK: Attempt $attempt/3 - Tap executed, waiting for cast message")
 
-            messageFound = Condition.wait({ script.hookCastMessageFound }, 30, 120)
+            messageFound = Condition.wait({ script.hookCastMessageFound }, 600, 3)
 
             if (messageFound) {
                 script.atWithdrawSpot = true
@@ -244,6 +244,7 @@ class DeployHookTask(script: SalvageSorter) : Task(script) {
         script.logger.info("DEPLETED: Handled $dialoguesHandled dialogue(s)")
         
         if (script.hopWorlds) {
+            script.atWithdrawSpot = false
             script.logger.info("DEPLETED: Starting world hop sequence")
             
             // Step 2: Hop to random world
@@ -253,7 +254,7 @@ class DeployHookTask(script: SalvageSorter) : Task(script) {
                 return false
             }
             script.logger.info("DEPLETED: World hop successful, logged in confirmed")
-            Condition.sleep(Random.nextInt(600,900))
+            Condition.sleep(Random.nextInt(1200,1800))
             // Check Camera
             CameraSnapper.snapCameraToDirection(script.cameraDirection, script)
             // Step 3: Walk to Hook
@@ -303,6 +304,7 @@ class DeployHookTask(script: SalvageSorter) : Task(script) {
             script.currentPhase = SalvagePhase.SALVAGING
             script.hookingSalvageBool = false
             script.atHookLocation = true
+            script.atWithdrawSpot = true
             return true
         }
         

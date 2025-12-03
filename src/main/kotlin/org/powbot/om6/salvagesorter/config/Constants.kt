@@ -55,9 +55,10 @@ object Constants {
 
     const val EXTRACTOR_SORT_X = 313
     const val EXTRACTOR_SORT_Y = 238
-
-    const val EXTRACTOR_HOOK_X = 302
-    const val EXTRACTOR_HOOK_Y = 372
+    const val EXTRACTOR_genX = 327
+    const val EXTRACTOR_genY = 283
+    const val EXTRACTOR_HOOK_X = 301
+    const val EXTRACTOR_HOOK_Y = 375
     // ========================================
     // SORTING COORDINATES
     // ========================================
