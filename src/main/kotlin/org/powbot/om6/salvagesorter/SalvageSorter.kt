@@ -235,6 +235,8 @@ class SalvageSorter : AbstractScript() {
             Condition.wait({ Camera.zoom == Constants.TARGET_ZOOM_LEVEL }, 100, 20)
             Condition.sleep(Random.nextInt(600, 1200))
         }
+        CameraSnapper.snapCameraToDirection(cameraDirection, this)
+
         //Enable Tap to Drop on Start
         if (tapToDrop){Game.setMouseActionToggled(true)} else {Game.setMouseActionToggled(false)}
 

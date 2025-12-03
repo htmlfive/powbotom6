@@ -137,8 +137,19 @@ class DeployHookTask(script: SalvageSorter) : Task(script) {
                 script.logger.info("HOOK: Cast message confirmed on attempt $attempt")
                 break
             }
-            if (script.hopWorlds && script.cargoHoldCount < script.cargoHopper.toInt() && Chat.canContinue()) {
-                return handleDepletedShipwreck()
+            if (Chat.canContinue()) {
+                if (script.cargoHoldCount < script.cargoHopper.toInt()) {
+                    if (script.hopWorlds) {
+                        return handleDepletedShipwreck()
+                    }
+                } else {
+                    // Cargo has enough items, switch to sorting instead of hopping
+                    script.logger.info("HOOK: Shipwreck depleted with ${script.cargoHoldCount} items. Switching to sorting.")
+                    script.cargoHoldFull = true
+                    script.currentPhase = SalvagePhase.SETUP_SORTING
+                    script.hookingSalvageBool = false
+                    return true
+                }
             }
             if (attempt < 3) {
                 script.logger.warn("HOOK: No confirmation on attempt $attempt. Retrying...")
@@ -161,8 +172,20 @@ class DeployHookTask(script: SalvageSorter) : Task(script) {
                     return false
                 }
 
-                if (script.hopWorlds && script.cargoHoldCount < script.cargoHopper.toInt() && Chat.canContinue()) {
-                    return handleDepletedShipwreck()
+                if (Chat.canContinue()) {
+                    if (script.cargoHoldCount < script.cargoHopper.toInt()) {
+                        if (script.hopWorlds) {
+                            return handleDepletedShipwreck()
+                        }
+                    } else {
+                        // Cargo has 30+ items, switch to sorting instead of hopping
+                        script.logger.info("HOOK: Shipwreck depleted with ${script.cargoHoldCount} items. Switching to sorting.")
+                        script.salvageMessageFound = false
+                        script.hookingSalvageBool = false
+                        script.cargoHoldFull = true
+                        script.currentPhase = SalvagePhase.SETUP_SORTING
+                        return false
+                    }
                 }
 
                 if (extractorTask.checkAndExecuteInterrupt(script)) {
@@ -181,7 +204,25 @@ class DeployHookTask(script: SalvageSorter) : Task(script) {
             script.hookingSalvageBool = false
 
             if (Chat.canContinue()) {
-                return handleDepletedShipwreck()
+                if (script.cargoHoldCount < script.cargoHopper.toInt()) {
+                    if (script.hopWorlds) {
+                        return handleDepletedShipwreck()
+                    } else {
+                        // Hop disabled, transition to sorting
+                        script.logger.info("HOOK: Shipwreck depleted. Hop disabled, switching to sorting.")
+                        script.cargoHoldFull = true
+                        script.currentPhase = SalvagePhase.SETUP_SORTING
+                        script.hookingSalvageBool = false
+                        return true
+                    }
+                } else {
+                    // Cargo has enough items, switch to sorting instead of hopping
+                    script.logger.info("HOOK: Shipwreck depleted with ${script.cargoHoldCount} items. Switching to sorting.")
+                    script.cargoHoldFull = true
+                    script.currentPhase = SalvagePhase.SETUP_SORTING
+                    script.hookingSalvageBool = false
+                    return true
+                }
             } else {
                 script.logger.error("HOOK: No confirmation after 3 attempts. Stopping.")
                 Notifications.showNotification("HOOK: No confirmation after 3 attempts. Stopping.")
