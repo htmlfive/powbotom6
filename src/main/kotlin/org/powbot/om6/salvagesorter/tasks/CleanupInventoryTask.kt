@@ -43,8 +43,6 @@ class CleanupInventoryTask(script: SalvageSorter) : Task(script) {
 
         if (extractorTask.checkAndExecuteInterrupt(script)) return
 
-        // FIX: Always transition to SALVAGING upon success (when not sorting)
-        // This ensures the script returns to the primary task loop (DeployHookTask)
         script.currentPhase = if (success) SalvagePhase.SALVAGING else SalvagePhase.CLEANING
 
         script.logger.info("PHASE: Cleanup complete/failed. Transitioned to ${script.currentPhase.name}.")

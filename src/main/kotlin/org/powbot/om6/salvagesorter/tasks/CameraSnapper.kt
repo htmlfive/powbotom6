@@ -15,19 +15,19 @@ object CameraSnapper {
 
     fun snapCameraToDirection(direction: CardinalDirection, script: SalvageSorter) {
         val yawNeeded = direction.yaw
-        val COMPASS_ACTION = direction.action
+        val compassAction = direction.action
         script.logger.info("LOGIC: Attempting to snap camera to ${direction.name} (Yaw: $yawNeeded). Current Yaw: ${Camera.yaw()}, Current Pitch: ${Camera.pitch()}")
 
         val isPitchIncorrect = Camera.pitch() !in PITCH_MIN..PITCH_MAX
 
         if (Camera.yaw() != yawNeeded || isPitchIncorrect) {
-            script.logger.info("CHECK: Yaw is ${Camera.yaw()}, does not match target $COMPASS_ACTION ($yawNeeded).")
+            script.logger.info("CHECK: Yaw is ${Camera.yaw()}, does not match target $compassAction ($yawNeeded).")
 
             val compassComponent = Widgets.widget(COMPASS_WIDGET_ID).component(COMPASS_COMPONENT_INDEX)
             script.logger.info("WIDGET: Checking compass component $COMPASS_WIDGET_ID:$COMPASS_COMPONENT_INDEX (Valid: ${compassComponent.valid()}).")
 
-            if (compassComponent.valid() && compassComponent.click(COMPASS_ACTION)) {
-                script.logger.info("ACTION: Successfully clicked compass with action '$COMPASS_ACTION'. Waiting for yaw stabilization.")
+            if (compassComponent.valid() && compassComponent.click(compassAction)) {
+                script.logger.info("ACTION: Successfully clicked compass with action '$compassAction'. Waiting for yaw stabilization.")
                 val snapSuccess = Condition.wait({ Camera.yaw() == yawNeeded }, 100, 10)
                 if (snapSuccess) {
                     script.logger.info("SUCCESS: Camera yaw stabilized at $yawNeeded.")
@@ -38,10 +38,10 @@ object CameraSnapper {
                 script.logger.info("SLEEP: Sleeping for $sleepTime ms after snap attempt.")
                 Condition.sleep(sleepTime)
             } else {
-                script.logger.warn("FAIL: Failed to find or click compass component $COMPASS_WIDGET_ID:$COMPASS_COMPONENT_INDEX for action '$COMPASS_ACTION'.")
+                script.logger.warn("FAIL: Failed to find or click compass component $COMPASS_WIDGET_ID:$COMPASS_COMPONENT_INDEX for action '$compassAction'.")
             }
         } else {
-            script.logger.info("CHECK: Already facing $COMPASS_ACTION ($yawNeeded). No snap action needed.")
+            script.logger.info("CHECK: Already facing $compassAction ($yawNeeded). No snap action needed.")
         }
     }
 }

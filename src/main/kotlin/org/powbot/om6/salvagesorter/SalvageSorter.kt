@@ -43,6 +43,12 @@ import org.powbot.api.script.ScriptConfiguration.List as ConfigList
             optionType = OptionType.BOOLEAN, defaultValue = "true"
         ),
         ScriptConfiguration(
+            "Cargo Hopper",
+            "Cargo Hop: Hop if this amount of salvage in cargo or less",
+            optionType = OptionType.STRING,
+            defaultValue = "30"
+        ),
+        ScriptConfiguration(
             "Salvage Item Name",
             "Salvage Item Name: The exact name of the item dropped after salvaging the shipwreck.",
             optionType = OptionType.STRING,
@@ -84,7 +90,7 @@ class SalvageSorter : AbstractScript() {
     val extractorInterval: Long = 64000L
     val cameraDirectionStr: String get() = getOption<String>("Camera Direction")
     val cameraDirection: CardinalDirection get() = CardinalDirection.valueOf(cameraDirectionStr)
-
+    val cargoHopper: String get() = getOption<String>("Cargo Hopper")
     var hookingSalvageBool = false
     var salvageMessageFound = false
     var atHookLocation = false

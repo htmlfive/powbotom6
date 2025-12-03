@@ -102,15 +102,15 @@ class WithdrawCargoTask(script: SalvageSorter) : Task(script) {
      * @return Status (0 = failed, -1 = cargo depleted, 1 = success)
      */
     private fun executeWithdrawCargo(): Int {
-        val MAX_RETRIES = 3
-        val DELAY_MS = 500
+        val maxRetries = 3
+        val delayMs = 500
 
         CameraSnapper.snapCameraToDirection(script.cameraDirection, script)
         script.logger.info("WITHDRAW: Starting 4-step cargo withdrawal sequence.")
 
         // Step 1: Open cargo interface
         script.logger.info("WITHDRAW: Step 1 - Opening cargo interface")
-        val step1Success = retryAction(MAX_RETRIES, DELAY_MS) {
+        val step1Success = retryAction(maxRetries, delayMs) {
             clickAtCoordinates(Constants.CARGO_OPEN_X, Constants.CARGO_OPEN_Y, Constants.CARGO_OPEN_MENUOPTION)
         }
 
@@ -165,7 +165,7 @@ class WithdrawCargoTask(script: SalvageSorter) : Task(script) {
 
         // Step 4: Walk back to sorting position
         script.logger.info("WITHDRAW: Step 4 - Walking back to sorting position")
-        val step4Success = retryAction(MAX_RETRIES, 750) { // Use a slightly longer delay for movement
+        val step4Success = retryAction(maxRetries, 750) { // Use a slightly longer delay for movement
             clickAtCoordinates(Constants.CARGO_WALKBACK_X, Constants.CARGO_WALKBACK_Y, Constants.CARGO_WALKBACK_MENUOPTION)
         }
 

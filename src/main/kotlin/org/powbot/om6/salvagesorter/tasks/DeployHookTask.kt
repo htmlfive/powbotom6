@@ -137,8 +137,7 @@ class DeployHookTask(script: SalvageSorter) : Task(script) {
                 script.logger.info("HOOK: Cast message confirmed on attempt $attempt")
                 break
             }
-
-            if (Chat.canContinue()) {
+            if (script.hopWorlds && script.cargoHoldCount < script.cargoHopper.toInt() && Chat.canContinue()) {
                 return handleDepletedShipwreck()
             }
             if (attempt < 3) {
@@ -162,7 +161,7 @@ class DeployHookTask(script: SalvageSorter) : Task(script) {
                     return false
                 }
 
-                if (Chat.canContinue()) {
+                if (script.hopWorlds && script.cargoHoldCount < script.cargoHopper.toInt() && Chat.canContinue()) {
                     return handleDepletedShipwreck()
                 }
 

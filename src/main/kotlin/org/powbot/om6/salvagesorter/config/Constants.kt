@@ -52,6 +52,12 @@ object Constants {
 
     const val hopEXTRACTORX = 306
     const val hopEXTRACTORY = 377
+
+    const val EXTRACTOR_SORT_X = 313
+    const val EXTRACTOR_SORT_Y = 238
+
+    const val EXTRACTOR_HOOK_X = 302
+    const val EXTRACTOR_HOOK_Y = 372
     // ========================================
     // SORTING COORDINATES
     // ========================================
@@ -73,8 +79,6 @@ object Constants {
     /** Y coordinate for walking to sorting location from hook */
     const val SORT_WALK_TO_Y = 490
 
-    const val EXTRACTOR_X = 297
-    const val EXTRACTOR_Y = 274
 
     // ========================================
     // CAMERA SETTINGS

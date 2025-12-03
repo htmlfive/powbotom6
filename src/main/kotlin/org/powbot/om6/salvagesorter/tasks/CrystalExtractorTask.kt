@@ -28,7 +28,10 @@ class CrystalExtractorTask(script: SalvageSorter) : Task(script) {
             script.logger.debug("ACTIVATE: Skipping extractor - at withdraw spot, need to walk back first.")
             return false
         }
-
+        if (isWidgetVisible(Constants.ROOT_CARGO_WIDGET, Constants.COMPONENT_DEPOSIT_SALVAGE)){
+            script.logger.debug("ACTIVATE: Skipping extractor - in menu")
+            return false
+        }
         // Don't activate if at salvaging spot during but not confirmed salvgaing phase
         if (script.currentPhase == SalvagePhase.SALVAGING && !script.hookingSalvageBool && !script.atWithdrawSpot ) {
             script.logger.debug("ACTIVATE: Skipping extractor - at withdraw spot, need to walk back first.")
@@ -56,7 +59,6 @@ class CrystalExtractorTask(script: SalvageSorter) : Task(script) {
     override fun execute() {
         val isOverride = script.harvesterMessageFound
 
-        // SAVE the phase BEFORE executing extractor tap
         val phaseBeforeInterrupt = script.currentPhase
 
         script.logger.info("ACTION: Starting Extractor Tap sequence (Override: $isOverride). Saving phase: $phaseBeforeInterrupt")
@@ -66,7 +68,6 @@ class CrystalExtractorTask(script: SalvageSorter) : Task(script) {
             script.extractorTimer = System.currentTimeMillis()
             script.logger.info("SUCCESS: Extractor tap complete. Timer reset.")
 
-            // RESTORE the phase we were in before the interrupt
             script.currentPhase = phaseBeforeInterrupt
             script.logger.info("PHASE: Restored phase to $phaseBeforeInterrupt after extractor interrupt.")
 
@@ -83,13 +84,15 @@ class CrystalExtractorTask(script: SalvageSorter) : Task(script) {
         while (attempt < maxRetries) {
             attempt++
             try {
-
-                CameraSnapper.snapCameraToDirection(script.cameraDirection, script)
-
+                val (x, y) = if (script.atWithdrawSpot) {
+                    Constants.EXTRACTOR_HOOK_X to Constants.EXTRACTOR_HOOK_Y
+                } else {
+                    Constants.EXTRACTOR_SORT_X to Constants.EXTRACTOR_SORT_Y
+                }
                 val randomOffsetX = Random.nextInt(-6, 6)
                 val randomOffsetY = Random.nextInt(-6, 6)
-                val finalX = Constants.EXTRACTOR_X + randomOffsetX
-                val finalY = Constants.EXTRACTOR_Y + randomOffsetY
+                val finalX = x + randomOffsetX
+                val finalY = y + randomOffsetY
                 script.harvesterMessageFound = false
 
                 script.logger.info("ACTION: Executing extractor tap at X=$finalX, Y=$finalY (Offset: $randomOffsetX, $randomOffsetY). [Attempt $attempt/$maxRetries]")
