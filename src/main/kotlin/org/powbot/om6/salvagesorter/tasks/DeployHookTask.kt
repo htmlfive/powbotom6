@@ -145,9 +145,10 @@ class DeployHookTask(script: SalvageSorter) : Task(script) {
                 } else {
                     // Cargo has enough items, switch to sorting instead of hopping
                     script.logger.info("HOOK: Shipwreck depleted with ${script.cargoHoldCount} items. Switching to sorting.")
+                    script.salvageMessageFound = false
+                    script.hookingSalvageBool = false
                     script.cargoHoldFull = true
                     script.currentPhase = SalvagePhase.SETUP_SORTING
-                    script.hookingSalvageBool = false
                     return true
                 }
             }
