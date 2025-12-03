@@ -61,6 +61,7 @@ class SetupSortingTask(script: SalvageSorter) : Task(script) {
             return false
         }
 
+        Condition.sleep(Random.nextInt(1200,1800))
 
         script.atSortLocation = true
         script.logger.info("WALK_SORT: Arrived at sort location.")
