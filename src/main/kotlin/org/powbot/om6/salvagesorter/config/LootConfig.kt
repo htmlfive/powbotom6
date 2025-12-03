@@ -1,7 +1,7 @@
 package org.powbot.om6.salvagesorter.config
 
 object LootConfig {
-    val DROP_LIST = arrayOf(
+    val dropList = arrayOf(
         //Fremennik
         "Raw lobster", "Raw tuna", "Raw monkfish", "Raw salmon",
         "Mithril ore", "Arctic pine logs", "Ensouled troll head", "Mahogany plank",
@@ -16,12 +16,15 @@ object LootConfig {
         "Uncut jade", "Uncut opal", "Uncut red topaz", "Silver bar", "Silk"
     )
 
-    val ALCH_LIST = arrayOf(
+    val alchList = arrayOf(
         //Fremennik
         "Fremennik helm", "Berserker helm", "Archer helm", "Farseer helm", "Warrior helm",
         // Opulent
         "Rune javelin", "Rune spear", "Dragon spear", "Shield left half","Ironwood repair kit"
     )
 
-    val DISCARD_OR_ALCH_LIST = DROP_LIST + ALCH_LIST
+    val discardOrAlchList = dropList + alchList
+    fun getDropListAsString(): String = dropList.joinToString(", ")
+    fun getAlchListAsString(): String = alchList.joinToString(", ")
+    fun getDiscardOrAlchListAsString(): String = discardOrAlchList.joinToString(", ")
 }

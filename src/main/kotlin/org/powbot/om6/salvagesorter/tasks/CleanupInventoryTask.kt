@@ -22,14 +22,14 @@ class CleanupInventoryTask(script: SalvageSorter) : Task(script) {
         if (script.powerSalvageMode) {
             if (hasSalvage) return false
 
-            val hasJunk = Inventory.stream().name(*LootConfig.DISCARD_OR_ALCH_LIST).isNotEmpty()
+            val hasJunk = Inventory.stream().name(*LootConfig.discardOrAlchList).isNotEmpty()
             return hasJunk
         }
 
         // Normal mode: Don't activate if we still have salvage to process
         if (hasSalvage) return false
 
-        val hasCleanupLoot = Inventory.stream().name(*LootConfig.DISCARD_OR_ALCH_LIST).isNotEmpty()
+        val hasCleanupLoot = Inventory.stream().name(*LootConfig.discardOrAlchList).isNotEmpty()
         return hasCleanupLoot
     }
 
@@ -59,7 +59,7 @@ class CleanupInventoryTask(script: SalvageSorter) : Task(script) {
         val highAlchSpell = Magic.Spell.HIGH_ALCHEMY
         script.logger.info("CLEANUP: Starting alching loop.")
 
-        LootConfig.ALCH_LIST.forEach { itemName ->
+        LootConfig.alchList.forEach { itemName ->
             val item = Inventory.stream().name(itemName).firstOrNull()
             if (item != null && item.valid()) {
                 script.logger.info("CLEANUP: Attempting High Alch on $itemName.")
@@ -86,7 +86,7 @@ class CleanupInventoryTask(script: SalvageSorter) : Task(script) {
         }
 
         val shuffledDroppableItems = Inventory.stream()
-            .filter { item -> item.valid() && item.name() in LootConfig.DROP_LIST }
+            .filter { item -> item.valid() && item.name() in LootConfig.dropList }
             .toList()
             .shuffled(KotlinRandom)
 

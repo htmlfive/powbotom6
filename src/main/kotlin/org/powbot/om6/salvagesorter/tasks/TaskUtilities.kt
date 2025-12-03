@@ -396,6 +396,7 @@ fun hopToRandomWorld(script: SalvageSorter) {
     val validWorlds = Worlds.stream()
         .filtered {
             it.type() == World.Type.MEMBERS && it.population < 1000 &&
+                    it.server() == World.Server.NORTH_AMERICA &&
                     it.specialty() != World.Specialty.BOUNTY_HUNTER &&
                     it.specialty() != World.Specialty.PVP &&
                     it.specialty() != World.Specialty.TARGET_WORLD &&
@@ -408,6 +409,7 @@ fun hopToRandomWorld(script: SalvageSorter) {
                     it.specialty() != World.Specialty.SPEEDRUNNING &&
                     it.specialty() != World.Specialty.FRESH_START &&
                     it.specialty() != World.Specialty.TRADE
+
         }
         .toList()
         .shuffled()

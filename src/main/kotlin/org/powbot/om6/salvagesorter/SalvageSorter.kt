@@ -13,8 +13,11 @@ import org.powbot.api.script.paint.PaintBuilder
 import org.powbot.mobile.script.ScriptManager
 import org.powbot.om6.salvagesorter.config.CardinalDirection
 import org.powbot.om6.salvagesorter.config.Constants
+import org.powbot.om6.salvagesorter.config.LootConfig
+import org.powbot.om6.salvagesorter.config.LootConfig.alchList
 import org.powbot.om6.salvagesorter.config.SalvagePhase
 import org.powbot.om6.salvagesorter.tasks.*
+import kotlin.collections.joinToString
 import kotlin.random.Random
 import org.powbot.api.script.ScriptConfiguration.List as ConfigList
 
@@ -71,6 +74,18 @@ import org.powbot.api.script.ScriptConfiguration.List as ConfigList
             optionType = OptionType.STRING,
             defaultValue = "210"
         ),
+//        ScriptConfiguration(
+//            "Alch List",
+//            "Alch List: What you want to alch.",
+//            optionType = OptionType.STRING,
+//            defaultValue = "210"
+//        ),
+//        ScriptConfiguration(
+//            "Drop List",
+//            "Drop List: What you want to drop.",
+//            optionType = OptionType.STRING,
+//            defaultValue = "210"
+//        ),
         ScriptConfiguration(
             "Camera Direction",
             "Camera Direction: The camera direction required for fixed-screen tap locations during salvaging, sorting, and extractor tapping. Req. Camera Vertical Setting in OSRS Settings. Set zoom to max all the way in",
@@ -80,6 +95,7 @@ import org.powbot.api.script.ScriptConfiguration.List as ConfigList
     ]
 )
 class SalvageSorter : AbstractScript() {
+
     val maxCargoSpace: String get() = getOption<String>("Max Cargo Space")
     val powerSalvageMode: Boolean get() = getOption<Boolean>("Power Salvage Mode")
     val hopWorlds: Boolean get() = getOption<Boolean>("Hop Worlds")

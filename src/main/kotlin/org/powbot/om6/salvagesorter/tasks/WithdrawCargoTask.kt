@@ -17,7 +17,7 @@ class WithdrawCargoTask(script: SalvageSorter) : Task(script) {
 
         // Don't activate if we have salvage or junk in inventory
         val hasSalvage = Inventory.stream().name(script.salvageName).isNotEmpty()
-        val hasJunk = Inventory.stream().name(*LootConfig.DISCARD_OR_ALCH_LIST).isNotEmpty()
+        val hasJunk = Inventory.stream().name(*LootConfig.discardOrAlchList).isNotEmpty()
 
         if (hasSalvage || hasJunk) return false
 
@@ -119,8 +119,8 @@ class WithdrawCargoTask(script: SalvageSorter) : Task(script) {
             return 0
         }
         script.logger.info("WITHDRAW: Step 1 - Cargo tap successful")
-
-        if (!Condition.wait({ isWidgetVisible(Constants.ROOT_CARGO_WIDGET, Constants.COMPONENT_WITHDRAW, Constants.INDEX_FIRST_SLOT) }, 100, 30)) {
+        Condition.sleep(600)
+        if (!Condition.wait({ isWidgetVisible(Constants.ROOT_CARGO_WIDGET, Constants.COMPONENT_WITHDRAW, Constants.INDEX_FIRST_SLOT) }, 600, 6)) {
             script.logger.warn("WITHDRAW: Withdraw widget did not become visible")
             return 0
         }
@@ -136,7 +136,7 @@ class WithdrawCargoTask(script: SalvageSorter) : Task(script) {
 
         Condition.sleep(600)
 
-        if (!Condition.wait({ Inventory.stream().name(script.salvageName).isNotEmpty() }, 100, 30)) {
+        if (!Condition.wait({ Inventory.stream().name(script.salvageName).isNotEmpty() }, 600,6)) {
             script.logger.warn("WITHDRAW: No salvage appeared in inventory after withdraw")
             // Don't return yet - continue to close the interface
         } else {
@@ -157,7 +157,7 @@ class WithdrawCargoTask(script: SalvageSorter) : Task(script) {
 
         Condition.sleep(600)
 
-        if (!Condition.wait({ !isWidgetVisible(Constants.ROOT_CARGO_WIDGET, Constants.COMPONENT_WITHDRAW, Constants.INDEX_FIRST_SLOT) }, 100, 30)) {
+        if (!Condition.wait({ !isWidgetVisible(Constants.ROOT_CARGO_WIDGET, Constants.COMPONENT_WITHDRAW, Constants.INDEX_FIRST_SLOT) }, 600,6)) {
             script.logger.warn("WITHDRAW: Cargo widget did not close properly")
             return 0
         }

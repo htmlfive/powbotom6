@@ -59,8 +59,8 @@ class DepositCargoTask(script: SalvageSorter) : Task(script) {
             return false
         }
         script.logger.info("DEPOSIT: Step 1 - Cargo tap successful")
-
-        if (!Condition.wait({ isWidgetVisible(Constants.ROOT_CARGO_WIDGET, Constants.COMPONENT_DEPOSIT_SALVAGE) }, 100, 30)) {
+        Condition.sleep(600)
+        if (!Condition.wait({ isWidgetVisible(Constants.ROOT_CARGO_WIDGET, Constants.COMPONENT_DEPOSIT_SALVAGE) }, 600,6)) {
             script.logger.warn("DEPOSIT: Deposit widget did not become visible")
             return false
         }
@@ -90,7 +90,7 @@ class DepositCargoTask(script: SalvageSorter) : Task(script) {
 
         Condition.sleep(600)
 
-        if (!Condition.wait({ !isWidgetVisible(Constants.ROOT_CARGO_WIDGET, Constants.COMPONENT_WITHDRAW, Constants.INDEX_FIRST_SLOT) }, 100, 30)) {
+        if (!Condition.wait({ !isWidgetVisible(Constants.ROOT_CARGO_WIDGET, Constants.COMPONENT_WITHDRAW, Constants.INDEX_FIRST_SLOT) }, 600, 6)) {
             script.logger.warn("DEPOSIT: Cargo widget did not close properly")
             return false
         }
