@@ -4,6 +4,7 @@ import org.powbot.api.*
 import org.powbot.api.rt4.*
 import org.powbot.mobile.script.ScriptManager
 import org.powbot.om6.salvagesorter.SalvageSorter
+import org.powbot.om6.salvagesorter.config.Constants
 
 // ========================================
 // LOGGING UTILITY FUNCTIONS
@@ -130,6 +131,13 @@ fun tapWithOffset(x: Int, y: Int, offsetRange: Int = 3): Boolean {
     val finalY = y + Random.nextInt(-offsetRange, offsetRange + 1)
     return Input.tap(finalX, finalY)
 }
+/**
+ *  Checks if the cargo is open
+ * @return true if cargo is open, false if closed
+ */
+fun isCargoOpen(): Boolean {
+    return Widgets.widget(Constants.ROOT_CARGO_WIDGET).component(Constants.COMPONENT_CARGO_SPACE).visible()
+}
 
 /**
  * Clicks an object at specific screen coordinates and selects a menu action
@@ -138,6 +146,7 @@ fun tapWithOffset(x: Int, y: Int, offsetRange: Int = 3): Boolean {
  * @param actions The menu actions to try (e.g., "Deploy", "Take", "Use")
  * @return true if successful, false otherwise
  */
+
 fun clickAtCoordinates(screenX: Int, screenY: Int, vararg actions: String): Boolean {
     val randomX = screenX + Random.nextInt(-3, 3)
     val randomY = screenY + Random.nextInt(-3, 3)

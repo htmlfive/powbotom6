@@ -272,20 +272,20 @@ class DeployHookTask(script: SalvageSorter) : Task(script) {
             }
             script.logger.info("DEPLETED: Walk tap successful")
 
-
+            Condition.sleep(Random.nextInt(600,900))
             // Step 4: Enable tap-to-drop if configured
             if (script.tapToDrop) {
                 Game.setMouseActionToggled(true)
                 script.logger.info("DEPLETED: Tap-to-drop enabled")
             }
             
-            // Step 5: Assign Ghost
-            script.logger.info("DEPLETED: Assigning Ghost")
-            if (!setupTask.assignGhost()) {
-                script.logger.warn("DEPLETED: Failed to assign Ghost after world hop")
-                return false
-            }
-            script.logger.info("DEPLETED: Ghost assignment successful")
+//            // Step 5: Assign Ghost
+//            script.logger.info("DEPLETED: Assigning Ghost")
+//            if (!setupTask.assignGhost()) {
+//                script.logger.warn("DEPLETED: Failed to assign Ghost after world hop")
+//                return false
+//            }
+//            script.logger.info("DEPLETED: Ghost assignment successful")
             Condition.sleep(Random.nextInt(600,900))
             // Step 6: Activate Extractor (if enabled)
             if (script.enableExtractor) {

@@ -28,7 +28,7 @@ class CrystalExtractorTask(script: SalvageSorter) : Task(script) {
             script.logger.debug("ACTIVATE: Skipping extractor - at withdraw spot, need to walk back first.")
             return false
         }
-        if (isWidgetVisible(Constants.ROOT_CARGO_WIDGET, Constants.COMPONENT_DEPOSIT_SALVAGE)){
+        if (isCargoOpen()){
             script.logger.debug("ACTIVATE: Skipping extractor - in menu")
             return false
         }

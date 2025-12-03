@@ -89,7 +89,7 @@ import org.powbot.api.script.ScriptConfiguration.List as ConfigList
         ScriptConfiguration(
             "Camera Direction",
             "Camera Direction: The camera direction required for fixed-screen tap locations during salvaging, sorting, and extractor tapping. Req. Camera Vertical Setting in OSRS Settings. Set zoom to max all the way in",
-            optionType = OptionType.STRING, defaultValue = "North",
+            optionType = OptionType.STRING, defaultValue = "East",
             allowedValues = ["North", "East", "South", "West"]
         )
     ]
