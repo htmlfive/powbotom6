@@ -31,6 +31,17 @@ import org.powbot.api.script.ScriptConfiguration.List as ConfigList
 @ConfigList(
     [
         ScriptConfiguration(
+            "Camera Direction",
+            "Camera Direction: The camera direction required for fixed-screen tap locations during salvaging, sorting, and extractor tapping. Req. Camera Vertical Setting in OSRS Settings. Set zoom to max all the way in",
+            optionType = OptionType.STRING, defaultValue = "North",
+            allowedValues = ["North", "East", "South", "West"]
+        ),
+        ScriptConfiguration(
+            "Use Skiff",
+            "Use Skiff: If true, uses Skiff hop coordinates. If false, uses Sloop hop coordinates.",
+            optionType = OptionType.BOOLEAN, defaultValue = "true"
+        ),
+        ScriptConfiguration(
             "Power Salvage Mode",
             "Power Salvage Mode: If true, skips sorting entirely and simply drops all salvage when inventory is full. Useful for Raft/Skiff salvaging below level 50 without Salvaging station.",
             optionType = OptionType.BOOLEAN, defaultValue = "true"
@@ -39,6 +50,11 @@ import org.powbot.api.script.ScriptConfiguration.List as ConfigList
             "Enable Extractor",
             "Enable Extractor: If true, enables the automatic tapping of the Crystal Extractor every ~64 seconds.",
             optionType = OptionType.BOOLEAN, defaultValue = "false"
+        ),
+        ScriptConfiguration(
+            "Tap-to-drop",
+            "Tap-to-drop: If true, enabled tap-to-drop before starting",
+            optionType = OptionType.BOOLEAN, defaultValue = "true"
         ),
         ScriptConfiguration(
             "Hop Worlds",
@@ -52,11 +68,10 @@ import org.powbot.api.script.ScriptConfiguration.List as ConfigList
             defaultValue = "30"
         ),
         ScriptConfiguration(
-            "Salvage Item Name",
-            "Salvage Item Name: The exact name of the item dropped after salvaging the shipwreck.",
+            "Max Cargo Space",
+            "Max Cargo Space: The maximum cargo space you can hold.",
             optionType = OptionType.STRING,
-            defaultValue = "Barracuda salvage",
-            allowedValues = ["Small salvage", "Fishy salvage", "Barracuda salvage", "Large salvage", "Plundered salvage", "Martial salvage", "Fremennik salvage", "Opulent salvage"]
+            defaultValue = "210"
         ),
         ScriptConfiguration(
             "Start Sorting",
@@ -64,39 +79,109 @@ import org.powbot.api.script.ScriptConfiguration.List as ConfigList
             optionType = OptionType.BOOLEAN, defaultValue = "false"
         ),
         ScriptConfiguration(
-            "Tap-to-drop",
-            "Tap-to-drop: If true, enabled tap-to-drop before starting",
-            optionType = OptionType.BOOLEAN, defaultValue = "true"
-        ),
-        ScriptConfiguration(
-            "Max Cargo Space",
-            "Max Cargo Space: The maximum cargo space you can hold.",
+            "Salvage Item Name",
+            "Salvage Item Name: The exact name of the item dropped after salvaging the shipwreck.",
             optionType = OptionType.STRING,
-            defaultValue = "210"
-        ),
-//        ScriptConfiguration(
-//            "Alch List",
-//            "Alch List: What you want to alch.",
-//            optionType = OptionType.STRING,
-//            defaultValue = "210"
-//        ),
-//        ScriptConfiguration(
-//            "Drop List",
-//            "Drop List: What you want to drop.",
-//            optionType = OptionType.STRING,
-//            defaultValue = "210"
-//        ),
-        ScriptConfiguration(
-            "Camera Direction",
-            "Camera Direction: The camera direction required for fixed-screen tap locations during salvaging, sorting, and extractor tapping. Req. Camera Vertical Setting in OSRS Settings. Set zoom to max all the way in",
-            optionType = OptionType.STRING, defaultValue = "North",
-            allowedValues = ["North", "East", "South", "West"]
+            defaultValue = "Barracuda salvage",
+            allowedValues = ["Small salvage", "Fishy salvage", "Barracuda salvage", "Large salvage", "Plundered salvage", "Martial salvage", "Fremennik salvage", "Opulent salvage"]
         ),
         ScriptConfiguration(
-            "Use Skiff",
-            "Use Skiff: If true, uses Skiff hop coordinates. If false, uses Sloop hop coordinates.",
-            optionType = OptionType.BOOLEAN, defaultValue = "true"
-        )
+            "Small Drop List",
+            "Items to DROP for Small salvage (comma-separated). Edit or clear to customize.",
+            optionType = OptionType.STRING,
+            defaultValue = LootConfig.SMALL_DROP_LIST_STRING
+        ),
+        ScriptConfiguration(
+            "Small Alch List",
+            "Items to ALCH for Small salvage (comma-separated). Edit or add items as needed.",
+            optionType = OptionType.STRING,
+            defaultValue = LootConfig.SMALL_ALCH_LIST_STRING
+        ),
+        ScriptConfiguration(
+            "Fishy Drop List",
+            "Items to DROP for Fishy salvage (comma-separated). Edit or clear to customize.",
+            optionType = OptionType.STRING,
+            defaultValue = LootConfig.FISHY_DROP_LIST_STRING
+        ),
+        ScriptConfiguration(
+            "Fishy Alch List",
+            "Items to ALCH for Fishy salvage (comma-separated). Edit or add items as needed.",
+            optionType = OptionType.STRING,
+            defaultValue = LootConfig.FISHY_ALCH_LIST_STRING
+        ),
+        ScriptConfiguration(
+            "Barracuda Drop List",
+            "Items to DROP for Barracuda salvage (comma-separated). Edit or clear to customize.",
+            optionType = OptionType.STRING,
+            defaultValue = LootConfig.BARRACUDA_DROP_LIST_STRING
+        ),
+        ScriptConfiguration(
+            "Barracuda Alch List",
+            "Items to ALCH for Barracuda salvage (comma-separated). Edit or add items as needed.",
+            optionType = OptionType.STRING,
+            defaultValue = LootConfig.BARRACUDA_ALCH_LIST_STRING
+        ),
+        ScriptConfiguration(
+            "Large Drop List",
+            "Items to DROP for Large salvage (comma-separated). Edit or clear to customize.",
+            optionType = OptionType.STRING,
+            defaultValue = LootConfig.LARGE_DROP_LIST_STRING
+        ),
+        ScriptConfiguration(
+            "Large Alch List",
+            "Items to ALCH for Large salvage (comma-separated). Edit or add items as needed.",
+            optionType = OptionType.STRING,
+            defaultValue = LootConfig.LARGE_ALCH_LIST_STRING
+        ),
+        ScriptConfiguration(
+            "Plundered Drop List",
+            "Items to DROP for Plundered salvage (comma-separated). Edit or clear to customize.",
+            optionType = OptionType.STRING,
+            defaultValue = LootConfig.PLUNDERED_DROP_LIST_STRING
+        ),
+        ScriptConfiguration(
+            "Plundered Alch List",
+            "Items to ALCH for Plundered salvage (comma-separated). Edit or add items as needed.",
+            optionType = OptionType.STRING,
+            defaultValue = LootConfig.PLUNDERED_ALCH_LIST_STRING
+        ),
+        ScriptConfiguration(
+            "Martial Drop List",
+            "Items to DROP for Martial salvage (comma-separated). Edit or clear to customize.",
+            optionType = OptionType.STRING,
+            defaultValue = LootConfig.MARTIAL_DROP_LIST_STRING
+        ),
+        ScriptConfiguration(
+            "Martial Alch List",
+            "Items to ALCH for Martial salvage (comma-separated). Edit or add items as needed.",
+            optionType = OptionType.STRING,
+            defaultValue = LootConfig.MARTIAL_ALCH_LIST_STRING
+        ),
+        ScriptConfiguration(
+            "Fremennik Drop List",
+            "Items to DROP for Fremennik salvage (comma-separated). Edit or clear to customize.",
+            optionType = OptionType.STRING,
+            defaultValue = LootConfig.FREMENNIK_DROP_LIST_STRING
+        ),
+        ScriptConfiguration(
+            "Fremennik Alch List",
+            "Items to ALCH for Fremennik salvage (comma-separated). Edit or add items as needed.",
+            optionType = OptionType.STRING,
+            defaultValue = LootConfig.FREMENNIK_ALCH_LIST_STRING
+        ),
+        ScriptConfiguration(
+            "Opulent Drop List",
+            "Items to DROP for Opulent salvage (comma-separated). Edit or clear to customize.",
+            optionType = OptionType.STRING,
+            defaultValue = LootConfig.OPULENT_DROP_LIST_STRING
+        ),
+        ScriptConfiguration(
+            "Opulent Alch List",
+            "Items to ALCH for Opulent salvage (comma-separated). Edit or add items as needed.",
+            optionType = OptionType.STRING,
+            defaultValue = LootConfig.OPULENT_ALCH_LIST_STRING
+        ),
+
     ]
 )
 class SalvageSorter : AbstractScript() {
@@ -114,9 +199,72 @@ class SalvageSorter : AbstractScript() {
     val cargoHopper: String get() = getOption<String>("Cargo Hopper")
     val useSkiff: Boolean get() = getOption<Boolean>("Use Skiff")
     
+    // Salvage-specific custom lists
+    val smallDropList: String get() = getOption<String>("Small Drop List")
+    val smallAlchList: String get() = getOption<String>("Small Alch List")
+    val fishyDropList: String get() = getOption<String>("Fishy Drop List")
+    val fishyAlchList: String get() = getOption<String>("Fishy Alch List")
+    val barracudaDropList: String get() = getOption<String>("Barracuda Drop List")
+    val barracudaAlchList: String get() = getOption<String>("Barracuda Alch List")
+    val largeDropList: String get() = getOption<String>("Large Drop List")
+    val largeAlchList: String get() = getOption<String>("Large Alch List")
+    val plunderedDropList: String get() = getOption<String>("Plundered Drop List")
+    val plunderedAlchList: String get() = getOption<String>("Plundered Alch List")
+    val martialDropList: String get() = getOption<String>("Martial Drop List")
+    val martialAlchList: String get() = getOption<String>("Martial Alch List")
+    val fremennikDropList: String get() = getOption<String>("Fremennik Drop List")
+    val fremennikAlchList: String get() = getOption<String>("Fremennik Alch List")
+    val opulentDropList: String get() = getOption<String>("Opulent Drop List")
+    val opulentAlchList: String get() = getOption<String>("Opulent Alch List")
+    
     // Helper methods to get the correct hop coordinates based on ship type
     val hopX: Int get() = if (useSkiff) Constants.SKIFF_HOP_X else Constants.SLOOP_HOP_X
     val hopY: Int get() = if (useSkiff) Constants.SKIFF_HOP_Y else Constants.SLOOP_HOP_Y
+    
+    // Helper methods to get drop/alch lists (uses prepopulated GUI values)
+    fun getDropList(): Array<String> {
+        val customList = when (salvageName) {
+            "Small salvage" -> smallDropList
+            "Fishy salvage" -> fishyDropList
+            "Barracuda salvage" -> barracudaDropList
+            "Large salvage" -> largeDropList
+            "Plundered salvage" -> plunderedDropList
+            "Martial salvage" -> martialDropList
+            "Fremennik salvage" -> fremennikDropList
+            "Opulent salvage" -> opulentDropList
+            else -> ""
+        }.trim()
+        
+        return if (customList.isNotEmpty()) {
+            customList.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toTypedArray()
+        } else {
+            emptyArray()
+        }
+    }
+    
+    fun getAlchList(): Array<String> {
+        val customList = when (salvageName) {
+            "Small salvage" -> smallAlchList
+            "Fishy salvage" -> fishyAlchList
+            "Barracuda salvage" -> barracudaAlchList
+            "Large salvage" -> largeAlchList
+            "Plundered salvage" -> plunderedAlchList
+            "Martial salvage" -> martialAlchList
+            "Fremennik salvage" -> fremennikAlchList
+            "Opulent salvage" -> opulentAlchList
+            else -> ""
+        }.trim()
+        
+        return if (customList.isNotEmpty()) {
+            customList.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toTypedArray()
+        } else {
+            emptyArray()
+        }
+    }
+    
+    fun getDiscardOrAlchList(): Array<String> {
+        return getDropList() + getAlchList()
+    }
     
     var hookingSalvageBool = false
     var salvageMessageFound = false
@@ -208,6 +356,12 @@ class SalvageSorter : AbstractScript() {
         if (tapToDrop){Game.setMouseToggleAction(Game.MouseToggleAction.DROP)}
 
         Condition.sleep(Random.nextInt(600, 1200))
+
+        // Log configuration
+        logger.info("===== LOOT CONFIGURATION FOR: $salvageName =====")
+        logger.info("Active Drop List: ${getDropList().joinToString(", ")}")
+        logger.info("Active Alch List: ${getAlchList().joinToString(", ")}")
+        logger.info("=================================================")
 
         initialCoinCount = currentCoinCount
         logger.info("INIT: Tracking coins. Initial total GP (Inventory Only): $initialCoinCount")
@@ -373,9 +527,17 @@ class SalvageSorter : AbstractScript() {
 
                         // Priority 3: Withdraw more salvage from cargo to continue sorting
                         else -> {
-                            logger.debug("STATE: At sort location, no salvage, withdrawing")
+                            logger.debug("STATE: At sort location, no salvage, need to withdraw")
+                            // Set phase BEFORE selecting task so activation check passes
                             currentPhase = SalvagePhase.WITHDRAWING
-                            allTasks.firstOrNull { it is WithdrawCargoTask }
+                            val withdrawTask = allTasks.firstOrNull { it is WithdrawCargoTask }
+                            if (withdrawTask?.activate() == true) {
+                                withdrawTask
+                            } else {
+                                logger.warn("STATE: WithdrawCargoTask activation failed, staying in IDLE")
+                                currentPhase = SalvagePhase.IDLE
+                                null
+                            }
                         }
                     }
                 }

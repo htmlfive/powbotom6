@@ -17,7 +17,7 @@ class WithdrawCargoTask(script: SalvageSorter) : Task(script) {
 
         // Don't activate if we have salvage or junk in inventory
         val hasSalvage = Inventory.stream().name(script.salvageName).isNotEmpty()
-        val hasJunk = Inventory.stream().name(*LootConfig.discardOrAlchList).isNotEmpty()
+        val hasJunk = Inventory.stream().name(*script.getDiscardOrAlchList()).isNotEmpty()
 
         if (hasSalvage || hasJunk) return false
 
