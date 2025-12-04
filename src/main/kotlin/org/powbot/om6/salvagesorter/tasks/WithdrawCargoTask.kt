@@ -103,28 +103,15 @@ class WithdrawCargoTask(script: SalvageSorter) : Task(script) {
      */
     private fun executeWithdrawCargo(): Int {
         val maxRetries = 3
-        val delayMs = 500
+        val delayMs = 750
 
-        CameraSnapper.snapCameraToDirection(script.cameraDirection, script)
+        snapCameraAndWait(script)
         script.logger.info("WITHDRAW: Starting 4-step cargo withdrawal sequence.")
 
         // Step 1: Open cargo interface
-        script.logger.info("WITHDRAW: Step 1 - Opening cargo interface")
-        val step1Success = retryAction(maxRetries, delayMs) {
-            clickAtCoordinates(Constants.CARGO_OPEN_X, Constants.CARGO_OPEN_Y, Constants.CARGO_OPEN_MENUOPTION)
-        }
-
-        if (!step1Success) {
-            script.logger.warn("WITHDRAW: Step 1 - Failed to tap cargo interface after retries")
+        if (!openCargoInterfaceAtSort(script)) {
             return 0
         }
-        script.logger.info("WITHDRAW: Step 1 - Cargo tap successful")
-        Condition.sleep(600)
-        if (!Condition.wait({ isWidgetVisible(Constants.ROOT_CARGO_WIDGET, Constants.COMPONENT_WITHDRAW, Constants.INDEX_FIRST_SLOT) }, 600, 6)) {
-            script.logger.warn("WITHDRAW: Withdraw widget did not become visible")
-            return 0
-        }
-        script.logger.info("WITHDRAW: Step 1 - Withdraw widget confirmed visible")
 
         // Step 2: Click withdraw button
         script.logger.info("WITHDRAW: Step 2 - Clicking withdraw salvage button")
@@ -148,20 +135,9 @@ class WithdrawCargoTask(script: SalvageSorter) : Task(script) {
         script.logger.info("WITHDRAW: Read cargo count from widget: $actualCargoCount")
 
         // Step 3: Close cargo interface
-        script.logger.info("WITHDRAW: Step 3 - Closing cargo interface")
-        if (!clickWidgetWithRetry(Constants.ROOT_CARGO_WIDGET, Constants.COMPONENT_CLOSE, Constants.INDEX_CLOSE, logPrefix = "WITHDRAW: Step 3", script = script)) {
-            script.logger.warn("WITHDRAW: Failed to click close button after retries")
+        if (!closeCargoInterface(script)) {
             return 0
         }
-        script.logger.info("WITHDRAW: Step 3 - Close button clicked successfully")
-
-        Condition.sleep(600)
-
-        if (!Condition.wait({ !isWidgetVisible(Constants.ROOT_CARGO_WIDGET, Constants.COMPONENT_WITHDRAW, Constants.INDEX_FIRST_SLOT) }, 600,6)) {
-            script.logger.warn("WITHDRAW: Cargo widget did not close properly")
-            return 0
-        }
-        script.logger.info("WITHDRAW: Step 3 - Cargo widget confirmed closed")
 
         // Step 4: Walk back to sorting position
         script.logger.info("WITHDRAW: Step 4 - Walking back to sorting position")

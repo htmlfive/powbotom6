@@ -398,6 +398,225 @@ fun retryAction(maxRetries: Int, delayMs: Int, action: () -> Boolean): Boolean {
 }
 
 // ========================================
+// CAMERA UTILITY FUNCTIONS
+// ========================================
+
+/**
+ * Snaps camera to direction and sleeps.
+ * @param script The SalvageSorter script instance
+ * @param minSleep Minimum sleep time in milliseconds (default: 600)
+ * @param maxSleep Maximum sleep time in milliseconds (default: 1200)
+ */
+fun snapCameraAndWait(script: SalvageSorter, minSleep: Int = 600, maxSleep: Int = 1200) {
+    CameraSnapper.snapCameraToDirection(script.cameraDirection, script)
+    Condition.sleep(Random.nextInt(minSleep, maxSleep))
+}
+
+// ========================================
+// CARGO INTERFACE UTILITY FUNCTIONS
+// ========================================
+
+/**
+ * Opens the cargo interface at hook location.
+ * @param script The SalvageSorter script instance
+ * @return true if cargo interface opened successfully
+ */
+fun openCargoInterfaceAtHook(script: SalvageSorter): Boolean {
+    script.logger.info("CARGO: Opening cargo interface at hook location")
+    if (!clickAtCoordinates(Constants.HOOK_CARGO_OPEN_X, Constants.HOOK_CARGO_OPEN_Y, Constants.HOOK_CARGO_MENUOPTION)) {
+        script.logger.warn("CARGO: Failed to tap cargo interface")
+        return false
+    }
+    script.logger.info("CARGO: Cargo tap successful")
+    Condition.sleep(600)
+    if (!Condition.wait({ isWidgetVisible(Constants.ROOT_CARGO_WIDGET, Constants.COMPONENT_DEPOSIT_SALVAGE) }, 600, 6)) {
+        script.logger.warn("CARGO: Deposit widget did not become visible")
+        return false
+    }
+    script.logger.info("CARGO: Deposit widget confirmed visible")
+    return true
+}
+
+/**
+ * Opens the cargo interface at sorting location.
+ * @param script The SalvageSorter script instance
+ * @return true if cargo interface opened successfully
+ */
+fun openCargoInterfaceAtSort(script: SalvageSorter): Boolean {
+    script.logger.info("CARGO: Opening cargo interface at sorting location")
+    if (!clickAtCoordinates(Constants.CARGO_OPEN_X, Constants.CARGO_OPEN_Y, Constants.CARGO_OPEN_MENUOPTION)) {
+        script.logger.warn("CARGO: Failed to tap cargo interface")
+        return false
+    }
+    script.logger.info("CARGO: Cargo tap successful")
+    Condition.sleep(600)
+    if (!Condition.wait({ isWidgetVisible(Constants.ROOT_CARGO_WIDGET, Constants.COMPONENT_WITHDRAW, Constants.INDEX_FIRST_SLOT) }, 600, 6)) {
+        script.logger.warn("CARGO: Withdraw widget did not become visible")
+        return false
+    }
+    script.logger.info("CARGO: Withdraw widget confirmed visible")
+    return true
+}
+
+/**
+ * Closes the cargo interface.
+ * @param script The SalvageSorter script instance
+ * @return true if cargo interface closed successfully
+ */
+fun closeCargoInterface(script: SalvageSorter): Boolean {
+    script.logger.info("CARGO: Closing cargo interface")
+    if (!clickWidgetWithRetry(Constants.ROOT_CARGO_WIDGET, Constants.COMPONENT_CLOSE, Constants.INDEX_CLOSE, logPrefix = "CARGO: Close", script = script)) {
+        script.logger.warn("CARGO: Failed to click close button after retries")
+        return false
+    }
+    script.logger.info("CARGO: Close button clicked successfully")
+
+    Condition.sleep(600)
+
+    if (!Condition.wait({ !isWidgetVisible(Constants.ROOT_CARGO_WIDGET, Constants.COMPONENT_WITHDRAW, Constants.INDEX_FIRST_SLOT) }, 600, 6)) {
+        script.logger.warn("CARGO: Cargo widget did not close properly")
+        return false
+    }
+    script.logger.info("CARGO: Cargo widget confirmed closed")
+    return true
+}
+
+/**
+ * Deposits salvage to cargo hold.
+ * @param script The SalvageSorter script instance
+ * @return true if deposit was successful
+ */
+fun depositSalvageToCargoHold(script: SalvageSorter): Boolean {
+    snapCameraAndWait(script, Constants.DEPOSIT_PRE_WAIT_MIN, Constants.DEPOSIT_PRE_WAIT_MAX)
+
+    val initialSalvageCount = Inventory.stream().name(script.salvageName).count()
+    script.logger.info("DEPOSIT: Starting deposit sequence. Initial salvage count: $initialSalvageCount")
+
+    // Step 1: Open cargo interface
+    if (!openCargoInterfaceAtHook(script)) {
+        return false
+    }
+
+    // Step 2: Click deposit button
+    script.logger.info("DEPOSIT: Clicking deposit salvage button")
+    if (!clickWidgetWithRetry(Constants.ROOT_CARGO_WIDGET, Constants.COMPONENT_DEPOSIT_SALVAGE, logPrefix = "DEPOSIT", script = script)) {
+        script.logger.warn("DEPOSIT: Failed to click deposit button after retries")
+        return false
+    }
+    script.logger.info("DEPOSIT: Deposit button clicked successfully")
+
+    Condition.sleep(Random.nextInt(Constants.WIDGET_INTERACTION_MIN, Constants.WIDGET_INTERACTION_MAX))
+
+    // Read the actual cargo count from widget before closing
+    val actualCargoCount = WidgetUtils.getNumber(Constants.ROOT_CARGO_WIDGET, Constants.COMPONENT_CARGO_SPACE)
+    script.logger.info("DEPOSIT: Read cargo count from widget: $actualCargoCount")
+
+    // Step 3: Close cargo interface
+    if (!closeCargoInterface(script)) {
+        return false
+    }
+
+    val finalSalvageCount = Inventory.stream().name(script.salvageName).count()
+    val depositedCount = (initialSalvageCount - finalSalvageCount).toInt()
+
+    if (finalSalvageCount < initialSalvageCount) {
+        script.cargoHoldCount = actualCargoCount
+
+        // Check if we still have salvage left in inventory after deposit (partial deposit = cargo full)
+        if (finalSalvageCount > 0) {
+            script.cargoHoldFull = true
+            script.cargoHoldCount = script.maxCargoSpace.toInt()
+            script.logger.info("DEPOSIT: PARTIAL - Deposited $depositedCount items, but $finalSalvageCount remain. Cargo is FULL. Set count to ${script.maxCargoSpace}.")
+        }
+        // Flag cargo as full if within 30 of max capacity for earlier transition
+        else if (script.cargoHoldCount >= (script.maxCargoSpace.toLong() - 30L)) {
+            script.cargoHoldFull = true
+            script.logger.info("DEPOSIT: SUCCESS - Deposited $depositedCount items. Cargo count: ${script.cargoHoldCount}. Near capacity (within 30), flagging as full.")
+        } else {
+            script.cargoHoldFull = false
+            script.logger.info("DEPOSIT: SUCCESS - Deposited $depositedCount items. Cargo count: ${script.cargoHoldCount}")
+        }
+        script.logger.info("DEPOSIT: Deposit sequence complete")
+        return true
+    } else {
+        script.cargoHoldFull = true
+        script.cargoHoldCount = actualCargoCount
+        script.logger.warn("DEPOSIT: FAILED - Cargo FULL (no items deposited). Cargo count: ${script.cargoHoldCount}.")
+        return false
+    }
+}
+
+// ========================================
+// CREW ASSIGNMENT UTILITY FUNCTIONS
+// ========================================
+
+/**
+ * Opens the sailing tab and waits for assign widget.
+ * @param script The SalvageSorter script instance
+ * @return true if sailing tab opened successfully
+ */
+fun openSailingTab(script: SalvageSorter): Boolean {
+    script.logger.info("ASSIGNMENTS: Opening sailing tab")
+    if (!clickWidgetWithRetry(Constants.ROOT_SAILINGTAB, Constants.COMPONENT_SAILINGTAB, logPrefix = "ASSIGNMENTS: Sailing Tab", script = script)) {
+        script.logger.warn("ASSIGNMENTS: Failed to click sailing tab after retries")
+        return false
+    }
+    script.logger.info("ASSIGNMENTS: Sailing tab clicked successfully")
+
+    Condition.sleep(Random.nextInt(Constants.WIDGET_INTERACTION_MIN, Constants.WIDGET_INTERACTION_MAX))
+
+    if (!Condition.wait({ isWidgetVisible(Constants.ROOT_ASSIGN_WIDGET, Constants.COMPONENT_ASSIGN_WIDGET) }, 100, 30)) {
+        script.logger.warn("ASSIGNMENTS: Assign widget did not become visible after opening tab")
+        clickWidget(Constants.ROOT_ASSIGN_WIDGET, Constants.COMPONENT_ASSIGN_WIDGETBACKBUTTON, Constants.INDEX_ASSIGNCONFIRM_BACKBUTTON)
+        Condition.sleep(600)
+        return false
+    }
+    script.logger.info("ASSIGNMENTS: Assign widget confirmed visible")
+    return true
+}
+
+/**
+ * Assigns a crew member to a specific slot.
+ * @param script The SalvageSorter script instance
+ * @param slotIndex The slot index to assign to
+ * @param confirmIndex The confirm button index to click
+ * @param slotName Human-readable slot name for logging
+ * @return true if assignment was successful
+ */
+fun assignCrewToSlot(script: SalvageSorter, slotIndex: Int, confirmIndex: Int, slotName: String): Boolean {
+    script.logger.info("ASSIGNMENTS: Clicking $slotName slot (Index $slotIndex)")
+    if (!clickWidgetWithRetry(Constants.ROOT_ASSIGN_WIDGET, Constants.COMPONENT_ASSIGN_WIDGET, slotIndex, logPrefix = "ASSIGNMENTS: $slotName", script = script)) {
+        script.logger.warn("ASSIGNMENTS: Failed to click $slotName slot after retries")
+        return false
+    }
+    script.logger.info("ASSIGNMENTS: $slotName slot clicked successfully")
+
+    Condition.sleep(Random.nextInt(Constants.WIDGET_INTERACTION_MIN, Constants.WIDGET_INTERACTION_MAX))
+
+    if (!Condition.wait({ isWidgetVisible(Constants.ROOT_ASSIGN_WIDGET, Constants.COMPONENT_ASSIGN_WIDGETCONFIRM) }, 100, 30)) {
+        script.logger.warn("ASSIGNMENTS: Confirm widget did not become visible after clicking $slotName slot")
+        return false
+    }
+    script.logger.info("ASSIGNMENTS: Confirm widget confirmed visible")
+
+    script.logger.info("ASSIGNMENTS: Confirming $slotName assignment")
+    if (!clickWidgetWithRetry(Constants.ROOT_ASSIGN_WIDGET, Constants.COMPONENT_ASSIGN_WIDGETCONFIRM, confirmIndex, logPrefix = "ASSIGNMENTS: $slotName Confirm", script = script)) {
+        script.logger.warn("ASSIGNMENTS: Failed to click $slotName confirm after retries")
+        return false
+    }
+    script.logger.info("ASSIGNMENTS: $slotName assignment confirmed successfully")
+
+    Condition.sleep(Random.nextInt(Constants.WIDGET_INTERACTION_MIN, Constants.WIDGET_INTERACTION_MAX))
+
+    if (!Condition.wait({ isWidgetVisible(Constants.ROOT_ASSIGN_WIDGET, Constants.COMPONENT_ASSIGN_WIDGET) }, 100, 30)) {
+        script.logger.warn("ASSIGNMENTS: Assign widget did not reappear after $slotName confirmation")
+        return false
+    }
+    script.logger.info("ASSIGNMENTS: Assign widget reappeared")
+    return true
+}
+
+// ========================================
 // WORLD HOPPING UTILITY FUNCTIONS
 // ========================================
 

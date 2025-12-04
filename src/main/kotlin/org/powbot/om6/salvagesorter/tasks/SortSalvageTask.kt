@@ -47,8 +47,7 @@ class SortSalvageTask(script: SalvageSorter) : Task(script) {
         val salvageItemName = script.salvageName
 
         // Setup camera and initial wait
-        CameraSnapper.snapCameraToDirection(script.cameraDirection, script)
-        Condition.sleep(Random.nextInt(Constants.SORT_PRE_TAP_MIN, Constants.SORT_PRE_TAP_MAX))
+        snapCameraAndWait(script, Constants.SORT_PRE_TAP_MIN, Constants.SORT_PRE_TAP_MAX)
 
         // Calculate tap coordinates with random offset
         val randomOffsetX = Random.nextInt(-Constants.SORT_BUTTON_TOLERANCE_X, Constants.SORT_BUTTON_TOLERANCE_X)

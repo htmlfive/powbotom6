@@ -23,100 +23,19 @@ class DepositCargoTask(script: SalvageSorter) : Task(script) {
         if (extractorTask.checkAndExecuteInterrupt(script)) return
 
         // Execute deposit - this will update script.cargoHoldFull
-        val success = depositSalvage()
+        val success = depositSalvageToCargoHold(script)
 
         // Check for extractor interrupt after action
         if (extractorTask.checkAndExecuteInterrupt(script)) return
 
         if (success) {
             script.logger.info("DEPOSIT: Deposit successful. Cargo hold accepting salvage.")
-            // cargoHoldFull = false (set by depositSalvage)
+            // cargoHoldFull = false (set by utility function)
             // Continue salvaging
         } else {
             script.logger.warn("DEPOSIT: Deposit failed - Cargo hold is FULL.")
-            // cargoHoldFull = true (set by depositSalvage)
+            // cargoHoldFull = true (set by utility function)
             // State machine will switch to SORTING phase
-        }
-    }
-
-    /**
-     * Deposits salvage to the cargo hold.
-     * @return true if deposit was successful
-     */
-    private fun depositSalvage(): Boolean
-    {
-
-        CameraSnapper.snapCameraToDirection(script.cameraDirection, script)
-        Condition.sleep(Random.nextInt(Constants.DEPOSIT_PRE_WAIT_MIN, Constants.DEPOSIT_PRE_WAIT_MAX))
-
-        val initialSalvageCount = Inventory.stream().name(script.salvageName).count()
-        script.logger.info("DEPOSIT: Starting 3-step deposit sequence. Initial salvage count: $initialSalvageCount")
-
-        // Step 1: Open cargo interface
-        script.logger.info("DEPOSIT: Step 1 - Opening cargo interface")
-        if (!clickAtCoordinates(Constants.HOOK_CARGO_OPEN_X, Constants.HOOK_CARGO_OPEN_Y, Constants.HOOK_CARGO_MENUOPTION)) {
-            script.logger.warn("DEPOSIT: Failed to tap cargo interface")
-            return false
-        }
-        script.logger.info("DEPOSIT: Step 1 - Cargo tap successful")
-        Condition.sleep(600)
-        if (!Condition.wait({ isWidgetVisible(Constants.ROOT_CARGO_WIDGET, Constants.COMPONENT_DEPOSIT_SALVAGE) }, 600,6)) {
-            script.logger.warn("DEPOSIT: Deposit widget did not become visible")
-            return false
-        }
-        script.logger.info("DEPOSIT: Step 1 - Deposit widget confirmed visible")
-
-        // Step 2: Click deposit button
-        script.logger.info("DEPOSIT: Step 2 - Clicking deposit salvage button")
-        if (!clickWidgetWithRetry(Constants.ROOT_CARGO_WIDGET, Constants.COMPONENT_DEPOSIT_SALVAGE, logPrefix = "DEPOSIT: Step 2", script = script)) {
-            script.logger.warn("DEPOSIT: Failed to click deposit button after retries")
-            return false
-        }
-        script.logger.info("DEPOSIT: Step 2 - Deposit button clicked successfully")
-
-        Condition.sleep(Random.nextInt(Constants.WIDGET_INTERACTION_MIN, Constants.WIDGET_INTERACTION_MAX))
-
-        // Read the actual cargo count from widget before closing
-        val actualCargoCount = WidgetUtils.getNumber(Constants.ROOT_CARGO_WIDGET, Constants.COMPONENT_CARGO_SPACE)
-        script.logger.info("DEPOSIT: Read cargo count from widget: $actualCargoCount")
-
-        // Step 3: Close cargo interface
-        script.logger.info("DEPOSIT: Step 3 - Closing cargo interface")
-        if (!clickWidgetWithRetry(Constants.ROOT_CARGO_WIDGET, Constants.COMPONENT_CLOSE, Constants.INDEX_CLOSE, logPrefix = "DEPOSIT: Step 3", script = script)) {
-            script.logger.warn("DEPOSIT: Failed to click close button after retries")
-            return false
-        }
-        script.logger.info("DEPOSIT: Step 3 - Close button clicked successfully")
-
-        Condition.sleep(600)
-
-        if (!Condition.wait({ !isWidgetVisible(Constants.ROOT_CARGO_WIDGET, Constants.COMPONENT_WITHDRAW, Constants.INDEX_FIRST_SLOT) }, 600, 6)) {
-            script.logger.warn("DEPOSIT: Cargo widget did not close properly")
-            return false
-        }
-        script.logger.info("DEPOSIT: Step 3 - Cargo widget confirmed closed")
-
-        val finalSalvageCount = Inventory.stream().name(script.salvageName).count()
-
-        if (finalSalvageCount < initialSalvageCount) {
-            // Update cargo count to actual value from widget
-            script.cargoHoldCount = actualCargoCount
-
-            // Flag cargo as full if within 30 of max capacity for earlier transition
-            if (script.cargoHoldCount >= (script.maxCargoSpace.toLong() - 30L)) {
-                script.cargoHoldFull = true
-                script.logger.info("DEPOSIT: SUCCESS - Cargo count (from widget): ${script.cargoHoldCount}. Near capacity (within 30), flagging as full.")
-            } else {
-                script.cargoHoldFull = false
-                script.logger.info("DEPOSIT: SUCCESS - Cargo count (from widget): ${script.cargoHoldCount}")
-            }
-            script.logger.info("DEPOSIT: Deposit sequence complete - all steps validated successfully")
-            return true
-        } else {
-            script.cargoHoldFull = true
-            script.cargoHoldCount = actualCargoCount // Use actual value even on failure
-            script.logger.warn("DEPOSIT: FAILED - Cargo FULL (no items deposited). Cargo count (from widget): ${script.cargoHoldCount}.")
-            return false
         }
     }
 }

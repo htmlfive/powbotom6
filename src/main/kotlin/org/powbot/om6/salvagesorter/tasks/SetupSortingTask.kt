@@ -48,8 +48,7 @@ class SetupSortingTask(script: SalvageSorter) : Task(script) {
             script.logger.warn("WALK_SORT: Failed to assign crew.")
             return false
         }
-        CameraSnapper.snapCameraToDirection(script.cameraDirection, script)
-        Condition.sleep(Random.nextInt(Constants.WALKTOSORT_CAMERA_MIN, Constants.WALKTOSORT_CAMERA_MAX))
+        snapCameraAndWait(script, Constants.WALKTOSORT_CAMERA_MIN, Constants.WALKTOSORT_CAMERA_MAX)
 
         script.logger.info("WALK_SORT: Tapping walk point.")
         val stepSuccess = retryAction(Random.nextInt(2,3), 750) {
@@ -75,98 +74,31 @@ class SetupSortingTask(script: SalvageSorter) : Task(script) {
     private fun assignBoth(): Boolean {
         script.logger.info("ASSIGNMENTS: Starting Sorting crew assignment sequence.")
 
-        // Step 1: Open Sailing Tab
-        script.logger.info("ASSIGNMENTS: Step 1 - Opening sailing tab")
-        if (!clickWidgetWithRetry(Constants.ROOT_SAILINGTAB, Constants.COMPONENT_SAILINGTAB, logPrefix = "ASSIGNMENTS: Step 1", script = script)) {
-            script.logger.warn("ASSIGNMENTS: Failed to click sailing tab after retries")
+        // Open sailing tab
+        if (!openSailingTab(script)) {
             return false
         }
-        script.logger.info("ASSIGNMENTS: Step 1 - Sailing tab clicked successfully")
-        
-        Condition.sleep(Random.nextInt(Constants.WIDGET_INTERACTION_MIN, Constants.WIDGET_INTERACTION_MAX))
-        
-        if (!Condition.wait({ isWidgetVisible(Constants.ROOT_ASSIGN_WIDGET, Constants.COMPONENT_ASSIGN_WIDGET) }, 100, 30)) {
-            script.logger.warn("ASSIGNMENTS: Assign widget did not become visible after opening tab")
-            clickWidget(Constants.ROOT_ASSIGN_WIDGET, Constants.COMPONENT_ASSIGN_WIDGETBACKBUTTON, Constants.INDEX_ASSIGNCONFIRM_BACKBUTTON)
-            Condition.sleep(600)
-            return false
-        }
-        script.logger.info("ASSIGNMENTS: Step 1 - Assign widget confirmed visible")
 
-        // Step 2: Scroll to sorting positions
-        script.logger.info("ASSIGNMENTS: Step 2 - Scrolling to sorting positions")
+        // Scroll to sorting positions
+        script.logger.info("ASSIGNMENTS: Scrolling to sorting positions")
         ScrollHelper.scrollTo(
             getItem = { Widgets.component(937, 25, 47) },
             getPane = { Widgets.component(937, 23) },
             getScrollComp = { Widgets.component(937, 32) }
         )
-        script.logger.info("ASSIGNMENTS: Step 2 - Scroll complete")
+        script.logger.info("ASSIGNMENTS: Scroll complete")
 
-        // Step 3: Click first sorting slot (Slot 2)
-        script.logger.info("ASSIGNMENTS: Step 3 - Clicking first sorting slot (Slot 2)")
-        if (!clickWidgetWithRetry(Constants.ROOT_ASSIGN_WIDGET, Constants.COMPONENT_ASSIGN_WIDGET, Constants.INDEX_ASSIGN_SLOT2, logPrefix = "ASSIGNMENTS: Step 3", script = script)) {
-            script.logger.warn("ASSIGNMENTS: Failed to click first sorting slot after retries")
+        // Assign first sorting crew to Slot 2
+        if (!assignCrewToSlot(script, Constants.INDEX_ASSIGN_SLOT2, Constants.INDEX_ASSIGNCONFIRM_SLOT1, "Sorter 1")) {
             return false
         }
-        script.logger.info("ASSIGNMENTS: Step 3 - First sorting slot clicked successfully")
-        
-        Condition.sleep(Random.nextInt(Constants.WIDGET_INTERACTION_MIN, Constants.WIDGET_INTERACTION_MAX))
-        
-        if (!Condition.wait({ isWidgetVisible(Constants.ROOT_ASSIGN_WIDGET, Constants.COMPONENT_ASSIGN_WIDGETCONFIRM) }, 100, 30)) {
-            script.logger.warn("ASSIGNMENTS: Confirm widget did not become visible after clicking first sorting slot")
-            return false
-        }
-        script.logger.info("ASSIGNMENTS: Step 3 - Confirm widget confirmed visible")
 
-        // Step 4: Confirm first sorting assignment
-        script.logger.info("ASSIGNMENTS: Step 4 - Confirming first sorting assignment")
-        if (!clickWidgetWithRetry(Constants.ROOT_ASSIGN_WIDGET, Constants.COMPONENT_ASSIGN_WIDGETCONFIRM, Constants.INDEX_ASSIGNCONFIRM_SLOT1, logPrefix = "ASSIGNMENTS: Step 4", script = script)) {
-            script.logger.warn("ASSIGNMENTS: Failed to click first sorting confirm after retries")
+        // Assign second sorting crew to Slot 1
+        if (!assignCrewToSlot(script, Constants.INDEX_ASSIGN_SLOT1, Constants.INDEX_ASSIGNCONFIRM_SLOT2, "Sorter 2")) {
             return false
         }
-        script.logger.info("ASSIGNMENTS: Step 4 - First sorting assignment confirmed successfully")
-        
-        Condition.sleep(Random.nextInt(Constants.WIDGET_INTERACTION_MIN, Constants.WIDGET_INTERACTION_MAX))
-        
-        if (!Condition.wait({ isWidgetVisible(Constants.ROOT_ASSIGN_WIDGET, Constants.COMPONENT_ASSIGN_WIDGET) }, 100, 30)) {
-            script.logger.warn("ASSIGNMENTS: Assign widget did not reappear after first sorting confirmation")
-            return false
-        }
-        script.logger.info("ASSIGNMENTS: Step 4 - Assign widget reappeared")
 
-        // Step 5: Click second sorting slot (Slot 1)
-        script.logger.info("ASSIGNMENTS: Step 5 - Clicking second sorting slot (Slot 1)")
-        if (!clickWidgetWithRetry(Constants.ROOT_ASSIGN_WIDGET, Constants.COMPONENT_ASSIGN_WIDGET, Constants.INDEX_ASSIGN_SLOT1, logPrefix = "ASSIGNMENTS: Step 5", script = script)) {
-            script.logger.warn("ASSIGNMENTS: Failed to click second sorting slot after retries")
-            return false
-        }
-        script.logger.info("ASSIGNMENTS: Step 5 - Second sorting slot clicked successfully")
-        
-        Condition.sleep(Random.nextInt(Constants.WIDGET_INTERACTION_MIN, Constants.WIDGET_INTERACTION_MAX))
-        
-        if (!Condition.wait({ isWidgetVisible(Constants.ROOT_ASSIGN_WIDGET, Constants.COMPONENT_ASSIGN_WIDGETCONFIRM) }, 100, 30)) {
-            script.logger.warn("ASSIGNMENTS: Confirm widget did not become visible after clicking second sorting slot")
-            return false
-        }
-        script.logger.info("ASSIGNMENTS: Step 5 - Confirm widget confirmed visible")
-
-        // Step 6: Confirm second sorting assignment
-        script.logger.info("ASSIGNMENTS: Step 6 - Confirming second sorting assignment")
-        if (!clickWidgetWithRetry(Constants.ROOT_ASSIGN_WIDGET, Constants.COMPONENT_ASSIGN_WIDGETCONFIRM, Constants.INDEX_ASSIGNCONFIRM_SLOT2, logPrefix = "ASSIGNMENTS: Step 6", script = script)) {
-            script.logger.warn("ASSIGNMENTS: Failed to click second sorting confirm after retries")
-            return false
-        }
-        script.logger.info("ASSIGNMENTS: Step 6 - Second sorting assignment confirmed successfully")
-        
-        Condition.sleep(Random.nextInt(Constants.WIDGET_INTERACTION_MIN, Constants.WIDGET_INTERACTION_MAX))
-        
-        if (!Condition.wait({ isWidgetVisible(Constants.ROOT_ASSIGN_WIDGET, Constants.COMPONENT_ASSIGN_WIDGET) }, 100, 30)) {
-            script.logger.warn("ASSIGNMENTS: Assign widget did not reappear after second sorting confirmation")
-            return false
-        }
-        script.logger.info("ASSIGNMENTS: Step 6 - Assign widget reappeared")
-
-        script.logger.info("ASSIGNMENTS: Sorting crew assignment sequence complete - all steps validated successfully")
+        script.logger.info("ASSIGNMENTS: Sorting crew assignment sequence complete")
         return true
     }
 }

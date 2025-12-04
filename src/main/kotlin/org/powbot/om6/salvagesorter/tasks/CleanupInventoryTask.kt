@@ -55,7 +55,7 @@ class CleanupInventoryTask(script: SalvageSorter) : Task(script) {
      private fun executeCleanupLoot(): Boolean {
         Game.setSingleTapToggle(false)
         var successfullyCleaned = false
-        CameraSnapper.snapCameraToDirection(script.cameraDirection, script)
+        snapCameraAndWait(script)
         val highAlchSpell = Magic.Spell.HIGH_ALCHEMY
         script.logger.info("CLEANUP: Starting alching loop.")
 
