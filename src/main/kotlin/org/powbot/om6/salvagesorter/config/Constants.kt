@@ -45,10 +45,28 @@ object Constants {
     /** Y coordinate for walking to hook location from sorting */
     const val HOOK_WALK_TO_Y = 188
 
-    const val HOP_X = 763 //Skiff
-    const val HOP_Y = 95 //Skiff
-/*    const val HOP_X = 791
-    const val HOP_Y = 63*/
+    // ========================================
+    // WORLD HOP COORDINATES
+    // ========================================
+    
+    /** X coordinate for world hop button on Skiff */
+    const val SKIFF_HOP_X = 763 //Update to tap minimap based on walking to hook
+    /** Y coordinate for world hop button on Skiff */
+    const val SKIFF_HOP_Y = 95 //Update to tap minimap based on walking to hook
+    
+    /** X coordinate for world hop button on Sloop */
+    const val SLOOP_HOP_X = 791 //Update to tap minimap based on walking to hook
+    /** Y coordinate for world hop button on Sloop */
+    const val SLOOP_HOP_Y = 63 //Update to tap minimap based on walking to hook
+    
+    /** Default HOP_X (Skiff) - will be overridden by getHopX() */
+    const val HOP_X = SKIFF_HOP_X
+    /** Default HOP_Y (Skiff) - will be overridden by getHopY() */
+    const val HOP_Y = SKIFF_HOP_Y
+    
+    // ========================================
+    // EXTRACTOR COORDINATES
+    // ========================================
     const val INITEXTRACTORX = 314
     const val INITEXTRACTORY = 238
 

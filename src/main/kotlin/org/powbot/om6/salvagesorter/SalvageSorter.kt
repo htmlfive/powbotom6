@@ -91,6 +91,11 @@ import org.powbot.api.script.ScriptConfiguration.List as ConfigList
             "Camera Direction: The camera direction required for fixed-screen tap locations during salvaging, sorting, and extractor tapping. Req. Camera Vertical Setting in OSRS Settings. Set zoom to max all the way in",
             optionType = OptionType.STRING, defaultValue = "North",
             allowedValues = ["North", "East", "South", "West"]
+        ),
+        ScriptConfiguration(
+            "Use Skiff",
+            "Use Skiff: If true, uses Skiff hop coordinates. If false, uses Sloop hop coordinates.",
+            optionType = OptionType.BOOLEAN, defaultValue = "true"
         )
     ]
 )
@@ -107,6 +112,12 @@ class SalvageSorter : AbstractScript() {
     val cameraDirectionStr: String get() = getOption<String>("Camera Direction")
     val cameraDirection: CardinalDirection get() = CardinalDirection.valueOf(cameraDirectionStr)
     val cargoHopper: String get() = getOption<String>("Cargo Hopper")
+    val useSkiff: Boolean get() = getOption<Boolean>("Use Skiff")
+    
+    // Helper methods to get the correct hop coordinates based on ship type
+    val hopX: Int get() = if (useSkiff) Constants.SKIFF_HOP_X else Constants.SLOOP_HOP_X
+    val hopY: Int get() = if (useSkiff) Constants.SKIFF_HOP_Y else Constants.SLOOP_HOP_Y
+    
     var hookingSalvageBool = false
     var salvageMessageFound = false
     var atHookLocation = false

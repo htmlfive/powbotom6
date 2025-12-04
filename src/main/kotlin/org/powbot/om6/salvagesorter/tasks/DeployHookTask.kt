@@ -280,13 +280,13 @@ class DeployHookTask(script: SalvageSorter) : Task(script) {
             CameraSnapper.snapCameraToDirection(script.cameraDirection, script)
             // Step 3: Walk to Hook
             Condition.sleep(Random.nextInt(180,300))
-            script.logger.info("DEPLETED: Walking to hook location")
-            if (!tapWithOffset(Constants.HOP_X, Constants.HOP_Y, 3)) {
+            script.logger.info("DEPLETED: Walking to hook location using ${if (script.useSkiff) "Skiff" else "Sloop"} coordinates")
+            if (!tapWithOffset(script.hopX, script.hopY, 3)) {
                 script.logger.warn("DEPLETED: Failed to tap walk-to-hook location")
                 return false
             }
             Condition.sleep(Random.nextInt(80,120))
-            if (!tapWithOffset(Constants.HOP_X, Constants.HOP_Y, 3)) {
+            if (!tapWithOffset(script.hopX, script.hopY, 3)) {
                 script.logger.warn("DEPLETED: Failed to tap walk-to-hook location")
                 return false
             }
