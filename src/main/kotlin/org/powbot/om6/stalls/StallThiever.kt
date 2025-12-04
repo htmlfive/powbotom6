@@ -109,6 +109,14 @@ class StallThiever : AbstractScript() {
         logger.info("   Thieving Tile: $thievingTile")
         logger.info("   Bank Tile: $bankTile")
 
+        // NEW VALIDATION: Ensure exactly one stall is selected
+        if (stallTargetEvents != null && stallTargetEvents.size > 1) {
+            logger.warn("Configuration validation FAILED. More than one GameObject was selected for the stall target.")
+            Notifications.showNotification("Please select only ONE stall object as the target for thieving.")
+            ScriptManager.stop()
+            return
+        }
+
         if (!ScriptUtils.isConfigurationValid(thievingTile, bankTile, stallTargetEvents)) {
             logger.warn("2. Configuration validation FAILED. One or more required options (Tiles/Stall Target) are missing or invalid.")
             Notifications.showNotification("Configuration not set correctly. Please restart the script and configure all options.")
@@ -131,8 +139,10 @@ class StallThiever : AbstractScript() {
             drop1Mode = drop1Mode,
             thievingTile = thievingTile!!,
             bankTile = bankTile!!,
-            itemsToBank = ScriptUtils.parseCommaSeparatedList(itemsToBankStr),
-            itemsToDrop = ScriptUtils.parseCommaSeparatedList(itemsToDropStr)
+            // Convert to lowercase to ensure case-insensitive matching later
+            itemsToBank = ScriptUtils.parseCommaSeparatedList(itemsToBankStr).map { it.lowercase() },
+            // Convert to lowercase to ensure case-insensitive matching later
+            itemsToDrop = ScriptUtils.parseCommaSeparatedList(itemsToDropStr).map { it.lowercase() }
         )
 
         logger.info("3. StallThieverConfig Built:")
