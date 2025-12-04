@@ -2,7 +2,13 @@ package org.powbot.om6.salvagesorter.config
 
 object LootConfig {
     val dropList = arrayOf(
-        //Fremennik
+        //Barracuda
+        "Oak logs", "Teak logs", "Oak plank", "Raw swordfish", "Copper ore", "Teak plank", "Raw shark", "Lead ore", "Teak repair kit", "Steel nails", "Rum", "Rope", "Banana",
+        //Large Salvage
+        "Sapphire ring", "Emerald ring", "Gold ring", "Teak logs", "Steel nails", "Oyster pearls", "Oyster pearl", "Casket", "Oak plank", "Giant seaweed",
+        //Plundered
+        "Gold ring", "Mithril scimitar", "Rum", "Sapphire ring", "Emerald bracelet", "Oyster pearls", "Casket", "Emerald ring", "Mithril cannonball", "Adamant cannonball",
+         //Fremennik
         "Raw lobster", "Raw tuna", "Raw monkfish", "Raw salmon",
         "Mithril ore", "Arctic pine logs", "Ensouled troll head", "Mahogany plank",
         //Opulent
@@ -17,6 +23,10 @@ object LootConfig {
     )
 
     val alchList = arrayOf(
+        //Large salvage
+        "Diamond ring",
+        //Plundered
+        "Diamond ring", "Diamond bracelet","Mahogany repair kit","Ruby bracelet","Rune scimitar",
         //Fremennik
         "Fremennik helm", "Berserker helm", "Archer helm", "Farseer helm", "Warrior helm",
         // Opulent
