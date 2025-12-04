@@ -1,5 +1,6 @@
 package org.powbot.om6.stalls
 
+import org.powbot.api.AppManager.logger
 import org.powbot.api.Condition
 import org.powbot.api.Tile
 import org.powbot.api.rt4.*
@@ -19,9 +20,12 @@ object ScriptUtils {
      * @return A list of trimmed strings with empty entries filtered out
      */
     fun parseCommaSeparatedList(input: String): List<String> {
-        return input.split(",")
+        logger.info("UTILS: Parsing comma-separated input: \"$input\"")
+        val result = input.split(",")
             .map { it.trim() }
             .filter { it.isNotEmpty() }
+        logger.info("UTILS: Parsed list result: $result")
+        return result
     }
 
     /**
@@ -31,7 +35,10 @@ object ScriptUtils {
      * @return True if the player is at the specified tile
      */
     fun isAtTile(tile: Tile): Boolean {
-        return Players.local().tile() == tile
+        val localTile = Players.local().tile()
+        val isAt = localTile == tile
+        logger.info("UTILS: Checking if player is at target tile ($tile). Current tile: $localTile. Result: $isAt")
+        return isAt
     }
 
     /**
@@ -41,9 +48,13 @@ object ScriptUtils {
      */
     fun isPlayerOnMyTile(): Boolean {
         val localPlayer = Players.local()
-        return Players.stream()
+        val playersOnTile = Players.stream()
             .at(localPlayer.tile())
-            .any { it != localPlayer }
+            .filter { it != localPlayer }
+            .count()
+        val isOccupied = playersOnTile > 0
+        logger.info("UTILS: Checking for other players on tile ${localPlayer.tile()}. Count found: $playersOnTile. Result: $isOccupied")
+        return isOccupied
     }
 
     /**
@@ -52,14 +63,22 @@ object ScriptUtils {
      * @return A random world matching the criteria, or null if none found
      */
     fun findRandomWorld(): World? {
-        return Worlds.stream()
+        logger.info("UTILS: Searching for random suitable world (Pop: ${Constants.WorldHopping.MIN_POPULATION}-${Constants.WorldHopping.MAX_POPULATION}, Type: MEMBERS, Specialty: NONE)...")
+        val suitableWorlds = Worlds.stream()
             .filtered {
                 it.type() == World.Type.MEMBERS &&
                         it.population in Constants.WorldHopping.MIN_POPULATION..Constants.WorldHopping.MAX_POPULATION &&
                         it.specialty() == World.Specialty.NONE
             }
             .toList()
-            .randomOrNull()
+
+        val selectedWorld = suitableWorlds.randomOrNull()
+        if (selectedWorld != null) {
+            logger.info("UTILS: Found and selected world ${selectedWorld}.")
+        } else {
+            logger.warn("UTILS: Failed to find a suitable world for hopping.")
+        }
+        return selectedWorld
     }
 
     /**
@@ -69,13 +88,18 @@ object ScriptUtils {
      * @return True if the hop was successful
      */
     fun hopToWorld(world: World): Boolean {
+        logger.info("UTILS: Attempting to hop to world ${world}...")
         return if (world.hop()) {
-            Condition.wait(
+            logger.info("UTILS: World hop requested. Waiting for player to stop moving (Max ${Constants.WaitConditions.WORLD_HOP_ATTEMPTS} attempts)...")
+            val result = Condition.wait(
                 { !Players.local().inMotion() },
                 Constants.WaitConditions.WORLD_HOP_TIMEOUT,
                 Constants.WaitConditions.WORLD_HOP_ATTEMPTS
             )
+            logger.info("UTILS: Hop completed and player is stationary: $result")
+            result
         } else {
+            logger.error("UTILS: Failed to initiate world hop request for world ${world}.")
             false
         }
     }
@@ -87,7 +111,11 @@ object ScriptUtils {
      * @return True if at least one item from the list is in the inventory
      */
     fun hasAnyItem(vararg itemNames: String): Boolean {
-        return Inventory.stream().name(*itemNames).isNotEmpty()
+        val names = itemNames.joinToString()
+        val count = Inventory.stream().name(*itemNames).count()
+        val result = count > 0
+        logger.info("UTILS: Checking for any of items [$names]. Found $count items. Result: $result")
+        return result
     }
 
     /**
@@ -97,7 +125,11 @@ object ScriptUtils {
      * @return True if all items in inventory are in the provided list
      */
     fun inventoryContainsOnly(itemNames: List<String>): Boolean {
-        return Inventory.stream().all { it.name() in itemNames }
+        val totalInvCount = Inventory.stream().count()
+        val itemsInListCount = Inventory.stream().name(*itemNames.toTypedArray()).count()
+        val result = totalInvCount == itemsInListCount
+        logger.info("UTILS: Checking if inventory only contains items from [${itemNames.joinToString()}]. Total Inv: $totalInvCount, Matching Inv: $itemsInListCount. Result: $result")
+        return result
     }
 
     /**
@@ -107,20 +139,30 @@ object ScriptUtils {
      * @return True if all specified items were successfully deposited
      */
     fun depositItems(vararg itemNames: String): Boolean {
+        logger.info("UTILS: Attempting to deposit items: [${itemNames.joinToString()}]")
         var allDeposited = true
         for (itemName in itemNames) {
             if (hasAnyItem(itemName)) {
+                logger.info("UTILS: Depositing all instances of '$itemName'.")
                 if (Bank.deposit(itemName, Bank.Amount.ALL)) {
-                    Condition.wait(
+                    val deposited = Condition.wait(
                         { !hasAnyItem(itemName) },
                         Constants.WaitConditions.BANK_DEPOSIT_TIMEOUT,
                         Constants.WaitConditions.BANK_DEPOSIT_ATTEMPTS
                     )
+                    if (!deposited) {
+                        logger.error("UTILS: Failed to confirm deposit of '$itemName' within timeout.")
+                        allDeposited = false
+                    }
                 } else {
+                    logger.error("UTILS: Bank.deposit() failed for '$itemName'.")
                     allDeposited = false
                 }
+            } else {
+                logger.info("UTILS: Item '$itemName' not found in inventory, skipping deposit.")
             }
         }
+        logger.info("UTILS: Overall deposit operation finished. Success: $allDeposited")
         return allDeposited
     }
 
@@ -131,23 +173,31 @@ object ScriptUtils {
      * @return True if the drop actions were initiated successfully
      */
     fun dropItems(vararg itemNames: String): Boolean {
+        logger.info("UTILS: Attempting to drop items: [${itemNames.joinToString()}]")
         val itemsToDrop = Inventory.stream().name(*itemNames).list()
-        if (itemsToDrop.isEmpty()) return true
+        if (itemsToDrop.isEmpty()) {
+            logger.info("UTILS: No items to drop found. Returning true.")
+            return true
+        }
 
+        logger.info("UTILS: Found ${itemsToDrop.size} items to drop. Initiating drops...")
         itemsToDrop.forEach { item ->
             if (item.interact(Constants.Actions.DROP)) {
-                Condition.sleep(Random.nextInt(
-                    Constants.Timing.DROP_ITEM_MIN_DELAY,
-                    Constants.Timing.DROP_ITEM_MAX_DELAY
-                ))
+                val delay = Random.nextInt(Constants.Timing.DROP_ITEM_MIN_DELAY, Constants.Timing.DROP_ITEM_MAX_DELAY)
+                logger.debug("UTILS: Interacted to drop ${item.name()}. Sleeping for ${delay}ms.")
+                Condition.sleep(delay)
+            } else {
+                logger.warn("UTILS: Failed to interact (DROP) with item ${item.name()}.")
             }
         }
 
-        return Condition.wait(
+        val dropped = Condition.wait(
             { !hasAnyItem(*itemNames) },
             Constants.WaitConditions.DROP_ITEMS_TIMEOUT,
             Constants.WaitConditions.DROP_ITEMS_ATTEMPTS
         )
+        logger.info("UTILS: Drop actions completed. Confirmed all items dropped: $dropped")
+        return dropped
     }
 
     /**
@@ -159,11 +209,19 @@ object ScriptUtils {
      * @return The found GameObject, or GameObject.Nil if not found
      */
     fun findGameObject(objectId: Int, centerTile: Tile, range: Double): GameObject {
-        return Objects.stream()
+        logger.info("UTILS: Searching for object ID $objectId around $centerTile with range $range.")
+        val obj = Objects.stream()
             .id(objectId)
             .within(centerTile, range)
             .nearest()
             .firstOrNull() ?: GameObject.Nil
+
+        if (obj.valid()) {
+            logger.info("UTILS: Found object: ${obj.name()} at ${obj.tile()}.")
+        } else {
+            logger.warn("UTILS: Object ID $objectId not found.")
+        }
+        return obj
     }
 
     /**
@@ -173,12 +231,20 @@ object ScriptUtils {
      * @return True if the object is now in the viewport
      */
     fun ensureObjectInView(obj: GameObject): Boolean {
-        if (!obj.valid()) return false
+        if (!obj.valid()) {
+            logger.warn("UTILS: Cannot ensure object in view: Object is not valid.")
+            return false
+        }
 
         if (!obj.inViewport()) {
+            logger.info("UTILS: Object ${obj.name()} is not in viewport. Turning camera...")
             Camera.turnTo(obj)
-            return obj.inViewport()
+            Condition.sleep(Random.nextInt(600,1200))
+            val inViewAfterTurn = obj.inViewport()
+            logger.info("UTILS: Camera turn complete. Object is now in viewport: $inViewAfterTurn")
+            return inViewAfterTurn
         }
+        logger.debug("UTILS: Object ${obj.name()} is already in viewport.")
         return true
     }
 
@@ -191,14 +257,29 @@ object ScriptUtils {
      * @return True if the interaction was successful and XP was gained
      */
     fun interactAndWaitForXp(obj: GameObject, action: String, skill: Skill): Boolean {
+        if (!obj.valid()) {
+            logger.error("UTILS: Cannot interact: Object is not valid.")
+            return false
+        }
+
         val initialXp = Skills.experience(skill)
+        logger.info("UTILS: Interacting with ${obj.name()} via '$action'. Initial ${skill.name} XP: $initialXp.")
+
         return if (obj.interact(action)) {
-            Condition.wait(
+            logger.info("UTILS: Interaction successful. Waiting for XP gain...")
+            val gainedXp = Condition.wait(
                 { Skills.experience(skill) > initialXp },
                 Constants.WaitConditions.THIEVING_XP_TIMEOUT,
                 Constants.WaitConditions.THIEVING_XP_ATTEMPTS
             )
+            if (gainedXp) {
+                logger.info("UTILS: XP gained confirmed. New ${skill.name} XP: ${Skills.experience(skill)}.")
+            } else {
+                logger.warn("UTILS: Failed to confirm XP gain within timeout.")
+            }
+            gainedXp
         } else {
+            logger.error("UTILS: Failed to execute interaction '$action' on ${obj.name()}.")
             false
         }
     }
@@ -210,7 +291,9 @@ object ScriptUtils {
      * @param max Maximum delay in milliseconds
      */
     fun randomDelay(min: Int, max: Int) {
-        Condition.sleep(Random.nextInt(min, max))
+        val delay = Random.nextInt(min, max)
+        logger.debug("UTILS: Applying random sleep delay of ${delay}ms.")
+        Condition.sleep(delay)
     }
 
     /**
@@ -222,10 +305,14 @@ object ScriptUtils {
     fun canSafelyBreak(bankTile: Tile): Boolean {
         val atBank = isAtTile(bankTile)
         val bankClosed = !Bank.opened()
-        val inventoryDeposited = !Inventory.isFull()
+        val inventoryDeposited = Inventory.stream().isNotEmpty() // This is likely inverted, should check if we have valuable items left. Assuming the intent is 'not full' or 'empty of valuables'. Let's check if full.
+        val invFull = Inventory.isFull()
         val notInCombat = !Players.local().inCombat()
 
-        return atBank && bankClosed && inventoryDeposited && notInCombat
+        // Revised logic for safety: Must be near bank, bank closed, not full/in combat.
+        val safe = atBank && bankClosed && !invFull && notInCombat
+        logger.info("UTILS: Checking safe break conditions: At Bank=$atBank, Bank Closed=$bankClosed, Inv Not Full=${!invFull}, Not in Combat=$notInCombat. Overall Safe: $safe")
+        return safe
     }
 
     /**
@@ -237,9 +324,13 @@ object ScriptUtils {
      * @return True if configuration is valid
      */
     fun isConfigurationValid(thievingTile: Tile, bankTile: Tile, stallEvents: List<*>): Boolean {
-        return stallEvents.isNotEmpty() &&
-                thievingTile != Tile.Nil &&
-                bankTile != Tile.Nil
+        val validEvents = stallEvents.isNotEmpty()
+        val validThievingTile = thievingTile != Tile.Nil
+        val validBankTile = bankTile != Tile.Nil
+        val isValid = validEvents && validThievingTile && validBankTile
+
+        logger.info("UTILS: Validating Configuration: Stall Events=$validEvents, Thieving Tile=$validThievingTile, Bank Tile=$validBankTile. Result: $isValid")
+        return isValid
     }
 
     /**
@@ -247,7 +338,11 @@ object ScriptUtils {
      */
     fun closeBankIfOpen() {
         if (Bank.opened()) {
+            logger.info("UTILS: Bank is open. Attempting to close it.")
             Bank.close()
+            Condition.wait({ !Bank.opened() }, 500, 5)
+        } else {
+            logger.debug("UTILS: Bank is already closed.")
         }
     }
 
@@ -258,7 +353,9 @@ object ScriptUtils {
      */
     fun isPlayerIdle(): Boolean {
         val player = Players.local()
-        return player.animation() == -1 && !player.inMotion()
+        val isIdle = player.animation() == -1 && !player.inMotion()
+        logger.debug("UTILS: Checking player idle status: Animation=${player.animation()}, InMotion=${player.inMotion()}. Result: $isIdle")
+        return isIdle
     }
 
     /**
@@ -268,10 +365,14 @@ object ScriptUtils {
      * @return True if already at the tile or movement was initiated
      */
     fun walkToTile(targetTile: Tile): Boolean {
-        return if (isAtTile(targetTile)) {
-            true
+        if (isAtTile(targetTile)) {
+            logger.info("UTILS: Already at target tile $targetTile.")
+            return true
         } else {
-            Movement.walkTo(targetTile)
+            logger.info("UTILS: Walking to tile $targetTile...")
+            val walked = Movement.walkTo(targetTile)
+            logger.info("UTILS: Movement initiated successfully: $walked")
+            return walked
         }
     }
 
@@ -282,6 +383,8 @@ object ScriptUtils {
      * @return The distance in tiles
      */
     fun distanceToTile(tile: Tile): Double {
-        return tile.distance().toDouble()
+        val dist = tile.distance().toDouble()
+        logger.debug("UTILS: Distance to tile $tile is $dist.")
+        return dist
     }
 }

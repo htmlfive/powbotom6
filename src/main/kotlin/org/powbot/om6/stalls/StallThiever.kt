@@ -98,30 +98,53 @@ class StallThiever : AbstractScript() {
     private lateinit var tasks: List<Task>
 
     override fun onStart() {
+        logger.info("--- StallThiever Script Initialization ---")
+
         val stallTargetEvents = getOption<List<GameObjectActionEvent>>(Constants.ConfigKeys.STALL_TARGET)
         val thievingTile = getOption<Tile>(Constants.ConfigKeys.THIEVING_TILE)
         val bankTile = getOption<Tile>(Constants.ConfigKeys.BANK_TILE)
 
+        logger.info("1. Retrieving Configuration Values:")
+        logger.info("   Stall Target Events: ${stallTargetEvents?.size} entries.")
+        logger.info("   Thieving Tile: $thievingTile")
+        logger.info("   Bank Tile: $bankTile")
+
         if (!ScriptUtils.isConfigurationValid(thievingTile, bankTile, stallTargetEvents)) {
-            logger.warn("Configuration not set correctly. Please restart the script and configure all options.")
+            logger.warn("2. Configuration validation FAILED. One or more required options (Tiles/Stall Target) are missing or invalid.")
             Notifications.showNotification("Configuration not set correctly. Please restart the script and configure all options.")
             ScriptManager.stop()
             return
         }
 
+        logger.info("2. Configuration validation SUCCESSFUL.")
+
+        // Retrieve remaining options
+        val enableHopping = getOption<Boolean>(Constants.ConfigKeys.ENABLE_HOPPING)
+        val drop1Mode = getOption<Boolean>(Constants.ConfigKeys.DROP_1_MODE)
+        val itemsToBankStr = getOption<String>(Constants.ConfigKeys.TARGET_ITEMS)
+        val itemsToDropStr = getOption<String>(Constants.ConfigKeys.DROP_ITEMS)
+
         config = StallThieverConfig(
-            stallId = stallTargetEvents.first().id,
+            stallId = stallTargetEvents!!.first().id,
             stallName = stallTargetEvents.first().name,
-            enableHopping = getOption(Constants.ConfigKeys.ENABLE_HOPPING),
-            drop1Mode = getOption(Constants.ConfigKeys.DROP_1_MODE),
-            thievingTile = thievingTile,
-            bankTile = bankTile,
-            itemsToBank = ScriptUtils.parseCommaSeparatedList(getOption(Constants.ConfigKeys.TARGET_ITEMS)),
-            itemsToDrop = ScriptUtils.parseCommaSeparatedList(getOption(Constants.ConfigKeys.DROP_ITEMS))
+            enableHopping = enableHopping,
+            drop1Mode = drop1Mode,
+            thievingTile = thievingTile!!,
+            bankTile = bankTile!!,
+            itemsToBank = ScriptUtils.parseCommaSeparatedList(itemsToBankStr),
+            itemsToDrop = ScriptUtils.parseCommaSeparatedList(itemsToDropStr)
         )
 
-        logger.info("Script started. Targeting stall '${config.stallName}' (ID: ${config.stallId}).")
+        logger.info("3. StallThieverConfig Built:")
+        logger.info("  -> Stall: ${config.stallName} (ID: ${config.stallId})")
+        logger.info("  -> Thieving Tile: ${config.thievingTile}")
+        logger.info("  -> Bank Tile: ${config.bankTile}")
+        logger.info("  -> Enable Hopping: ${config.enableHopping}")
+        logger.info("  -> Drop 1 Mode: ${config.drop1Mode}")
+        logger.info("  -> Items to Bank: [${config.itemsToBank.joinToString()}]")
+        logger.info("  -> Items to Drop: [${config.itemsToDrop.joinToString()}]")
 
+        logger.info("4. Initializing task list...")
         tasks = listOf(
             HandlePitchTask(this),
             HandleHoppingTask(this),
@@ -131,6 +154,7 @@ class StallThiever : AbstractScript() {
             WalkToStallTask(this),
             ThieveTask(this)
         )
+        logger.info("   Tasks initialized: ${tasks.size} tasks loaded.")
 
         // --- Paint Setup ---
         val paint = PaintBuilder.newBuilder()
@@ -140,21 +164,34 @@ class StallThiever : AbstractScript() {
             .trackSkill(org.powbot.api.rt4.walking.model.Skill.Thieving)
             .build()
         addPaint(paint)
+        logger.info("5. Paint successfully added. Script is ready to poll.")
     }
 
     override fun poll() {
-        val task = tasks.firstOrNull { it.validate() }
+        logger.info("--- Poll Cycle Start (Current Task: $currentTask) ---")
+
+        val task = tasks.firstOrNull {
+            val validated = it.validate()
+            logger.info("Attempting validation for ${it.javaClass.simpleName}: Result = $validated")
+            validated
+        }
+
         if (task != null) {
             currentTask = task.javaClass.simpleName
+            logger.info("--- Task Selected --- Selected task: $currentTask. Executing...")
             task.execute()
+            logger.info("Task $currentTask execution finished.")
         } else {
             currentTask = Constants.TaskNames.IDLE
+            logger.info("No tasks validated in this cycle. Entering IDLE state.")
             Condition.sleep(Constants.Timing.IDLE_SLEEP)
+            logger.info("IDLE state complete. Sleeping for ${Constants.Timing.IDLE_SLEEP}ms finished.")
         }
     }
 
     override fun canBreak(): Boolean {
-        return ScriptUtils.canSafelyBreak(config.bankTile)
+        val safeBreak = ScriptUtils.canSafelyBreak(config.bankTile)
+        logger.info("Checking if safe to break: $safeBreak (Based on being near bank tile: ${config.bankTile})")
+        return safeBreak
     }
 }
-

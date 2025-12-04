@@ -11,14 +11,22 @@ class HandlePitchTask(script: StallThiever) : Task(script, Constants.TaskNames.H
 
     override fun validate(): Boolean {
         val currentPitch = Camera.pitch()
-        return currentPitch < Constants.Camera.MIN_PITCH || currentPitch > Constants.Camera.MAX_PITCH
+        val isOutsideRange = currentPitch < Constants.Camera.MIN_PITCH || currentPitch > Constants.Camera.MAX_PITCH
+
+        script.logger.debug("VALIDATE: ${name}: Current Pitch ($currentPitch) vs Range (${Constants.Camera.MIN_PITCH}-${Constants.Camera.MAX_PITCH}). Result: $isOutsideRange")
+
+        return isOutsideRange
     }
 
     override fun execute() {
-        script.logger.info("Pitch is outside acceptable range (${Constants.Camera.MIN_PITCH}-${Constants.Camera.MAX_PITCH}), adjusting to $desiredPitch.")
+        script.logger.info("EXECUTE: ${name}: Pitch is outside acceptable range. Current: ${Camera.pitch()}, Target: $desiredPitch.")
         Camera.pitch(desiredPitch)
+
+        script.logger.debug("EXECUTE: ${name}: Pitch set. Sleeping to allow camera movement to settle.")
         Condition.sleep(Random.nextInt(1200, 1800))
+
         // Pick a new random pitch for next time
         desiredPitch = Random.nextInt(Constants.Camera.MIN_PITCH, Constants.Camera.MAX_PITCH + 1)
+        script.logger.debug("EXECUTE: ${name}: New desired pitch set for next check: $desiredPitch.")
     }
 }
