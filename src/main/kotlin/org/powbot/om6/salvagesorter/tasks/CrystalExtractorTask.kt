@@ -28,7 +28,7 @@ class CrystalExtractorTask(script: SalvageSorter) : Task(script) {
             script.logger.debug("ACTIVATE: Skipping extractor - at withdraw spot, need to walk back first.")
             return false
         }
-        if (isCargoOpen()){
+        if (isCargoOpen(script)){
             script.logger.debug("ACTIVATE: Skipping extractor - in menu")
             return false
         }

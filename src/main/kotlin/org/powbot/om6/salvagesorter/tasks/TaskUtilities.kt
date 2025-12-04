@@ -27,6 +27,7 @@ fun log(script: SalvageSorter, level: String, message: String) {
     Notifications.showNotification(message)
 }
 
+
 // ========================================
 // WIDGET UTILITY FUNCTIONS
 // ========================================
@@ -135,8 +136,16 @@ fun tapWithOffset(x: Int, y: Int, offsetRange: Int = 3): Boolean {
  *  Checks if the cargo is open
  * @return true if cargo is open, false if closed
  */
-fun isCargoOpen(): Boolean {
-    return Widgets.widget(Constants.ROOT_CARGO_WIDGET).component(Constants.COMPONENT_CARGO_SPACE).visible()
+fun isCargoOpen(script: SalvageSorter): Boolean {
+    if (!Widgets.widget(Constants.ROOT_CARGO_WIDGET).component(Constants.COMPONENT_CARGO_SPACE).visible()) {
+        script.logger.info("isCargoOpen: FALSE, cargo is NOT open")
+        return false
+    }
+
+    // If the component WAS visible (the 'if' condition was false),
+    // the function execution reaches here, so return true (cargo IS open).
+    script.logger.info("isCargoOpen: TRUE, cargo is open")
+    return true
 }
 
 /**

@@ -83,8 +83,8 @@ class DeployHookTask(script: SalvageSorter) : Task(script) {
         } else {
             script.logger.warn("DEPLOY: Hook deployment failed (dialogue/error/interrupt). Ensuring phase is SALVAGING for immediate retry.")
             // CRITICAL: Explicitly set phase to SALVAGING to ensure retry
-            script.currentPhase = SalvagePhase.SALVAGING
-            Condition.sleep(200) // Very small delay before retry
+            script.currentPhase = SalvagePhase.SETUP_SALVAGING
+            Condition.sleep(600) // Very small delay before retry
         }
     }
 
@@ -118,6 +118,8 @@ class DeployHookTask(script: SalvageSorter) : Task(script) {
         Condition.sleep(mainWait)
 
         script.hookCastMessageFound = false
+        val initialSalvageCount = Inventory.stream().name(script.salvageName).count().toInt()
+        script.logger.info("HOOK: Initial salvage count: $initialSalvageCount")
 
         // Try tapping hook up to 3 times before giving up
         var messageFound = false
@@ -163,6 +165,8 @@ class DeployHookTask(script: SalvageSorter) : Task(script) {
             script.hookingSalvageBool = true
             script.atWithdrawSpot = true
             script.salvageMessageFound = false
+            var lastCheckTime = System.currentTimeMillis()
+            var lastSalvageCount = initialSalvageCount
 
             while (!Inventory.isFull()) {
                 // Check for salvage completion message - if found, break loop to re-hook
@@ -193,6 +197,22 @@ class DeployHookTask(script: SalvageSorter) : Task(script) {
                     script.logger.info("HOOK: Extractor interrupted. Re-hooking.")
                     script.hookingSalvageBool = false
                     return false
+                }
+
+                // Check every 10 seconds if salvage count increased
+                val currentTime = System.currentTimeMillis()
+                if (currentTime - lastCheckTime >= 10000) {
+                    val currentSalvageCount = Inventory.stream().name(script.salvageName).count().toInt()
+                    script.logger.info("HOOK: 10s check - Last: $lastSalvageCount, Current: $currentSalvageCount")
+                    
+                    if (currentSalvageCount <= lastSalvageCount) {
+                        script.logger.warn("HOOK: No salvage increase in 10s. Re-tapping hook.")
+                        script.hookingSalvageBool = false
+                        return false
+                    }
+                    
+                    lastSalvageCount = currentSalvageCount
+                    lastCheckTime = currentTime
                 }
 
                 Condition.sleep(Random.nextInt(Constants.HOOK_WAIT_LOOP_MIN, Constants.HOOK_WAIT_LOOP_MAX))

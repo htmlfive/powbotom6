@@ -68,9 +68,30 @@ class SetupSalvagingTask(script: SalvageSorter) : Task(script) {
         CameraSnapper.snapCameraToDirection(script.cameraDirection, script)
 
         script.logger.info("WALK: Tapping walk-to-hook.")
-        val stepSuccess = retryAction(Random.nextInt(2,3), 750) { // Use a slightly longer delay for movement
-            clickAtCoordinates(Constants.HOOK_WALK_TO_X, Constants.HOOK_WALK_TO_Y, Constants.HOOK_DEPLOY_MENUOPTION)
+        val stepSuccess = if (!script.powerSalvageMode) {
+            retryAction(Random.nextInt(2,3), 750) {
+                clickAtCoordinates(Constants.HOOK_WALK_TO_X, Constants.HOOK_WALK_TO_Y, Constants.HOOK_DEPLOY_MENUOPTION)
+            }
+        } else {
+            CameraSnapper.snapCameraToDirection(script.cameraDirection, script)
+            Condition.sleep(Random.nextInt(180,300))
+            script.logger.info("WALK: Walking to hook location (Power Mode)")
+            
+            val tap1 = tapWithOffset(Constants.HOP_X, Constants.HOP_Y, 3)
+            if (!tap1) {
+                script.logger.warn("WALK: Failed first tap")
+            }
+            
+            Condition.sleep(Random.nextInt(80,120))
+            
+            val tap2 = tapWithOffset(Constants.HOP_X, Constants.HOP_Y, 3)
+            if (!tap2) {
+                script.logger.warn("WALK: Failed second tap")
+            }
+            
+            tap1 && tap2
         }
+        
         if (!stepSuccess) {
             script.logger.warn("WALK: Failed to tap walk point.")
             return false

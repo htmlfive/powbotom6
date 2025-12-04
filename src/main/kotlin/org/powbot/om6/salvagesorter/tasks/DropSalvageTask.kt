@@ -43,18 +43,19 @@ class DropSalvageTask(script: SalvageSorter) : Task(script) {
         }
 
         script.logger.info("POWER SALVAGE: Dropping ${salvageItems.size} salvage items.")
-
+        //if (!Game.setMouseToggleAction(Game.MouseToggleAction.DROP)){Game.setMouseToggleAction(Game.MouseToggleAction.DROP)}
         // Drop each item with a short delay between drops
         salvageItems.forEach { item ->
             if (item.valid()) {
+                ensureInventoryOpen(600,900)
                 if (!script.tapToDrop) {
-                    Game.setSingleTapToggle(false)
+                    Game.setMouseActionToggled(false);
                     item.interact("Drop")
-                    Condition.sleep(Random.nextInt(300, 500))
+                    Condition.sleep(Random.nextInt(80, 150))
                 } else {
-                    Game.setSingleTapToggle(false)
+                    Game.setMouseActionToggled(true);
                     item.click()
-                    Condition.sleep(Random.nextInt(300, 500))
+                    Condition.sleep(Random.nextInt(90, 150))
                 }
             }
         }

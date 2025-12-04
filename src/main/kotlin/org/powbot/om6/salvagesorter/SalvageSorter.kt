@@ -33,17 +33,17 @@ import org.powbot.api.script.ScriptConfiguration.List as ConfigList
         ScriptConfiguration(
             "Power Salvage Mode",
             "Power Salvage Mode: If true, skips sorting entirely and simply drops all salvage when inventory is full. Useful for Raft/Skiff salvaging below level 50 without Salvaging station.",
-            optionType = OptionType.BOOLEAN, defaultValue = "false"
+            optionType = OptionType.BOOLEAN, defaultValue = "true"
         ),
         ScriptConfiguration(
             "Enable Extractor",
             "Enable Extractor: If true, enables the automatic tapping of the Crystal Extractor every ~64 seconds.",
-            optionType = OptionType.BOOLEAN, defaultValue = "true"
+            optionType = OptionType.BOOLEAN, defaultValue = "false"
         ),
         ScriptConfiguration(
             "Hop Worlds",
             "Hop Worlds: If true, enables the hopping of worlds if salvaging depleted",
-            optionType = OptionType.BOOLEAN, defaultValue = "false"
+            optionType = OptionType.BOOLEAN, defaultValue = "true"
         ),
         ScriptConfiguration(
             "Cargo Hopper",
@@ -55,7 +55,7 @@ import org.powbot.api.script.ScriptConfiguration.List as ConfigList
             "Salvage Item Name",
             "Salvage Item Name: The exact name of the item dropped after salvaging the shipwreck.",
             optionType = OptionType.STRING,
-            defaultValue = "Opulent salvage",
+            defaultValue = "Barracuda salvage",
             allowedValues = ["Small salvage", "Fishy salvage", "Barracuda salvage", "Large salvage", "Plundered salvage", "Martial salvage", "Fremennik salvage", "Opulent salvage"]
         ),
         ScriptConfiguration(
@@ -89,7 +89,7 @@ import org.powbot.api.script.ScriptConfiguration.List as ConfigList
         ScriptConfiguration(
             "Camera Direction",
             "Camera Direction: The camera direction required for fixed-screen tap locations during salvaging, sorting, and extractor tapping. Req. Camera Vertical Setting in OSRS Settings. Set zoom to max all the way in",
-            optionType = OptionType.STRING, defaultValue = "East",
+            optionType = OptionType.STRING, defaultValue = "North",
             allowedValues = ["North", "East", "South", "West"]
         )
     ]
@@ -194,6 +194,7 @@ class SalvageSorter : AbstractScript() {
 
     override fun onStart() {
         logger.info("SCRIPT START: Initializing Shipwreck Sorter...")
+        if (tapToDrop){Game.setMouseToggleAction(Game.MouseToggleAction.DROP)}
 
         Condition.sleep(Random.nextInt(600, 1200))
 

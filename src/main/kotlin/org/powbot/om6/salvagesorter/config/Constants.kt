@@ -45,8 +45,10 @@ object Constants {
     /** Y coordinate for walking to hook location from sorting */
     const val HOOK_WALK_TO_Y = 188
 
-    const val HOP_X = 791
-    const val HOP_Y = 63
+    const val HOP_X = 763 //Skiff
+    const val HOP_Y = 95 //Skiff
+/*    const val HOP_X = 791
+    const val HOP_Y = 63*/
     const val INITEXTRACTORX = 314
     const val INITEXTRACTORY = 238
 
