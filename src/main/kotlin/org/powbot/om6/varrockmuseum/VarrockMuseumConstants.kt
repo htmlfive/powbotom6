@@ -36,34 +36,6 @@ object VarrockMuseumConstants {
     // Widget IDs
     const val LAMP_SKILL_WIDGET = 240
     
-    // Skill ID mappings for lamp widget
-    val LAMP_SKILL_IDS = mapOf(
-        "Attack" to 2,
-        "Strength" to 3,
-        "Ranged" to 4,
-        "Magic" to 5,
-        "Defense" to 6,
-        "Sailing" to 7,
-        "Hitpoints" to 8,
-        "Prayer" to 9,
-        "Agility" to 10,
-        "Herblore" to 11,
-        "Thieving" to 12,
-        "Crafting" to 13,
-        "Runecrafting" to 14,
-        "Slayer" to 15,
-        "Farming" to 16,
-        "Mining" to 17,
-        "Smithing" to 18,
-        "Fishing" to 19,
-        "Cooking" to 20,
-        "Firemaking" to 21,
-        "Woodcutting" to 22,
-        "Fletching" to 23,
-        "Construction" to 24,
-        "Hunter" to 25
-    )
-    
     // Skill name to Skill enum mapping for paint tracking
     val SKILL_NAME_TO_ENUM = mapOf(
         "Attack" to Skill.Attack,

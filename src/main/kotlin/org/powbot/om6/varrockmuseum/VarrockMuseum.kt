@@ -20,7 +20,6 @@ import org.powbot.om6.varrockmuseum.VarrockMuseumConstants.DEFAULT_LAMP_SKILL
 import org.powbot.om6.varrockmuseum.VarrockMuseumConstants.DEFAULT_SPAM_CLICK
 import org.powbot.om6.varrockmuseum.VarrockMuseumConstants.DIALOGUE_PLACE_ALL
 import org.powbot.om6.varrockmuseum.VarrockMuseumConstants.DIG_SITE_SPECIMEN_ROCKS
-import org.powbot.om6.varrockmuseum.VarrockMuseumConstants.LAMP_SKILL_IDS
 import org.powbot.om6.varrockmuseum.VarrockMuseumConstants.LAMP_SKILL_WIDGET
 import org.powbot.om6.varrockmuseum.VarrockMuseumConstants.SKILL_NAME_TO_ENUM
 import org.powbot.om6.varrockmuseum.VarrockMuseumConstants.SPECIMEN_TABLE
@@ -56,7 +55,7 @@ import org.powbot.om6.varrockmuseum.VarrockMuseumUtils.waitUntil
             name = "Lamp Skill",
             description = "Skill to use antique lamp XP on",
             defaultValue = DEFAULT_LAMP_SKILL,
-            allowedValues = arrayOf("Attack", "Strength", "Ranged", "Magic", "Defense", "Hitpoints", "Prayer", "Agility", "Herblore", "Thieving", "Crafting", "Runecrafting", "Slayer", "Farming", "Mining", "Smithing", "Fishing", "Cooking", "Firemaking", "Woodcutting", "Fletching", "Construction", "Hunter"),
+            allowedValues = arrayOf("Attack", "Strength", "Ranged", "Magic", "Defense", "Hitpoints", "Sailing", "Prayer", "Agility", "Herblore", "Thieving", "Crafting", "Runecrafting", "Slayer", "Farming", "Mining", "Smithing", "Fishing", "Cooking", "Firemaking", "Woodcutting", "Fletching", "Construction", "Hunter"),
             optionType = OptionType.STRING
         ),
         ScriptConfiguration(
@@ -164,7 +163,7 @@ class VarrockMuseum : AbstractScript() {
         if (inventoryContains(ANTIQUE_LAMP)) {
             currentTask = "Rubbing lamp"
             logger.info("Rubbing antique lamp for $lampSkill XP...")
-            if (rubLamp(lampSkill, LAMP_SKILL_WIDGET, LAMP_SKILL_IDS)) {
+            if (rubLamp(lampSkill, LAMP_SKILL_WIDGET)) {
                 Condition.sleep(Random.nextInt(600, 1200))
             }
             return true
