@@ -14,12 +14,12 @@ import org.powbot.mobile.script.ScriptManager
 import org.powbot.om6.salvagesorter.config.CardinalDirection
 import org.powbot.om6.salvagesorter.config.Constants
 import org.powbot.om6.salvagesorter.config.LootConfig
-import org.powbot.om6.salvagesorter.config.LootConfig.alchList
 import org.powbot.om6.salvagesorter.config.SalvagePhase
 import org.powbot.om6.salvagesorter.tasks.*
 import kotlin.collections.joinToString
 import kotlin.random.Random
 import org.powbot.api.script.ScriptConfiguration.List as ConfigList
+import org.powbot.api.script.ValueChanged
 
 @ScriptManifest(
     name = "0m6 Shipwreck Sorter",
@@ -65,6 +65,7 @@ import org.powbot.api.script.ScriptConfiguration.List as ConfigList
             "Cargo Hopper",
             "Cargo Hop: Hop if this amount of salvage in cargo or less",
             optionType = OptionType.STRING,
+            visible = true,
             defaultValue = "30"
         ),
         ScriptConfiguration(
@@ -89,96 +90,112 @@ import org.powbot.api.script.ScriptConfiguration.List as ConfigList
             "Small Drop List",
             "Items to DROP for Small salvage (comma-separated). Edit or clear to customize.",
             optionType = OptionType.STRING,
+            visible = false,
             defaultValue = LootConfig.SMALL_DROP_LIST_STRING
         ),
         ScriptConfiguration(
             "Small Alch List",
             "Items to ALCH for Small salvage (comma-separated). Edit or add items as needed.",
             optionType = OptionType.STRING,
+            visible = false,
             defaultValue = LootConfig.SMALL_ALCH_LIST_STRING
         ),
         ScriptConfiguration(
             "Fishy Drop List",
             "Items to DROP for Fishy salvage (comma-separated). Edit or clear to customize.",
             optionType = OptionType.STRING,
+            visible = false,
             defaultValue = LootConfig.FISHY_DROP_LIST_STRING
         ),
         ScriptConfiguration(
             "Fishy Alch List",
             "Items to ALCH for Fishy salvage (comma-separated). Edit or add items as needed.",
             optionType = OptionType.STRING,
+            visible = false,
             defaultValue = LootConfig.FISHY_ALCH_LIST_STRING
         ),
         ScriptConfiguration(
             "Barracuda Drop List",
             "Items to DROP for Barracuda salvage (comma-separated). Edit or clear to customize.",
             optionType = OptionType.STRING,
+            visible = true,
             defaultValue = LootConfig.BARRACUDA_DROP_LIST_STRING
         ),
         ScriptConfiguration(
             "Barracuda Alch List",
             "Items to ALCH for Barracuda salvage (comma-separated). Edit or add items as needed.",
             optionType = OptionType.STRING,
+            visible = true,
             defaultValue = LootConfig.BARRACUDA_ALCH_LIST_STRING
         ),
         ScriptConfiguration(
             "Large Drop List",
             "Items to DROP for Large salvage (comma-separated). Edit or clear to customize.",
             optionType = OptionType.STRING,
+            visible = false,
             defaultValue = LootConfig.LARGE_DROP_LIST_STRING
         ),
         ScriptConfiguration(
             "Large Alch List",
             "Items to ALCH for Large salvage (comma-separated). Edit or add items as needed.",
             optionType = OptionType.STRING,
+            visible = false,
             defaultValue = LootConfig.LARGE_ALCH_LIST_STRING
         ),
         ScriptConfiguration(
             "Plundered Drop List",
             "Items to DROP for Plundered salvage (comma-separated). Edit or clear to customize.",
             optionType = OptionType.STRING,
+            visible = false,
             defaultValue = LootConfig.PLUNDERED_DROP_LIST_STRING
         ),
         ScriptConfiguration(
             "Plundered Alch List",
             "Items to ALCH for Plundered salvage (comma-separated). Edit or add items as needed.",
             optionType = OptionType.STRING,
+            visible = false,
             defaultValue = LootConfig.PLUNDERED_ALCH_LIST_STRING
         ),
         ScriptConfiguration(
             "Martial Drop List",
             "Items to DROP for Martial salvage (comma-separated). Edit or clear to customize.",
             optionType = OptionType.STRING,
+            visible = false,
             defaultValue = LootConfig.MARTIAL_DROP_LIST_STRING
         ),
         ScriptConfiguration(
             "Martial Alch List",
             "Items to ALCH for Martial salvage (comma-separated). Edit or add items as needed.",
             optionType = OptionType.STRING,
+            visible = false,
             defaultValue = LootConfig.MARTIAL_ALCH_LIST_STRING
         ),
         ScriptConfiguration(
             "Fremennik Drop List",
             "Items to DROP for Fremennik salvage (comma-separated). Edit or clear to customize.",
             optionType = OptionType.STRING,
+            visible = false,
             defaultValue = LootConfig.FREMENNIK_DROP_LIST_STRING
         ),
         ScriptConfiguration(
             "Fremennik Alch List",
             "Items to ALCH for Fremennik salvage (comma-separated). Edit or add items as needed.",
             optionType = OptionType.STRING,
+            visible = false,
             defaultValue = LootConfig.FREMENNIK_ALCH_LIST_STRING
         ),
         ScriptConfiguration(
             "Opulent Drop List",
             "Items to DROP for Opulent salvage (comma-separated). Edit or clear to customize.",
             optionType = OptionType.STRING,
+            visible = false,
             defaultValue = LootConfig.OPULENT_DROP_LIST_STRING
         ),
         ScriptConfiguration(
             "Opulent Alch List",
             "Items to ALCH for Opulent salvage (comma-separated). Edit or add items as needed.",
             optionType = OptionType.STRING,
+            visible = false,
             defaultValue = LootConfig.OPULENT_ALCH_LIST_STRING
         ),
 
@@ -198,7 +215,38 @@ class SalvageSorter : AbstractScript() {
     val cameraDirection: CardinalDirection get() = CardinalDirection.valueOf(cameraDirectionStr)
     val cargoHopper: String get() = getOption<String>("Cargo Hopper")
     val useSkiff: Boolean get() = getOption<Boolean>("Use Skiff")
-    
+
+    @ValueChanged("Hop Worlds")
+    fun onHopWorldsChanged(isHopsEnabled: Boolean) {
+        logger.info("CONFIG CHANGE: Hop Worlds changed to $isHopsEnabled. Updating Cargo Hopper visibility.")
+        updateVisibility("Cargo Hopper", isHopsEnabled)
+    }
+    @ValueChanged("Salvage Item Name")
+    fun onSalvageTypeChanged(salvageType: String) {
+        logger.info("CONFIG CHANGE: Salvage Type changed to $salvageType. Updating visibility...")
+
+        val salvageToConfigPrefix = mapOf(
+            "Small salvage" to "Small",
+            "Fishy salvage" to "Fishy",
+            "Barracuda salvage" to "Barracuda",
+            "Large salvage" to "Large",
+            "Plundered salvage" to "Plundered",
+            "Martial salvage" to "Martial",
+            "Fremennik salvage" to "Fremennik",
+            "Opulent salvage" to "Opulent"
+        )
+        val activePrefix = salvageToConfigPrefix[salvageType]
+        for ((_, prefix) in salvageToConfigPrefix) {
+            val dropOptionName = "${prefix} Drop List"
+            val alchOptionName = "${prefix} Alch List"
+            val isVisible = (prefix == activePrefix)
+            updateVisibility(dropOptionName, isVisible)
+            updateVisibility(alchOptionName, isVisible)
+
+            logger.debug("Visibility set for $prefix: $isVisible")
+        }
+    }
+
     // Salvage-specific custom lists
     val smallDropList: String get() = getOption<String>("Small Drop List")
     val smallAlchList: String get() = getOption<String>("Small Alch List")
