@@ -44,10 +44,11 @@ class SetupSortingTask(script: SalvageSorter) : Task(script) {
 
         script.logger.info("WALK_SORT: Starting walk and assignment.")
 
-        if (!assignBoth()) {
-            script.logger.warn("WALK_SORT: Failed to assign crew.")
-            return false
-        }
+        // if under 55 dont do this
+//        if (!assignBoth()) {
+//            script.logger.warn("WALK_SORT: Failed to assign crew.")
+//            return false
+//        }
         snapCameraAndWait(script, Constants.WALKTOSORT_CAMERA_MIN, Constants.WALKTOSORT_CAMERA_MAX)
 
         script.logger.info("WALK_SORT: Tapping walk point.")

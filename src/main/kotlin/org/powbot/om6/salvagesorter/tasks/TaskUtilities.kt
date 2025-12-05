@@ -633,20 +633,8 @@ fun hopToRandomWorld(script: SalvageSorter) {
     val validWorlds = Worlds.stream()
         .filtered {
             it.type() == World.Type.MEMBERS && it.population < 1000 &&
-                    it.server() == World.Server.NORTH_AMERICA &&
-                    it.specialty() != World.Specialty.BOUNTY_HUNTER &&
-                    it.specialty() != World.Specialty.PVP &&
-                    it.specialty() != World.Specialty.TARGET_WORLD &&
-                    it.specialty() != World.Specialty.PVP_ARENA &&
-                    it.specialty() != World.Specialty.DEAD_MAN &&
-                    it.specialty() != World.Specialty.BETA &&
-                    it.specialty() != World.Specialty.HIGH_RISK &&
-                    it.specialty() != World.Specialty.LEAGUE &&
-                    it.specialty() != World.Specialty.SKILL_REQUIREMENT &&
-                    it.specialty() != World.Specialty.SPEEDRUNNING &&
-                    it.specialty() != World.Specialty.FRESH_START &&
-                    it.specialty() != World.Specialty.TRADE
-
+                    it.server() == World.Server.UNITED_KINGDOM &&
+                    it.specialty() != World.Specialty.NONE
         }
         .toList()
         .shuffled()
@@ -666,6 +654,7 @@ fun hopToRandomWorld(script: SalvageSorter) {
                 return
             }
         }
+
         script.logger.warn("Failed to hop to world: ${world.id()}, trying next...")
         Condition.sleep(300)
     }

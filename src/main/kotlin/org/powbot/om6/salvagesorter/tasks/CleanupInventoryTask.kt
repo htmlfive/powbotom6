@@ -73,7 +73,6 @@ class CleanupInventoryTask(script: SalvageSorter) : Task(script) {
                         Condition.wait({ Game.tab() == Game.Tab.MAGIC }, 125, 12)
                         script.logger.info("CLEANUP: Alch successful. Sleeping for animation.")
                         Condition.sleep(Random.nextInt(Constants.CLEANUP_ALCH_MIN, Constants.CLEANUP_ALCH_MAX))
-                        Condition.wait({ Inventory.stream().name(itemName).isEmpty() }, 300, 5)
                     } else {
                         script.logger.warn("CLEANUP: Failed to click item $itemName.")
                     }

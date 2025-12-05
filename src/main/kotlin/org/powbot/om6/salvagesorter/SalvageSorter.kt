@@ -8,6 +8,7 @@ import org.powbot.api.event.MessageType
 import org.powbot.api.rt4.Camera
 import org.powbot.api.rt4.Game
 import org.powbot.api.rt4.Inventory
+import org.powbot.api.rt4.walking.model.Skill
 import org.powbot.api.script.*
 import org.powbot.api.script.paint.PaintBuilder
 import org.powbot.mobile.script.ScriptManager
@@ -39,12 +40,12 @@ import org.powbot.api.script.ValueChanged
         ScriptConfiguration(
             "Use Skiff",
             "Use Skiff: If true, uses Skiff hop coordinates. If false, uses Sloop hop coordinates.",
-            optionType = OptionType.BOOLEAN, defaultValue = "true"
+            optionType = OptionType.BOOLEAN, defaultValue = "false"
         ),
         ScriptConfiguration(
             "Power Salvage Mode",
             "Power Salvage Mode: If true, skips sorting entirely and simply drops all salvage when inventory is full. Useful for Raft/Skiff salvaging below level 50 without Salvaging station.",
-            optionType = OptionType.BOOLEAN, defaultValue = "true"
+            optionType = OptionType.BOOLEAN, defaultValue = "false"
         ),
         ScriptConfiguration(
             "Enable Extractor",
@@ -72,7 +73,7 @@ import org.powbot.api.script.ValueChanged
             "Max Cargo Space",
             "Max Cargo Space: The maximum cargo space you can hold.",
             optionType = OptionType.STRING,
-            defaultValue = "210"
+            defaultValue = "120"
         ),
         ScriptConfiguration(
             "Start Sorting",
@@ -83,7 +84,7 @@ import org.powbot.api.script.ValueChanged
             "Salvage Item Name",
             "Salvage Item Name: The exact name of the item dropped after salvaging the shipwreck.",
             optionType = OptionType.STRING,
-            defaultValue = "Barracuda salvage",
+            defaultValue = "Large salvage",
             allowedValues = ["Small salvage", "Fishy salvage", "Barracuda salvage", "Large salvage", "Plundered salvage", "Martial salvage", "Fremennik salvage", "Opulent salvage"]
         ),
         ScriptConfiguration(
@@ -118,28 +119,28 @@ import org.powbot.api.script.ValueChanged
             "Barracuda Drop List",
             "Items to DROP for Barracuda salvage (comma-separated). Edit or clear to customize.",
             optionType = OptionType.STRING,
-            visible = true,
+            visible = false,
             defaultValue = LootConfig.BARRACUDA_DROP_LIST_STRING
         ),
         ScriptConfiguration(
             "Barracuda Alch List",
             "Items to ALCH for Barracuda salvage (comma-separated). Edit or add items as needed.",
             optionType = OptionType.STRING,
-            visible = true,
+            visible = false,
             defaultValue = LootConfig.BARRACUDA_ALCH_LIST_STRING
         ),
         ScriptConfiguration(
             "Large Drop List",
             "Items to DROP for Large salvage (comma-separated). Edit or clear to customize.",
             optionType = OptionType.STRING,
-            visible = false,
+            visible = true,
             defaultValue = LootConfig.LARGE_DROP_LIST_STRING
         ),
         ScriptConfiguration(
             "Large Alch List",
             "Items to ALCH for Large salvage (comma-separated). Edit or add items as needed.",
             optionType = OptionType.STRING,
-            visible = false,
+            visible = true,
             defaultValue = LootConfig.LARGE_ALCH_LIST_STRING
         ),
         ScriptConfiguration(
@@ -453,6 +454,13 @@ class SalvageSorter : AbstractScript() {
                 val gain = currentCoinCount - initialCoinCount
                 String.format("%,d GP", gain)
             }
+            .addString("Coins/Hour") {
+                val gain = currentCoinCount - initialCoinCount
+                val runtime = System.currentTimeMillis() - phaseStartTime
+                val coinsPerHour = if (runtime > 0) (gain * 3600000L / runtime) else 0L
+                String.format("%,d GP/h", coinsPerHour)
+            }
+            .trackSkill(Skill.Magic)
             .addString("Salvage in Cargo (Approx)") { cargoHoldCount.toString() }
             .addString("Hops") { if(hopWorlds){hops.toString() } else "DISABLED"}
             .addString("At Withdraw Spot") { if (atWithdrawSpot) "YES" else "NO" }
