@@ -4,6 +4,8 @@ import org.powbot.api.AppManager.logger
 import org.powbot.api.Condition
 import org.powbot.api.Tile
 import org.powbot.api.rt4.*
+import org.powbot.api.rt4.Bank
+import org.powbot.api.rt4.bank.Quantity
 import org.powbot.api.rt4.walking.model.Skill
 import kotlin.random.Random
 
@@ -28,18 +30,6 @@ object ScriptUtils {
         return result
     }
 
-    /**
-     * Checks if the player is at a specific tile.
-     *
-     * @param tile The tile to check
-     * @return True if the player is at the specified tile
-     */
-    fun isAtTile(tile: Tile): Boolean {
-        val localTile = Players.local().tile()
-        val isAt = localTile == tile
-        logger.info("UTILS: Checking if player is at target tile ($tile). Current tile: $localTile. Result: $isAt")
-        return isAt
-    }
 
     /**
      * Checks if there are other players on the local player's tile.
@@ -132,27 +122,30 @@ object ScriptUtils {
         return result
     }
 
-    /**
-     * Deposits all items with specified names from the inventory into the bank.
-     *
-     * @param itemNames The names of items to deposit
-     * @return True if all specified items were successfully deposited
-     */
     fun depositItems(vararg itemNames: String): Boolean {
         logger.info("UTILS: Attempting to deposit items: [${itemNames.joinToString()}]")
         var allDeposited = true
-        for (itemName in itemNames) {
+
+        for ((index, itemName) in itemNames.withIndex()) {
             if (hasAnyItem(itemName)) {
                 logger.info("UTILS: Depositing all instances of '$itemName'.")
-                if (Bank.deposit(itemName, Bank.Amount.ALL)) {
-                    val deposited = Condition.wait(
-                        { !hasAnyItem(itemName) },
-                        Constants.WaitConditions.BANK_DEPOSIT_TIMEOUT,
-                        Constants.WaitConditions.BANK_DEPOSIT_ATTEMPTS
-                    )
-                    if (!deposited) {
-                        logger.error("UTILS: Failed to confirm deposit of '$itemName' within timeout.")
-                        allDeposited = false
+                if (Bank.deposit().item(itemName, Quantity.of(Bank.Amount.ALL.value)).submit()) {
+                    val isLastItem = index == itemNames.size - 1
+
+                    if (isLastItem) {
+                        val deposited = Condition.wait(
+                            { !hasAnyItem(itemName) },
+                            Constants.WaitConditions.BANK_DEPOSIT_TIMEOUT,
+                            Constants.WaitConditions.BANK_DEPOSIT_ATTEMPTS
+                        )
+                        if (!deposited) {
+                            logger.error("UTILS: Failed to confirm deposit of '$itemName' within timeout.")
+                            allDeposited = false
+                        }
+                    } else {
+                        val delay = Random.nextInt(180, 400)
+                        logger.debug("UTILS: Sleeping ${delay}ms before next deposit.")
+                        Condition.sleep(delay)
                     }
                 } else {
                     logger.error("UTILS: Bank.deposit() failed for '$itemName'.")
@@ -222,30 +215,6 @@ object ScriptUtils {
             logger.warn("UTILS: Object ID $objectId not found.")
         }
         return obj
-    }
-
-    /**
-     * Checks if a game object is in the viewport, and turns the camera to it if not.
-     *
-     * @param obj The GameObject to check and turn to
-     * @return True if the object is now in the viewport
-     */
-    fun ensureObjectInView(obj: GameObject): Boolean {
-        if (!obj.valid()) {
-            logger.warn("UTILS: Cannot ensure object in view: Object is not valid.")
-            return false
-        }
-
-        if (!obj.inViewport()) {
-            logger.info("UTILS: Object ${obj.name()} is not in viewport. Turning camera...")
-            Camera.turnTo(obj)
-            Condition.sleep(Random.nextInt(600,1200))
-            val inViewAfterTurn = obj.inViewport()
-            logger.info("UTILS: Camera turn complete. Object is now in viewport: $inViewAfterTurn")
-            return inViewAfterTurn
-        }
-        logger.debug("UTILS: Object ${obj.name()} is already in viewport.")
-        return true
     }
 
     /**
@@ -357,22 +326,125 @@ object ScriptUtils {
         logger.debug("UTILS: Checking player idle status: Animation=${player.animation()}, InMotion=${player.inMotion()}. Result: $isIdle")
         return isIdle
     }
+    /**
+     * Checks if the player is at a specific tile.
+     *
+     * @param tile The tile to check
+     * @return True if the player is at the specified tile
+     */
+    fun isAtTile(tile: Tile): Boolean {
+        val localTile = Players.local().tile()
+        val isAt = localTile == tile
+        logger.info("UTILS: Checking if player is at target tile ($tile). Current tile: $localTile. Result: $isAt")
+        return isAt
+    }
+
 
     /**
-     * Walks to a tile if not already there.
+     * Walks to a tile if not already there with interaction timeout and fallback.
      *
      * @param targetTile The tile to walk to
-     * @return True if already at the tile or movement was initiated
+     * @param stallTile The stall tile for finding nearby fallback tiles
+     * @param interactionTimeout Time in ms to wait before finding fallback tile (default 10000ms)
+     * @return True if reached target or fallback tile
      */
-    fun walkToTile(targetTile: Tile): Boolean {
+    fun walkToTile(targetTile: Tile, stallTile: Tile? = null, interactionTimeout: Long = 10000): Boolean {
         if (isAtTile(targetTile)) {
             logger.info("UTILS: Already at target tile $targetTile.")
             return true
-        } else {
-            logger.info("UTILS: Walking to tile $targetTile...")
-            val walked = Movement.walkTo(targetTile)
-            logger.info("UTILS: Movement initiated successfully: $walked")
-            return walked
+        }
+
+        logger.info("UTILS: Walking to tile $targetTile with ${interactionTimeout}ms interaction timeout...")
+
+        val startTime = System.currentTimeMillis()
+        var lastInteractionTime = startTime
+        var currentTarget = targetTile
+        var fallbackAttempted = false
+        var retryCount = 0
+        val maxRetries = 3
+
+        val walked = Condition.wait({
+            val elapsedTime = System.currentTimeMillis() - startTime
+            val timeSinceInteraction = System.currentTimeMillis() - lastInteractionTime
+
+            if (elapsedTime >= 10000) {
+                if (retryCount < maxRetries && stallTile != null) {
+                    logger.info("UTILS: Timeout after 30 seconds. Retrying with new fallback tile (${retryCount + 1}/$maxRetries)...")
+                    val newFallback = findNearbyValidTile(stallTile)
+                    if (newFallback != null && newFallback != currentTarget) {
+                        currentTarget = newFallback
+                        retryCount++
+                        lastInteractionTime = System.currentTimeMillis()
+                        logger.info("UTILS: New fallback tile selected: $newFallback")
+                        return@wait false
+                    }
+                }
+                logger.info("UTILS: Max retries reached or no new tiles found. Stopping.")
+                return@wait true
+            }
+
+            if (isAtTile(currentTarget)) {
+                logger.info("UTILS: Reached target tile $currentTarget.")
+                if (currentTarget != targetTile) {
+                    Movement.step(targetTile)
+                    Condition.sleep(200)
+                }
+                return@wait true
+            }
+
+            if (timeSinceInteraction >= interactionTimeout && !fallbackAttempted && stallTile != null) {
+                logger.info("UTILS: No interaction for ${interactionTimeout}ms. Finding fallback tile near stall $stallTile...")
+                val fallbackTile = findNearbyValidTile(stallTile)
+                if (fallbackTile != null) {
+                    currentTarget = fallbackTile
+                    fallbackAttempted = true
+                    logger.info("UTILS: Fallback tile selected: $fallbackTile")
+                } else {
+                    logger.warn("UTILS: No valid fallback tile found near stall.")
+                }
+            }
+
+            val distance = currentTarget.distance()
+
+            if (distance <= 5 && currentTarget.reachable()) {
+                logger.info("UTILS: Target tile is $distance tiles away (<= 5) AND reachable. Using Movement.step.")
+                Movement.step(currentTarget)
+                lastInteractionTime = System.currentTimeMillis()
+                Condition.sleep(200)
+            } else {
+                logger.info("UTILS: Target tile is $distance tiles away. Using Movement.walkTo.")
+                Movement.walkTo(currentTarget)
+                lastInteractionTime = System.currentTimeMillis()
+            }
+
+            false
+        }, 200, 25)
+
+        logger.info("UTILS: Movement completed. Success: $walked")
+        return walked
+    }
+
+    /**
+     * Finds a nearby valid tile within 1 tile of the stall.
+     *
+     * @param stallTile The stall tile to search around
+     * @return A valid reachable tile or null
+     */
+    private fun findNearbyValidTile(stallTile: Tile): Tile? {
+        val nearby = listOf(
+            stallTile,
+            stallTile.derive(1, 0),
+            stallTile.derive(-1, 0),
+            stallTile.derive(0, 1),
+            stallTile.derive(0, -1),
+            stallTile.derive(1, 1),
+            stallTile.derive(1, -1),
+            stallTile.derive(-1, 1),
+            stallTile.derive(-1, -1)
+        )
+
+        return nearby.find { it.reachable() }.also {
+            logger.debug("UTILS: Valid fallback tile found: $it")
         }
     }
 

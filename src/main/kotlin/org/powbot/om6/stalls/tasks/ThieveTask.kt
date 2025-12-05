@@ -39,10 +39,6 @@ class ThieveTask(script: StallThiever) : Task(script, Constants.TaskNames.THIEVI
 
         script.logger.debug("EXECUTE: ${name}: Stall object found: ${stall.name()} at ${stall.tile()}.")
 
-        if (!ScriptUtils.ensureObjectInView(stall)) {
-            script.logger.info("EXECUTE: ${name}: Failed to get stall in viewport after camera adjustment. Retrying next loop.")
-            return
-        }
 
         script.logger.info("EXECUTE: ${name}: Attempting to steal from stall...")
         if (ScriptUtils.interactAndWaitForXp(stall, Constants.Actions.STEAL_FROM, Skill.Thieving)) {
