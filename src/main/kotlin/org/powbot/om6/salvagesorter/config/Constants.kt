@@ -134,6 +134,7 @@ object Constants {
     const val COMPONENT_DEPOSIT_SALVAGE = 14
     const val COMPONENT_WITHDRAW = 10
     const val INDEX_FIRST_SLOT = 0
+    const val CARGO_WITHDRAW_ALL = "Withdraw-All"
 
     const val COMPONENT_CLOSE = 1
     const val INDEX_CLOSE = 11

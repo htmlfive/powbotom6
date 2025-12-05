@@ -2,6 +2,8 @@ package org.powbot.om6.salvagesorter.tasks
 
 import org.powbot.api.Condition
 import org.powbot.api.Random
+import org.powbot.api.rt4.Component
+import org.powbot.api.rt4.Components
 import org.powbot.api.rt4.Inventory
 import org.powbot.om6.salvagesorter.SalvageSorter
 import org.powbot.om6.salvagesorter.config.Constants
@@ -113,12 +115,17 @@ class WithdrawCargoTask(script: SalvageSorter) : Task(script) {
             return 0
         }
 
-        // Step 2: Click withdraw button
         script.logger.info("WITHDRAW: Step 2 - Clicking withdraw salvage button")
-        if (!clickWidgetWithRetry(Constants.ROOT_CARGO_WIDGET, Constants.COMPONENT_WITHDRAW, Constants.INDEX_FIRST_SLOT, logPrefix = "WITHDRAW: Step 2", script = script)) {
-            script.logger.warn("WITHDRAW: Failed to click withdraw button after retries")
+        val withdrawButton: Component = Components.stream(Constants.ROOT_CARGO_WIDGET).action(Constants.CARGO_WITHDRAW_ALL).first()
+        if (withdrawButton.valid() && withdrawButton.visible()) {
+            Condition.sleep(Random.nextInt(300, 600))
+            withdrawButton.click()
+            script.logger.info("WITHDRAW: Successfully clicked withdraw button")
+        } else {
+            script.logger.warn("WITHDRAW: Failed to find or click withdraw button")
             return 0
         }
+
         script.logger.info("WITHDRAW: Step 2 - Withdraw button clicked successfully")
 
         Condition.sleep(600)

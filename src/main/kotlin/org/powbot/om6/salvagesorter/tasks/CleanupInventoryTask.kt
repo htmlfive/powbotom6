@@ -96,6 +96,7 @@ class CleanupInventoryTask(script: SalvageSorter) : Task(script) {
 
         shuffledDroppableItems.forEach { itemToDrop ->
             if (itemToDrop.valid()) {
+
                 if (!script.tapToDrop) {
                     Game.setSingleTapToggle(false)
                     itemToDrop.interact("Drop")
