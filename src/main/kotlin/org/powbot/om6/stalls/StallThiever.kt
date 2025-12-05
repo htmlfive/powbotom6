@@ -36,7 +36,7 @@ data class StallThieverConfig(
 @ScriptManifest(
     name = Constants.Script.NAME,
     description = Constants.Script.DESCRIPTION,
-    version = Constants.Script.VERSION,
+    version = "2.2.2",
     author = Constants.Script.AUTHOR,
     scriptId = "5a9626a1-3db0-4270-b447-c2d1dc98af66",
     category = ScriptCategory.Thieving
@@ -139,9 +139,7 @@ class StallThiever : AbstractScript() {
             drop1Mode = drop1Mode,
             thievingTile = thievingTile!!,
             bankTile = bankTile!!,
-            // Convert to lowercase to ensure case-insensitive matching later
             itemsToBank = ScriptUtils.parseCommaSeparatedList(itemsToBankStr).map { it.lowercase() },
-            // Convert to lowercase to ensure case-insensitive matching later
             itemsToDrop = ScriptUtils.parseCommaSeparatedList(itemsToDropStr).map { it.lowercase() }
         )
 
@@ -182,12 +180,12 @@ class StallThiever : AbstractScript() {
 
         val task = tasks.firstOrNull {
             val validated = it.validate()
-            logger.info("Attempting validation for ${it.javaClass.simpleName}: Result = $validated")
+            logger.info("Attempting validation for ${it.name}: Result = $validated")
             validated
         }
 
         if (task != null) {
-            currentTask = task.javaClass.simpleName
+            currentTask = task.name
             logger.info("--- Task Selected --- Selected task: $currentTask. Executing...")
             task.execute()
             logger.info("Task $currentTask execution finished.")
